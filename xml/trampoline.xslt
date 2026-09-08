@@ -34,4 +34,12 @@
 		<xsl:call-template name="createFunctionBody"/>
     </xsl:template>
 
+    <xsl:template match="define|ifdef|ifndef|elifdef|else|endif" mode="definition">
+        <xsl:call-template name="addDirectives"/>
+    </xsl:template>
+
+    <xsl:template match="define|ifdef|ifndef|elifdef|else|endif">
+        <xsl:call-template name="addDirectives"/>
+    </xsl:template>
+
 </xsl:stylesheet>

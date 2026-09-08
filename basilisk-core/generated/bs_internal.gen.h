@@ -37,7 +37,6 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-
 #include <vulkan.h>
 #include <stdarg.h>
 
@@ -65,8 +64,10 @@ typedef bs_vec3(* PFN_bs_hsvToRgb)(const bs_vec3* hsv);
 typedef bs_vec3(* PFN_bs_rgbToHsv)(const bs_vec3* rgb);
 typedef bs_Result(* PFN_bs_convertYyjsonResult)(int code);
 typedef bs_Result(* PFN_bs_convertVulkanResult)(int code);
+#ifdef _WIN32
 typedef bs_Result(* PFN_bs_convertWin32Error)(int code);
 typedef const char*(* PFN_bs_serializeWin32Error)(int code);
+#endif
 typedef bs_Result(* PFN_bs_convertErrno)();
 typedef const char*(* PFN_bs_serializeErrno)();
 typedef bs_Result(* PFN_bs_playSound)(bs_Sound* sound, float volume);
@@ -332,7 +333,9 @@ typedef bs_Result(* PFN_bs_setWorkingDirectoryN)(char* path, int path_length);
 typedef bs_Result(* PFN_bs_setWorkingDirectoryV)(char* format, va_list args);
 typedef bs_Result(* PFN_bs_setWorkingDirectoryF)(char* format, ...);
 typedef bs_String*(* PFN_bs_executablePath)();
+#ifdef _WIN32
 typedef char*(* PFN_bs_appdataPath)();
+#endif
 typedef void(* PFN_bs_shortenString)(bs_String* string, int len);
 typedef bs_String*(* PFN_bs_appendChar)(bs_String* string, char c);
 typedef void(* PFN_bs_removeCharRange)(bs_String* string, int start, int count);
@@ -344,8 +347,10 @@ typedef size_t(* PFN_bs_strnlen)(const char* src, size_t n);
 typedef char*(* PFN_bs_strsep)(char** stringp, const char* delim);
 typedef void*(* PFN_bs_memmem)(const void* haystack, bs_U32 haystack_len, const void* const needle, const bs_U32 needle_len);
 typedef bs_U32(* PFN_bs_alignUp)(bs_U32 value, bs_U32 alignment);
+#ifdef _WIN32
 typedef bs_Result(* PFN_bs_widen)(char* src, wchar_t* dst, bs_U32 dst_size);
 typedef bs_Result(* PFN_bs_unwiden)(wchar_t* src, char* dst, bs_U32 dst_size);
+#endif
 typedef char*(* PFN_bs_charStringV)(const char* format, va_list args);
 typedef char*(* PFN_bs_charStringF)(const char* format,  ...);
 typedef void*(* PFN_bs_free)(void* p);
@@ -384,14 +389,12 @@ typedef bs_Result(* PFN_bs_saveFile)(void* data, bs_U32 data_len, char* path);
 typedef bs_Result(* PFN_bs_saveFileN)(void* data, bs_U32 data_len, char* path, int path_length);
 typedef bs_Result(* PFN_bs_saveFileV)(void* data, bs_U32 data_len, char* format, va_list args);
 typedef bs_Result(* PFN_bs_saveFileF)(void* data, bs_U32 data_len, char* format, ...);
+#ifdef _WIN32
 typedef void(* PFN_bs_convertWin32Path)(char* path);
 typedef void(* PFN_bs_convertWin32PathN)(char* path, int path_length);
 typedef void(* PFN_bs_convertWin32PathV)(char* format, va_list args);
 typedef void(* PFN_bs_convertWin32PathF)(char* format, ...);
-typedef bs_Result(* PFN_bs_ensureDirectory)(char* path);
-typedef bs_Result(* PFN_bs_ensureDirectoryN)(char* path, int path_length);
-typedef bs_Result(* PFN_bs_ensureDirectoryV)(char* format, va_list args);
-typedef bs_Result(* PFN_bs_ensureDirectoryF)(char* format, ...);
+#endif
 typedef bs_Result(* PFN_bs_fileModifiedDate)(bs_DateTime* out, char* path);
 typedef bs_Result(* PFN_bs_fileModifiedDateN)(bs_DateTime* out, char* path, int path_length);
 typedef bs_Result(* PFN_bs_fileModifiedDateV)(bs_DateTime* out, char* format, va_list args);
@@ -592,8 +595,10 @@ typedef struct {
     PFN_bs_rgbToHsv bs_rgbToHsv;
     PFN_bs_convertYyjsonResult bs_convertYyjsonResult;
     PFN_bs_convertVulkanResult bs_convertVulkanResult;
+#ifdef _WIN32
     PFN_bs_convertWin32Error bs_convertWin32Error;
     PFN_bs_serializeWin32Error bs_serializeWin32Error;
+#endif
     PFN_bs_convertErrno bs_convertErrno;
     PFN_bs_serializeErrno bs_serializeErrno;
     PFN_bs_playSound bs_playSound;
@@ -859,7 +864,9 @@ typedef struct {
     PFN_bs_setWorkingDirectoryV bs_setWorkingDirectoryV;
     PFN_bs_setWorkingDirectoryF bs_setWorkingDirectoryF;
     PFN_bs_executablePath bs_executablePath;
+#ifdef _WIN32
     PFN_bs_appdataPath bs_appdataPath;
+#endif
     PFN_bs_shortenString bs_shortenString;
     PFN_bs_appendChar bs_appendChar;
     PFN_bs_removeCharRange bs_removeCharRange;
@@ -871,8 +878,10 @@ typedef struct {
     PFN_bs_strsep bs_strsep;
     PFN_bs_memmem bs_memmem;
     PFN_bs_alignUp bs_alignUp;
+#ifdef _WIN32
     PFN_bs_widen bs_widen;
     PFN_bs_unwiden bs_unwiden;
+#endif
     PFN_bs_charStringV bs_charStringV;
     PFN_bs_charStringF bs_charStringF;
     PFN_bs_free bs_free;
@@ -911,14 +920,12 @@ typedef struct {
     PFN_bs_saveFileN bs_saveFileN;
     PFN_bs_saveFileV bs_saveFileV;
     PFN_bs_saveFileF bs_saveFileF;
+#ifdef _WIN32
     PFN_bs_convertWin32Path bs_convertWin32Path;
     PFN_bs_convertWin32PathN bs_convertWin32PathN;
     PFN_bs_convertWin32PathV bs_convertWin32PathV;
     PFN_bs_convertWin32PathF bs_convertWin32PathF;
-    PFN_bs_ensureDirectory bs_ensureDirectory;
-    PFN_bs_ensureDirectoryN bs_ensureDirectoryN;
-    PFN_bs_ensureDirectoryV bs_ensureDirectoryV;
-    PFN_bs_ensureDirectoryF bs_ensureDirectoryF;
+#endif
     PFN_bs_fileModifiedDate bs_fileModifiedDate;
     PFN_bs_fileModifiedDateN bs_fileModifiedDateN;
     PFN_bs_fileModifiedDateV bs_fileModifiedDateV;
@@ -1119,8 +1126,10 @@ BSAPI bs_vec3 _bs_hsvToRgb(const bs_vec3* hsv);
 BSAPI bs_vec3 _bs_rgbToHsv(const bs_vec3* rgb);
 BSAPI bs_Result _bs_convertYyjsonResult(int code);
 BSAPI bs_Result _bs_convertVulkanResult(int code);
+#ifdef _WIN32
 BSAPI bs_Result _bs_convertWin32Error(int code);
 BSAPI const char* _bs_serializeWin32Error(int code);
+#endif
 BSAPI bs_Result _bs_convertErrno();
 BSAPI const char* _bs_serializeErrno();
 BSAPI bs_Result _bs_playSound(bs_Sound* sound, float volume);
@@ -1386,7 +1395,9 @@ BSAPI bs_Result _bs_setWorkingDirectoryN(char* path, int path_length);
 BSAPI bs_Result _bs_setWorkingDirectoryV(char* format, va_list args);
 BSAPI bs_Result _bs_setWorkingDirectoryF(char* format,  ...);
 BSAPI bs_String* _bs_executablePath();
+#ifdef _WIN32
 BSAPI char* _bs_appdataPath();
+#endif
 BSAPI void _bs_shortenString(bs_String* string, int len);
 BSAPI bs_String* _bs_appendChar(bs_String* string, char c);
 BSAPI void _bs_removeCharRange(bs_String* string, int start, int count);
@@ -1398,8 +1409,10 @@ BSAPI size_t _bs_strnlen(const char* src, size_t n);
 BSAPI char* _bs_strsep(char** stringp, const char* delim);
 BSAPI void* _bs_memmem(const void* haystack, bs_U32 haystack_len, const void* const needle, const bs_U32 needle_len);
 BSAPI bs_U32 _bs_alignUp(bs_U32 value, bs_U32 alignment);
+#ifdef _WIN32
 BSAPI bs_Result _bs_widen(char* src, wchar_t* dst, bs_U32 dst_size);
 BSAPI bs_Result _bs_unwiden(wchar_t* src, char* dst, bs_U32 dst_size);
+#endif
 BSAPI char* _bs_charStringV(const char* format, va_list args);
 BSAPI char* _bs_charStringF(const char* format,  ...);
 BSAPI void* _bs_free(void* p);
@@ -1438,14 +1451,12 @@ BSAPI bs_Result _bs_saveFile(void* data, bs_U32 data_len, char* path);
 BSAPI bs_Result _bs_saveFileN(void* data, bs_U32 data_len, char* path, int path_length);
 BSAPI bs_Result _bs_saveFileV(void* data, bs_U32 data_len, char* format, va_list args);
 BSAPI bs_Result _bs_saveFileF(void* data, bs_U32 data_len, char* format,  ...);
+#ifdef _WIN32
 BSAPI void _bs_convertWin32Path(char* path);
 BSAPI void _bs_convertWin32PathN(char* path, int path_length);
 BSAPI void _bs_convertWin32PathV(char* format, va_list args);
 BSAPI void _bs_convertWin32PathF(char* format,  ...);
-BSAPI bs_Result _bs_ensureDirectory(char* path);
-BSAPI bs_Result _bs_ensureDirectoryN(char* path, int path_length);
-BSAPI bs_Result _bs_ensureDirectoryV(char* format, va_list args);
-BSAPI bs_Result _bs_ensureDirectoryF(char* format,  ...);
+#endif
 BSAPI bs_Result _bs_fileModifiedDate(bs_DateTime* out, char* path);
 BSAPI bs_Result _bs_fileModifiedDateN(bs_DateTime* out, char* path, int path_length);
 BSAPI bs_Result _bs_fileModifiedDateV(bs_DateTime* out, char* format, va_list args);
@@ -1648,8 +1659,10 @@ static inline bs_FunctionTable* _bs_getFunctions() {
     functions.bs_rgbToHsv = _bs_rgbToHsv;
     functions.bs_convertYyjsonResult = _bs_convertYyjsonResult;
     functions.bs_convertVulkanResult = _bs_convertVulkanResult;
+#ifdef _WIN32
     functions.bs_convertWin32Error = _bs_convertWin32Error;
     functions.bs_serializeWin32Error = _bs_serializeWin32Error;
+#endif
     functions.bs_convertErrno = _bs_convertErrno;
     functions.bs_serializeErrno = _bs_serializeErrno;
     functions.bs_playSound = _bs_playSound;
@@ -1915,7 +1928,9 @@ static inline bs_FunctionTable* _bs_getFunctions() {
     functions.bs_setWorkingDirectoryV = _bs_setWorkingDirectoryV;
     functions.bs_setWorkingDirectoryF = _bs_setWorkingDirectoryF;
     functions.bs_executablePath = _bs_executablePath;
+#ifdef _WIN32
     functions.bs_appdataPath = _bs_appdataPath;
+#endif
     functions.bs_shortenString = _bs_shortenString;
     functions.bs_appendChar = _bs_appendChar;
     functions.bs_removeCharRange = _bs_removeCharRange;
@@ -1927,8 +1942,10 @@ static inline bs_FunctionTable* _bs_getFunctions() {
     functions.bs_strsep = _bs_strsep;
     functions.bs_memmem = _bs_memmem;
     functions.bs_alignUp = _bs_alignUp;
+#ifdef _WIN32
     functions.bs_widen = _bs_widen;
     functions.bs_unwiden = _bs_unwiden;
+#endif
     functions.bs_charStringV = _bs_charStringV;
     functions.bs_charStringF = _bs_charStringF;
     functions.bs_free = _bs_free;
@@ -1967,14 +1984,12 @@ static inline bs_FunctionTable* _bs_getFunctions() {
     functions.bs_saveFileN = _bs_saveFileN;
     functions.bs_saveFileV = _bs_saveFileV;
     functions.bs_saveFileF = _bs_saveFileF;
+#ifdef _WIN32
     functions.bs_convertWin32Path = _bs_convertWin32Path;
     functions.bs_convertWin32PathN = _bs_convertWin32PathN;
     functions.bs_convertWin32PathV = _bs_convertWin32PathV;
     functions.bs_convertWin32PathF = _bs_convertWin32PathF;
-    functions.bs_ensureDirectory = _bs_ensureDirectory;
-    functions.bs_ensureDirectoryN = _bs_ensureDirectoryN;
-    functions.bs_ensureDirectoryV = _bs_ensureDirectoryV;
-    functions.bs_ensureDirectoryF = _bs_ensureDirectoryF;
+#endif
     functions.bs_fileModifiedDate = _bs_fileModifiedDate;
     functions.bs_fileModifiedDateN = _bs_fileModifiedDateN;
     functions.bs_fileModifiedDateV = _bs_fileModifiedDateV;

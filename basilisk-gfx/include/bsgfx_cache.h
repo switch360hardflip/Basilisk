@@ -1,19 +1,19 @@
 
  /**
   MIT License
-  
+
   Copyright (c) 2026 switch360hardflip <switch360hardflip@gmail.com>
-  
+
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
   in the Software without restriction, including without limitation the rights
   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
   copies of the Software, and to permit persons to whom the Software is
   furnished to do so, subject to the following conditions:
-  
+
   The above copyright notice and this permission notice shall be included in all
   copies or substantial portions of the Software.
-  
+
   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,7 +21,7 @@
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
-  */ 
+  */
 
 #ifndef BSGFX_CACHE_H
 #define BSGFX_CACHE_H
@@ -29,7 +29,7 @@
 #include <basilisk-gfx.h>
 
 #define BSGFX_CACHE_SHADER(path, type)                                                          \
-    inline bs_Shader* $##path() {                                                               \
+    static inline bs_Shader* $##path() {                                                               \
         static bs_Resource* resource = NULL;                                                    \
         if (!resource) {                                                                        \
             bs_shader(BSGFX_PACKAGE, "shaders/" #path "." #type, 0, &resource);                 \
@@ -45,7 +45,7 @@
 #define BSGFX_CACHE_RMISS(path) BSGFX_CACHE_SHADER(path, rmiss)
 
 #define BSGFX_CACHE_MODEL(path, flags)                                                          \
-    inline bs_Model* $##path##() {                                                              \
+    static inline bs_Model* $##path##() {                                                              \
         static bs_Model* model = NULL;                                                          \
         const char* p = #path + 1;                                                              \
         if (!model)                                                                             \
@@ -58,7 +58,7 @@ static inline bs_vec4 _bsgfx_convertColor(bs_RGBA color) {
 }
 
 #define BSGFX_CACHE_COLOR_MATERIAL(name, _color)                                    \
-    inline bsgfx_Material* $##name() {                                              \
+    static inline bsgfx_Material* $##name() {                                              \
         static int id = -1;                                                         \
         if (id == -1) {                                                             \
             id = bsgfx_materialN(BS_CONSTANT_STRING(#name))->id;                    \
@@ -73,7 +73,7 @@ static inline bs_vec4 _bsgfx_convertColor(bs_RGBA color) {
     }
 
 #define BSGFX_CACHE_ATLAS_QUERY(source_id, atlas_id, n)                             \
-    inline bsgfx_AtlasCache* $##atlas_id##_##n() {                                  \
+    static inline bsgfx_AtlasCache* $##atlas_id##_##n() {                                  \
         static bsgfx_AtlasCache cache = {.id = -1};                                 \
         if (cache.id == -1) {                                                       \
             bs_Atlas* atlas = (bs_Atlas*)bs_fetch(source_id, atlas_id)->head;       \
@@ -174,7 +174,7 @@ BSGFX_CACHE_VS(vs_bsgfx_msdf_glyph)
 
 #define BSGFX_PACKAGE bsgfx_package()
 
-#undef BSGFX_CATEGORY 
+#undef BSGFX_CATEGORY
 #define BSGFX_CATEGORY BSGFX_MATERIAL_CATEGORY_NONE
 
 BSGFX_CACHE_COLOR_MATERIAL(menu_background, BS_RGBA(112, 112, 112, 248))
@@ -206,7 +206,7 @@ BSGFX_CACHE_COLOR_MATERIAL(bsmod_blue_border, BS_RGBA(75, 167, 114, 255))
 BSGFX_CACHE_COLOR_MATERIAL(bsmod_blue, BS_RGBA(135, 232, 57, 255))
 BSGFX_CACHE_COLOR_MATERIAL(bsmod_red, BS_RGBA(230, 73, 58, 255))
 
-#undef BSGFX_CATEGORY 
+#undef BSGFX_CATEGORY
 #define BSGFX_CATEGORY BSGFX_MATERIAL_CATEGORY_UI_COLOR_SCHEME
 
 BSGFX_CACHE_COLOR_MATERIAL(bsmod_light_blue, BS_RGBA(175, 204, 222, 255))

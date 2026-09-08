@@ -26,6 +26,10 @@ add_library(${PROJECT_NAME} SHARED
     ${TYPE_FILES}
 )
 
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    LINKER_LANGUAGE CXX
+)
+
 if (DEFINED RENDERDOC_PATH)
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     RENDERDOC_PATH="${RENDERDOC_PATH}"
@@ -67,6 +71,7 @@ target_link_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/external/
     ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/Debug #todo release
     ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang
+    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Unix
     ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV/Debug
     ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV
     ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build/Debug
@@ -107,6 +112,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     GenericCodeGen
     glslang
     glslang-default-resource-limits
+    OSDependent
     MachineIndependent
     SPIRV
     spirv-cross-c

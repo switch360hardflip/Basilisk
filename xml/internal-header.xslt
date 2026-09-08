@@ -9,24 +9,20 @@
     <xsl:variable name="functionPrefix" select="registry/functionPrefix"/>
     <xsl:variable name="functionPrefixCaps" select="registry/functionPrefixCaps"/>
 
-    <xsl:template match="define|ifdef|ifndef|elifdef">
-        <xsl:text>#</xsl:text>
-        <xsl:value-of select="name()"/>
-        <xsl:text> </xsl:text>
-        <xsl:value-of select="@cond"/>
-        <xsl:text>&#xA;</xsl:text>
-        <xsl:apply-templates select="*"/>
+    <xsl:template match="define|ifdef|ifndef|elifdef|else|endif" mode="typedef">
+        <xsl:call-template name="addDirectives"/>
     </xsl:template>
 
-    <xsl:template match="else">
-        <xsl:text>#</xsl:text>
-        <xsl:value-of select="name()"/>
-        <xsl:text>&#xA;</xsl:text>
-        <xsl:apply-templates select="*"/>
+    <xsl:template match="define|ifdef|ifndef|elifdef|else|endif" mode="table">
+        <xsl:call-template name="addDirectives"/>
     </xsl:template>
 
-    <xsl:template match="endif">
-        <xsl:text>#endif&#xA;&#xA;</xsl:text>
+    <xsl:template match="define|ifdef|ifndef|elifdef|else|endif" mode="declaration">
+        <xsl:call-template name="addDirectives"/>
+    </xsl:template>
+
+    <xsl:template match="define|ifdef|ifndef|elifdef|else|endif" >
+        <xsl:call-template name="addDirectives"/>
     </xsl:template>
 
     <xsl:template match="/">
@@ -42,14 +38,14 @@
 		<xsl:apply-templates select="registry/includes/internalHeader/*"/>
 		<xsl:text>&#xA;</xsl:text>
 
-		<xsl:apply-templates select="registry/functions/function" mode="typedef"/>
+		<xsl:apply-templates select="registry/functions/*" mode="typedef"/>
         <xsl:text>&#xA;typedef struct {&#xA;</xsl:text>
-        <xsl:apply-templates select="registry/functions/function" mode="table"/>
+        <xsl:apply-templates select="registry/functions/*" mode="table"/>
         <xsl:text>} </xsl:text>
         <xsl:value-of select="$functionPrefix"/>
         <xsl:text>FunctionTable;&#xA;&#xA;</xsl:text>
 
-		<xsl:apply-templates select="registry/functions/function" mode="declaration"/>
+		<xsl:apply-templates select="registry/functions/*" mode="declaration"/>
 		<xsl:text>&#xA;</xsl:text>
 
 		<xsl:call-template name="addFunctionTableGetter">

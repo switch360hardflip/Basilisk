@@ -59,8 +59,16 @@ add_dependencies(${PROJECT_NAME}
 
 target_link_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/external/
+    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/Debug #todo release
+    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang
+    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Unix
+    ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV/Debug
+    ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV
+    ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build/Debug
+    ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build
+    ${CMAKE_SOURCE_DIR}/external/freetype/objs
+    ${CMAKE_SOURCE_DIR}/external/freetype/objs/.libs
 )
-
 target_link_libraries(${PROJECT_NAME} PRIVATE
     basilisk-core
     basilisk-gfx
@@ -75,6 +83,16 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 else()
 target_link_libraries(${PROJECT_NAME} PRIVATE
     vulkan
+    GenericCodeGen
+    glslang
+    glslang-default-resource-limits
+    OSDependent
+    MachineIndependent
+    SPIRV
+    spirv-cross-c
+    spirv-cross-core
+    spirv-cross-glsl
+    stdc++
 )
 
 endif()

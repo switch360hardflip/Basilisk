@@ -17,7 +17,7 @@
 			<xsl:with-param name="prefix" select="'_preval_'"/>
 		</xsl:call-template>
 
-        <xsl:apply-templates select="registry/functions/function" mode="validation"/>
+        <xsl:apply-templates select="registry/functions/*" mode="validation"/>
 
         <xsl:value-of select="registry/functionPrefix"/>
         <xsl:text>FunctionTable* _preval_</xsl:text>
@@ -26,8 +26,11 @@
 		<xsl:text>static </xsl:text>
 		<xsl:value-of select="registry/functionPrefix"/>
 		<xsl:text>FunctionTable functions = { 0 };&#xA;&#xA;</xsl:text>
-		<xsl:for-each select="registry/functions/function">
-            <xsl:if test="not(body)">
+		<xsl:for-each select="registry/functions/*">
+    		<xsl:if test="self::define | self::ifdef | self::ifndef | self::elifdef | self::else | self::endif">
+                <xsl:call-template name="addDirectives"/>
+            </xsl:if>
+            <xsl:if test="self::function and not(body)">
                 <xsl:text>    functions.</xsl:text>
                 <xsl:value-of select="@name"/>
                 <xsl:text> = _preval_</xsl:text>
@@ -151,6 +154,14 @@
 
             <xsl:text>&#xA;</xsl:text>
         </xsl:if>
+    </xsl:template>
+
+    <xsl:template match="define|ifdef|ifndef|elifdef|else|endif" mode="validation">
+        <xsl:call-template name="addDirectives"/>
+    </xsl:template>
+
+    <xsl:template match="define|ifdef|ifndef|elifdef|else|endif">
+        <xsl:call-template name="addDirectives"/>
     </xsl:template>
 
 </xsl:stylesheet>

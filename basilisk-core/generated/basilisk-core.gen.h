@@ -4480,6 +4480,7 @@ BSAPI bs_Result
 bs_convertVulkanResult(
     int code);
 
+#ifdef _WIN32
  /**
   @param code
   @return bs_Result
@@ -4496,6 +4497,7 @@ BSAPI const char*
 bs_serializeWin32Error(
     int code);
 
+#endif
  /**
   @return bs_Result
   */
@@ -7452,12 +7454,14 @@ bs_setWorkingDirectoryF(
 BSAPI bs_String*
 bs_executablePath();
 
+#ifdef _WIN32
  /**
   @return char*
   */
 BSAPI char*
 bs_appdataPath();
 
+#endif
  /**
   @param string
   @param len
@@ -7992,6 +7996,7 @@ bs_saveFileF(
     char* format,
      ...);
 
+#ifdef _WIN32
  /**
   @param path
   @return void
@@ -8030,44 +8035,7 @@ bs_convertWin32PathF(
     char* format,
      ...);
 
- /**
-  @param path
-  @return bs_Result
-  */
-BSAPI bs_Result
-bs_ensureDirectory(
-    char* path);
-
- /**
-  @param path
-  @param path_length
-  @return bs_Result
-  */
-BSAPI bs_Result
-bs_ensureDirectoryN(
-    char* path,
-    int path_length);
-
- /**
-  @param format
-  @param args
-  @return bs_Result
-  */
-BSAPI bs_Result
-bs_ensureDirectoryV(
-    char* format,
-    va_list args);
-
- /**
-  @param format
-  @param ...
-  @return bs_Result
-  */
-BSAPI bs_Result
-bs_ensureDirectoryF(
-    char* format,
-     ...);
-
+#endif
  /**
   @param out
   @param path

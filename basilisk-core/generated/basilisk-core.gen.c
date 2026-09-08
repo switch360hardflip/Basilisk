@@ -867,6 +867,7 @@ bs_Result bs_convertVulkanResult(
     return next.bs_convertVulkanResult(code);
 }
 
+#ifdef _WIN32
 bs_Result bs_convertWin32Error(
     int code)
 {
@@ -879,6 +880,7 @@ const char* bs_serializeWin32Error(
     return next.bs_serializeWin32Error(code);
 }
 
+#endif
 bs_Result bs_convertErrno()
 {
     return next.bs_convertErrno();
@@ -2957,11 +2959,13 @@ bs_String* bs_executablePath()
     return next.bs_executablePath();
 }
 
+#ifdef _WIN32
 char* bs_appdataPath()
 {
     return next.bs_appdataPath();
 }
 
+#endif
 void bs_shortenString(
     bs_String* string, 
     int len)
@@ -3046,6 +3050,7 @@ bs_U32 bs_alignUp(
     return next.bs_alignUp(value, alignment);
 }
 
+#ifdef _WIN32
 bs_Result bs_widen(
     char* src, 
     wchar_t* dst, 
@@ -3062,6 +3067,7 @@ bs_Result bs_unwiden(
     return next.bs_unwiden(src, dst, dst_size);
 }
 
+#endif
 char* bs_charStringV(
     const char* format, 
     va_list args)
@@ -3346,6 +3352,7 @@ bs_Result bs_saveFileF(
     return _return;
 }
 
+#ifdef _WIN32
 void bs_convertWin32Path(
     char* path)
 {
@@ -3376,37 +3383,7 @@ void bs_convertWin32PathF(
     va_end(args);
 }
 
-bs_Result bs_ensureDirectory(
-    char* path)
-{
-    return next.bs_ensureDirectory(path);
-}
-
-bs_Result bs_ensureDirectoryN(
-    char* path, 
-    int path_length)
-{
-    return next.bs_ensureDirectoryN(path, path_length);
-}
-
-bs_Result bs_ensureDirectoryV(
-    char* format, 
-    va_list args)
-{
-    return next.bs_ensureDirectoryV(format, args);
-}
-
-bs_Result bs_ensureDirectoryF(
-    char* format, 
-    ...)
-{
-    va_list args;
-    va_start(args, format);
-    bs_Result _return = next.bs_ensureDirectoryV(format, args);
-    va_end(args);
-    return _return;
-}
-
+#endif
 bs_Result bs_fileModifiedDate(
     bs_DateTime* out, 
     char* path)

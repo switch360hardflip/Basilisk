@@ -2463,6 +2463,7 @@
             <return>bs_Result</return>
             <param><type>int</type><name>code</name></param>
         </function>
+        <ifdef cond="_WIN32"/>
         <function name="bs_convertWin32Error">
             <return>bs_Result</return>
             <param><type>int</type><name>code</name></param>
@@ -2471,6 +2472,7 @@
             <return>const char*</return>
             <param><type>int</type><name>code</name></param>
         </function>
+        <endif/>
         <function name="bs_convertErrno">
             <return>bs_Result</return>
         </function>
@@ -3429,9 +3431,11 @@
         <function name="bs_executablePath">
             <return>bs_String*</return>
         </function>
+        <ifdef cond="_WIN32"/>
         <function name="bs_appdataPath">
             <return>char*</return>
         </function>
+        <endif/>
         <function name="bs_shortenString">
             <return>void</return>
             <param><type>bs_String*</type><name>string</name></param>
@@ -3648,12 +3652,16 @@
             <param><type>void*</type><name>data</name></param>
             <param><type>bs_U32</type><name>data_len</name></param>
         </variadicStringTemplate>
+        <ifdef cond="_WIN32"/>
         <variadicStringTemplate name="bs_convertWin32Path" string="path">
             <return>void</return>
         </variadicStringTemplate>
+        <endif/>
+        <!--
         <variadicStringTemplate name="bs_ensureDirectory" string="path">
             <return>bs_Result</return>
         </variadicStringTemplate>
+        -->
         <variadicStringTemplate name="bs_fileModifiedDate" string="path">
             <return>bs_Result</return>
             <param><type>bs_DateTime*</type><name>out</name></param>

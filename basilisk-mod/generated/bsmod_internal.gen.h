@@ -38,7 +38,6 @@
 #include <windows.h>
 #endif
 
-
 typedef bsgfx_InstanceSubtype**(* PFN_bsmod_subtypes)();
 typedef bsmod_Callbacks*(* PFN_bsmod_callbacks)();
 typedef void(* PFN_bsmod_copyHoveringDataToBuffer)();

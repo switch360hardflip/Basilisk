@@ -92,6 +92,10 @@ if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /wd6255 /wd4047 /wd4090 /wd4024 /wd4133)
 endif()
 
+if (UNIX)
+    add_compile_options(-Wno-discarded-qualifiers)
+endif()
+
 SET(COPY_BASILISK_GFX_DLL_DEBUG ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/build/basilisk-gfx/Debug/basilisk-gfx.dll" "${CMAKE_SOURCE_DIR}/build/${BS_APP_NAME}/Debug/")
 SET(COPY_BASILISK_GFX_DLL_RELEASE ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/build/basilisk-gfx/Release/basilisk-gfx.dll" "${CMAKE_SOURCE_DIR}/build/${BS_APP_NAME}/Release")
 SET(COPY_BASILISK_GFX_DLL_RELEASE_DEBUG ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/build/basilisk-gfx/RelWithDebInfo/basilisk-gfx.dll" "${CMAKE_SOURCE_DIR}/build/${BS_APP_NAME}/RelWithDebInfo")

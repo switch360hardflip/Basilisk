@@ -171,6 +171,7 @@ BSAPI bs_Result _preval_bs_convertVulkanResult(int code) {
     return next.bs_convertVulkanResult(code);
 }
 
+#ifdef _WIN32
 BSAPI bs_Result _preval_bs_convertWin32Error(int code) {
     return next.bs_convertWin32Error(code);
 }
@@ -179,6 +180,7 @@ BSAPI const char* _preval_bs_serializeWin32Error(int code) {
     return next.bs_serializeWin32Error(code);
 }
 
+#endif
 BSAPI bs_Result _preval_bs_convertErrno() {
     return next.bs_convertErrno();
 }
@@ -1627,10 +1629,12 @@ BSAPI bs_String* _preval_bs_executablePath() {
     return next.bs_executablePath();
 }
 
+#ifdef _WIN32
 BSAPI char* _preval_bs_appdataPath() {
     return next.bs_appdataPath();
 }
 
+#endif
 BSAPI void _preval_bs_shortenString(bs_String* string, int len) {
     BS_VALIDATE(string != NULL, ,);
     next.bs_shortenString(string, len);
@@ -1688,6 +1692,7 @@ BSAPI bs_U32 _preval_bs_alignUp(bs_U32 value, bs_U32 alignment) {
     return next.bs_alignUp(value, alignment);
 }
 
+#ifdef _WIN32
 BSAPI bs_Result _preval_bs_widen(char* src, wchar_t* dst, bs_U32 dst_size) {
     BS_VALIDATE(src != NULL, BS_RESULT_VALIDATION_ERROR,);
     BS_VALIDATE(dst != NULL, BS_RESULT_VALIDATION_ERROR,);
@@ -1700,6 +1705,7 @@ BSAPI bs_Result _preval_bs_unwiden(wchar_t* src, char* dst, bs_U32 dst_size) {
     return next.bs_unwiden(src, dst, dst_size);
 }
 
+#endif
 BSAPI char* _preval_bs_charStringV(const char* format, va_list args) {
     BS_VALIDATE(format != NULL, NULL,);
     return next.bs_charStringV(format, args);
@@ -1887,6 +1893,7 @@ BSAPI bs_Result _preval_bs_saveFileV(void* data, bs_U32 data_len, char* format, 
     return next.bs_saveFileV(data, data_len, format, args);
 }
 
+#ifdef _WIN32
 BSAPI void _preval_bs_convertWin32Path(char* path) {
     BS_VALIDATE(path != NULL, ,);
     next.bs_convertWin32Path(path);
@@ -1902,21 +1909,7 @@ BSAPI void _preval_bs_convertWin32PathV(char* format, va_list args) {
     next.bs_convertWin32PathV(format, args);
 }
 
-BSAPI bs_Result _preval_bs_ensureDirectory(char* path) {
-    BS_VALIDATE(path != NULL, BS_RESULT_VALIDATION_ERROR,);
-    return next.bs_ensureDirectory(path);
-}
-
-BSAPI bs_Result _preval_bs_ensureDirectoryN(char* path, int path_length) {
-    BS_VALIDATE(path != NULL, BS_RESULT_VALIDATION_ERROR,);
-    return next.bs_ensureDirectoryN(path, path_length);
-}
-
-BSAPI bs_Result _preval_bs_ensureDirectoryV(char* format, va_list args) {
-    BS_VALIDATE(format != NULL, BS_RESULT_VALIDATION_ERROR,);
-    return next.bs_ensureDirectoryV(format, args);
-}
-
+#endif
 BSAPI bs_Result _preval_bs_fileModifiedDate(bs_DateTime* out, char* path) {
     BS_VALIDATE(out != NULL, BS_RESULT_VALIDATION_ERROR,);
     BS_VALIDATE(path != NULL, BS_RESULT_VALIDATION_ERROR,);
@@ -2765,8 +2758,10 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_rgbToHsv = _preval_bs_rgbToHsv;
     functions.bs_convertYyjsonResult = _preval_bs_convertYyjsonResult;
     functions.bs_convertVulkanResult = _preval_bs_convertVulkanResult;
+#ifdef _WIN32
     functions.bs_convertWin32Error = _preval_bs_convertWin32Error;
     functions.bs_serializeWin32Error = _preval_bs_serializeWin32Error;
+#endif
     functions.bs_convertErrno = _preval_bs_convertErrno;
     functions.bs_serializeErrno = _preval_bs_serializeErrno;
     functions.bs_playSound = _preval_bs_playSound;
@@ -3012,7 +3007,9 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_setWorkingDirectoryN = _preval_bs_setWorkingDirectoryN;
     functions.bs_setWorkingDirectoryV = _preval_bs_setWorkingDirectoryV;
     functions.bs_executablePath = _preval_bs_executablePath;
+#ifdef _WIN32
     functions.bs_appdataPath = _preval_bs_appdataPath;
+#endif
     functions.bs_shortenString = _preval_bs_shortenString;
     functions.bs_appendChar = _preval_bs_appendChar;
     functions.bs_removeCharRange = _preval_bs_removeCharRange;
@@ -3024,8 +3021,10 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_strsep = _preval_bs_strsep;
     functions.bs_memmem = _preval_bs_memmem;
     functions.bs_alignUp = _preval_bs_alignUp;
+#ifdef _WIN32
     functions.bs_widen = _preval_bs_widen;
     functions.bs_unwiden = _preval_bs_unwiden;
+#endif
     functions.bs_charStringV = _preval_bs_charStringV;
     functions.bs_free = _preval_bs_free;
     functions.bs_malloc = _preval_bs_malloc;
@@ -3060,12 +3059,11 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_saveFile = _preval_bs_saveFile;
     functions.bs_saveFileN = _preval_bs_saveFileN;
     functions.bs_saveFileV = _preval_bs_saveFileV;
+#ifdef _WIN32
     functions.bs_convertWin32Path = _preval_bs_convertWin32Path;
     functions.bs_convertWin32PathN = _preval_bs_convertWin32PathN;
     functions.bs_convertWin32PathV = _preval_bs_convertWin32PathV;
-    functions.bs_ensureDirectory = _preval_bs_ensureDirectory;
-    functions.bs_ensureDirectoryN = _preval_bs_ensureDirectoryN;
-    functions.bs_ensureDirectoryV = _preval_bs_ensureDirectoryV;
+#endif
     functions.bs_fileModifiedDate = _preval_bs_fileModifiedDate;
     functions.bs_fileModifiedDateN = _preval_bs_fileModifiedDateN;
     functions.bs_fileModifiedDateV = _preval_bs_fileModifiedDateV;

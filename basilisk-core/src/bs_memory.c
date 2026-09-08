@@ -23,6 +23,7 @@
   SOFTWARE.
   */
 
+#include "basilisk-core.gen.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -826,13 +827,22 @@ end:
 
     return BS_RESULT_OK;
 }
+#endif
 
 BSAPI bs_Result _bs_foreachFileN(bs_ForeachDocumentFunction x, void* param, char* directory, int directory_length) {
+#ifdef _WIN32
     return _bs_iterateDocuments(true, x, param, directory, directory_length);
+#else
+    return BS_RESULT_NOT_IMPLEMENTED;
+#endif
 }
 
 BSAPI bs_Result _bs_foreachDirectoryN(bs_ForeachDocumentFunction x, void* param, char* directory, int directory_length) {
+#ifdef _WIN32
     return _bs_iterateDocuments(false, x, param, directory, directory_length);
+#else
+    return BS_RESULT_NOT_IMPLEMENTED;
+#endif
 }
 
  /**
@@ -844,30 +854,25 @@ static inline bs_Result _bs_increment(bs_FileInfo info, void* i) {
 }
 
 BSAPI int _bs_numFilesN(char* directory, int directory_length) {
+#ifdef _WIN32
     int i = 0;
     _bs_foreachFileN(_bs_increment, (void*)&i, directory, directory_length);
     return i;
+#else
+    return BS_RESULT_NOT_IMPLEMENTED;
+#endif
 }
 
 BSAPI int _bs_numDirectoriesN(char* directory, int directory_length) {
+#ifdef _WIN32
     int i = 0;
     _bs_foreachDirectoryN(_bs_increment, (void*)&i, directory, directory_length);
     return i;
-}
-
 #else
-
-BSAPI bs_Result _bs_foreachFileN(bs_ForeachDocumentFunction x, void* param, char* directory, int directory_length) {
-    bs_warnF("_bs_foreachFile not implemented on this platform");
     return BS_RESULT_NOT_IMPLEMENTED;
-}
-
-BSAPI bs_Result _bs_foreachDirectoryN(bs_ForeachDocumentFunction x, void* param, char* directory, int directory_length) {
-    _bs_warnF("_bs_foreachDirectory not implemented on this platform");
-    return BS_RESULT_NOT_IMPLEMENTED;
-}
-
 #endif
+}
+
 
    /**
     Document information
@@ -1081,6 +1086,8 @@ BSAPI bs_Result _bs_setWorkingDirectoryN(char* path, int path_length) {
         BS_WARN_WIN32_PATH("SetCurrentDirectory", path);
         return _bs_convertWin32Error(GetLastError());
     }
+
+    _bs_findRelativePath();
 #else
     if (chdir(path) != 0) {
         BS_WARN_ERRNO_PATH("chdir", path);
@@ -1088,7 +1095,8 @@ BSAPI bs_Result _bs_setWorkingDirectoryN(char* path, int path_length) {
     }
 #endif
 
-    _bs_findRelativePath();
+ _bs_findRelativePath();
+
     return BS_RESULT_OK;
 }
 
@@ -1438,14 +1446,15 @@ BSAPI bs_F64 _bs_toDouble(const char *str) {
    *============================================================================*/
 
 #ifdef _WIN32
-
 BSAPI void _bs_convertWin32PathN(char* path, int len) {
     for (int i = 0; i < len; i++)
         path[i] = path[i] == '/' ? '\\' : path[i];
 }
+#endif
 
 // todo document that this will alter the path from / to \\ for win32
 // todo document limits
+/*
 BSAPI bs_Result _bs_ensureDirectoryN(char* path, int path_length) {
     _bs_convertWin32PathN(path, path_length);
     DWORD file_attributes = GetFileAttributes(path);
@@ -1481,8 +1490,10 @@ BSAPI bs_Result _bs_ensureDirectoryN(char* path, int path_length) {
 
     return BS_RESULT_OK;
 }
+*/
 
 void _bs_findExecutablePaths() {
+    #ifdef _WIN32
     char executable_path[MAX_PATH];
     int len = GetModuleFileName(NULL, executable_path, MAX_PATH);
 
@@ -1505,9 +1516,14 @@ void _bs_findExecutablePaths() {
     len -= len - i - 1;
     _bs_instance_->executable->len = len;
     _bs_infoF("Executable path = (\"%s\")", exe_path);
+    #else
+    // TODO
+    //readlink("/proc/self/exe");
+    #endif
 }
 
 BSAPI void _bs_findRelativePath() {
+    #ifdef _WIN32
     char path[MAX_PATH]; // todo check if this can be more than max path
     int len = GetCurrentDirectory(MAX_PATH, path);
     if (len == 0) {
@@ -1520,8 +1536,19 @@ BSAPI void _bs_findRelativePath() {
         char c = _bs_instance_->cwd->value[i];
         _bs_instance_->cwd->value[i] = c == '\\' ? '/' : c;
     }
+    #else
+    char* path = getcwd(path, sizeof(path));
+
+    if (!path) {
+        BS_WARN_ERRNO_PATH("getcwd", path);
+        return;
+    }
+    int len = (int)strlen(path);
+    _bs_instance_->cwd = _bs_stringN(NULL, path, len);
+    #endif
 }
 
+#ifdef _WIN32
 BSAPI char* _bs_appdataPath() {
     if (_bs_instance_->appdata)
         return _bs_instance_->appdata->value;
@@ -1543,8 +1570,7 @@ BSAPI char* _bs_appdataPath() {
 
     return _bs_instance_->appdata->value;
 }
-
-#endif _WIN32
+#endif
 
 
   /*==============================================================================

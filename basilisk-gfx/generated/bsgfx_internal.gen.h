@@ -38,7 +38,6 @@
 #include <windows.h>
 #endif
 
-
 typedef void(* PFN_bsgfx_test)();
 typedef bsgfx_InstanceSubtype**(* PFN_bsgfx_subtypes)();
 typedef bsgfx_InstanceType**(* PFN_bsgfx_instanceTypes)();

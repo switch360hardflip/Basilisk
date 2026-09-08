@@ -1,19 +1,19 @@
 
  /**
   MIT License
-  
+
   Copyright (c) 2026 switch360hardflip <switch360hardflip@gmail.com>
-  
+
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
   in the Software without restriction, including without limitation the rights
   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
   copies of the Software, and to permit persons to whom the Software is
   furnished to do so, subject to the following conditions:
-  
+
   The above copyright notice and this permission notice shall be included in all
   copies or substantial portions of the Software.
-  
+
   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,8 +21,9 @@
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
-  */ 
+  */
 
+#include "basilisk-core.gen.h"
 #include <basilisk-core.h>
 #include <bs_internal.h>
 
@@ -80,9 +81,10 @@ IXAudio2* px_audio_2 = NULL;
     #define XAUDIO2_DLL XAUDIO2_DLL_A
     #define XAUDIO2D_DLL XAUDIO2D_DLL_A
 #endif
-
+#endif
 
 BSAPI bs_Result _bs_playSound(bs_Sound* sound, float volume) {
+    #ifdef _WIN32
     IXAudio2SourceVoice* voice = sound->xaudio;
 
     if (volume > max_volume) volume = max_volume;
@@ -100,6 +102,7 @@ BSAPI bs_Result _bs_playSound(bs_Sound* sound, float volume) {
     voice->lpVtbl->Start(voice, 0, 0);
 
     return BS_RESULT_OK;
+    #endif
 }
 
 BSAPI bs_Result _val_bs_playSound(bs_Sound* sound, float volume) {
@@ -108,6 +111,7 @@ BSAPI bs_Result _val_bs_playSound(bs_Sound* sound, float volume) {
     return _bs_playSound(sound, volume);
 }
 
+#ifdef _WIN32
 static bs_Result _bs_findAudioChunk(
     HANDLE file_handle, DWORD four_cc,
     DWORD* dw_chunk_size, DWORD* dw_chunk_data_position)
@@ -173,6 +177,7 @@ static bs_Result _bs_readAudioChunk(
 
     return BS_RESULT_OK;
 }
+#endif
 
 BSAPI bs_Result _bs_sound(bs_Resource* resource, bs_U32 flags) {
     /*
@@ -226,6 +231,7 @@ BSAPI bs_Result _bs_sound(bs_Resource* resource, bs_U32 flags) {
 }
 
 BSAPI bs_Result _bs_iniAudio() {
+    #ifdef _WIN32
     HRESULT result = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     IXAudio2MasteringVoice* master_voice = NULL;
 
@@ -244,7 +250,7 @@ BSAPI bs_Result _bs_iniAudio() {
     audio_initialized = true;
 
     return BS_RESULT_OK;
-}
+    #endif
 
-#else
-#endif
+    return BS_RESULT_NOT_IMPLEMENTED;
+}

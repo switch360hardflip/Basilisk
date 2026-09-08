@@ -60,6 +60,8 @@ void _bs_writeLogFileF(
     va_end(args);
 }
 
+#ifdef _WIN32
+#endif
 void _bs_beginComment(
     bs_Queue* queue, 
     char* value)
@@ -662,6 +664,10 @@ bs_Result _bs_setWorkingDirectoryF(
     return _return;
 }
 
+#ifdef _WIN32
+#endif
+#ifdef _WIN32
+#endif
 char* _bs_charStringF(
     const char* format, 
      ...)
@@ -766,6 +772,7 @@ bs_Result _bs_saveFileF(
     return _return;
 }
 
+#ifdef _WIN32
 void _bs_convertWin32Path(
     char* path)
 {
@@ -792,33 +799,7 @@ void _bs_convertWin32PathF(
     va_end(args);
 }
 
-bs_Result _bs_ensureDirectory(
-    char* path)
-{
-    return _bs_ensureDirectoryN(path, strlen(path));
-}
-
-bs_Result _bs_ensureDirectoryV(
-    char* format, 
-    va_list args)
-{
-    int _length = bs_formatStringLength(format, args);
-    char* _formatted = bs_alloca(_length + 1);
-    vsnprintf(_formatted, _length + 1, format, args);
-    return _bs_ensureDirectoryN(_formatted, _length);
-}
-
-bs_Result _bs_ensureDirectoryF(
-    char* format, 
-    ...)
-{
-    va_list args;
-    va_start(args, format);
-    bs_Result _return = _bs_ensureDirectoryV(format, args);
-    va_end(args);
-    return _return;
-}
-
+#endif
 bs_Result _bs_fileModifiedDate(
     bs_DateTime* out, 
     char* path)

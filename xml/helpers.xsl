@@ -64,8 +64,11 @@
 		<xsl:value-of select="registry/functionPrefix"/>
 		<xsl:text>FunctionTable functions;&#xA;&#xA;</xsl:text>
 
-		<xsl:for-each select="registry/functions/function">
-			<xsl:if test="not(body) or @type = 'allowBody'">
+		<xsl:for-each select="registry/functions/*">
+		    <xsl:if test="self::define | self::ifdef | self::ifndef | self::elifdef | self::else | self::endif">
+				<xsl:call-template name="addDirectives"/>
+			</xsl:if>
+			<xsl:if test="self::function and not(body) or @type = 'allowBody'">
 				<xsl:text>    functions.</xsl:text>
 				<xsl:value-of select="@name"/>
 				<xsl:text> = </xsl:text>
@@ -112,8 +115,11 @@
 
         <xsl:text>#endif&#xA;</xsl:text>
 
-        <xsl:for-each select="registry/functions/function">
-			<xsl:if test="not(body) and not(@variadic)">
+        <xsl:for-each select="registry/functions/*">
+      		<xsl:if test="self::define | self::ifdef | self::ifndef | self::elifdef | self::else | self::endif">
+				<xsl:call-template name="addDirectives"/>
+			</xsl:if>
+			<xsl:if test="self::function and not(body) and not(@variadic)">
                 <xsl:text>    functions.</xsl:text>
                 <xsl:value-of select="@name"/>
                 <xsl:text> = (PFN_</xsl:text>

@@ -1,14 +1,6 @@
 # Basilisk
 
-Need to:
-
-- [x] Replace shitty in house math library with cglm
-- [x] Error system rebuild (validation layer project)
-- [ ] Get demos running (test project)
-- [x] Code generation project
-- [ ] Bootstrapping project
-
-After that, engine should be working again
+Linux glslang build: cmake -S . -B build -DENABLE_OPT=OFF
 
 # Attribution
 

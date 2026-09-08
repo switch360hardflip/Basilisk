@@ -76,8 +76,10 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_rgbToHsv = (PFN_bs_rgbToHsv)bs_getProcAddress(module, "_preval_bs_rgbToHsv");
     functions.bs_convertYyjsonResult = (PFN_bs_convertYyjsonResult)bs_getProcAddress(module, "_preval_bs_convertYyjsonResult");
     functions.bs_convertVulkanResult = (PFN_bs_convertVulkanResult)bs_getProcAddress(module, "_preval_bs_convertVulkanResult");
+#ifdef _WIN32
     functions.bs_convertWin32Error = (PFN_bs_convertWin32Error)bs_getProcAddress(module, "_preval_bs_convertWin32Error");
     functions.bs_serializeWin32Error = (PFN_bs_serializeWin32Error)bs_getProcAddress(module, "_preval_bs_serializeWin32Error");
+#endif
     functions.bs_convertErrno = (PFN_bs_convertErrno)bs_getProcAddress(module, "_preval_bs_convertErrno");
     functions.bs_serializeErrno = (PFN_bs_serializeErrno)bs_getProcAddress(module, "_preval_bs_serializeErrno");
     functions.bs_playSound = (PFN_bs_playSound)bs_getProcAddress(module, "_preval_bs_playSound");
@@ -283,7 +285,9 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_workingDirectory = (PFN_bs_workingDirectory)bs_getProcAddress(module, "_preval_bs_workingDirectory");
     functions.bs_setWorkingDirectory = (PFN_bs_setWorkingDirectory)bs_getProcAddress(module, "_preval_bs_setWorkingDirectory");
     functions.bs_executablePath = (PFN_bs_executablePath)bs_getProcAddress(module, "_preval_bs_executablePath");
+#ifdef _WIN32
     functions.bs_appdataPath = (PFN_bs_appdataPath)bs_getProcAddress(module, "_preval_bs_appdataPath");
+#endif
     functions.bs_shortenString = (PFN_bs_shortenString)bs_getProcAddress(module, "_preval_bs_shortenString");
     functions.bs_appendChar = (PFN_bs_appendChar)bs_getProcAddress(module, "_preval_bs_appendChar");
     functions.bs_removeCharRange = (PFN_bs_removeCharRange)bs_getProcAddress(module, "_preval_bs_removeCharRange");
@@ -295,8 +299,10 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_strsep = (PFN_bs_strsep)bs_getProcAddress(module, "_preval_bs_strsep");
     functions.bs_memmem = (PFN_bs_memmem)bs_getProcAddress(module, "_preval_bs_memmem");
     functions.bs_alignUp = (PFN_bs_alignUp)bs_getProcAddress(module, "_preval_bs_alignUp");
+#ifdef _WIN32
     functions.bs_widen = (PFN_bs_widen)bs_getProcAddress(module, "_preval_bs_widen");
     functions.bs_unwiden = (PFN_bs_unwiden)bs_getProcAddress(module, "_preval_bs_unwiden");
+#endif
     functions.bs_charStringV = (PFN_bs_charStringV)bs_getProcAddress(module, "_preval_bs_charStringV");
     functions.bs_free = (PFN_bs_free)bs_getProcAddress(module, "_preval_bs_free");
     functions.bs_malloc = (PFN_bs_malloc)bs_getProcAddress(module, "_preval_bs_malloc");
@@ -325,8 +331,9 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_fileName = (PFN_bs_fileName)bs_getProcAddress(module, "_preval_bs_fileName");
     functions.bs_appendFile = (PFN_bs_appendFile)bs_getProcAddress(module, "_preval_bs_appendFile");
     functions.bs_saveFile = (PFN_bs_saveFile)bs_getProcAddress(module, "_preval_bs_saveFile");
+#ifdef _WIN32
     functions.bs_convertWin32Path = (PFN_bs_convertWin32Path)bs_getProcAddress(module, "_preval_bs_convertWin32Path");
-    functions.bs_ensureDirectory = (PFN_bs_ensureDirectory)bs_getProcAddress(module, "_preval_bs_ensureDirectory");
+#endif
     functions.bs_fileModifiedDate = (PFN_bs_fileModifiedDate)bs_getProcAddress(module, "_preval_bs_fileModifiedDate");
     functions.bs_setFileModifiedDate = (PFN_bs_setFileModifiedDate)bs_getProcAddress(module, "_preval_bs_setFileModifiedDate");
     functions.bs_fullPath = (PFN_bs_fullPath)bs_getProcAddress(module, "_preval_bs_fullPath");
