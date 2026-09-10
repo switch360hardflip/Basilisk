@@ -1935,7 +1935,6 @@
          <structure name="bs_Context">
             <field><type>bs_Header</type><name>head</name></field>
             <field><type>const char*</type><name>title</name></field>
-            <field><type>void*</type><name>hwnd</name></field>
             <field><type>bs_Timer</type><name>timer</name></field>
             <field><type>bs_ivec2</type><name>dimensions</name></field>
             <field><type>bs_Callback</type><name>destroy</name></field>
@@ -1965,8 +1964,27 @@
 
             <field><type>bs_IO</type><name>io</name></field>
 
+	 		<ifdef cond="_WIN32"/>
+	 			<field><type>void*</type><name>hwnd</name></field>
+		 	<endif/>
+
+			<ifdef cond="__linux__"/>
+			 <field><type>void*</type><name>display</name></field>
+			 <field><type>void*</type><name>registry</name></field>
+			 <field><type>void*</type><name>compositor</name></field>
+			 <field><type>void*</type><name>wm_base</name></field>
+			 <field><type>void*</type><name>decoration_manager</name></field>
+			 <field><type>void*</type><name>viewporter</name></field>
+			 <field><type>void*</type><name>single_pixel_buffer_manager</name></field>
+
+			 <field><type>void*</type><name>_wl_surface</name></field>
+			 <field><type>void*</type><name>xdg_surface</name></field>
+			 <field><type>void*</type><name>xdg_toplevel</name></field>
+			 <field><type>void*</type><name>viewport</name></field>
+			 <field><type>void*</type><name>buffer</name></field>
+			<endif/>
             <structure instance="_[]">
-                <field><type>struct VkSemaphore_T*</type><name>semaphore</name></field>
+				<field><type>struct VkSemaphore_T*</type><name>semaphore</name></field>
             </structure>
         </structure>
 		<structure name="bs_Scope">

@@ -141,8 +141,8 @@ BSGFXAPI void _bsgfx_ini(const char* name, bs_U32 width, bs_U32 height, bs_U32 w
 
     bs_parseArgs(argc, argv);
 
-#ifdef _DEBUG
-    const char* args[] = { "--use-validation-layers", "--track-changes"};
+#ifndef NDEBUG
+	char* args[] = { "--use-validation-layers", "--track-changes"};
     bs_parseArgs(sizeof(args) / sizeof(char*), args);
 #endif
 

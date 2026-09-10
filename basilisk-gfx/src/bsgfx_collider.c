@@ -110,7 +110,7 @@ static bool _bsgfx_descendSlopeRayCast(
 	if (!result.hit)
 		return false;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 	if (result.normal.x == 0.0 && result.normal.y == 0.0 && result.normal.z == 0.0)
 		bs_warnF("Normal is 0, 0, 0");
 #endif
@@ -165,7 +165,7 @@ static float _bsgfx_applyCollisionRaycast(bsgfx_Collider* collider, bs_vec3* vel
 		if (collider->collision & BSGFX_COLLISION_SLOPE) {
 			float tx = bs_tan(collider->angle) * (float)bs_sign(velocity->x);
 			float tz = bs_tan(collider->angle) * (float)bs_sign(velocity->z);
-#ifdef _DEBUG
+#ifndef NDEBUG
 			if (tx == 0.0 || tz == 0.0)
 				bs_warnF("Division by 0\n");
 #endif
@@ -350,7 +350,7 @@ static void _bsgfx_applySecondarySlopeRaycast(
 	if (!result.hit)
 		return;
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 	if (result.normal.x == 0.0 && result.normal.y == 0.0 && result.normal.z == 0.0)
 		bs_warnF("Normal is 0, 0, 0");
 #endif
@@ -360,7 +360,7 @@ static void _bsgfx_applySecondarySlopeRaycast(
 		return;
 
 	float angle = bs_v3Angle(&result.normal, &BS_V3(0, 1, 0));
-#ifdef _DEBUG
+#ifndef NDEBUG
 	if (angle == 0.0)
 		bs_warnF("Angle is 0");
 #endif

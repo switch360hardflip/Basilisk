@@ -26,6 +26,10 @@ add_executable(${PROJECT_NAME}
     ${FS_SHADER_FILES}
 )
 
+if (DEBUG_LEVEL)
+    add_compile_definitions(_DEBUG)
+endif()
+
 set_property(TARGET ${PROJECT_NAME}
     PROPERTY VS_DEBUGGER_WORKING_DIRECTORY
     "${CMAKE_SOURCE_DIR}/build/${PROJECT_NAME}/$<CONFIG>"
@@ -129,6 +133,7 @@ set(RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE
     "${CMAKE_CURRENT_BINARY_DIR}/Release/content"
 )
 
+if (WIN32)
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND "$<$<CONFIG:Debug>:${PROJECT_LINK}>" COMMENT "POST_BUILD: Creating junction to /"
@@ -152,3 +157,4 @@ add_custom_command(
     COMMAND_EXPAND_LISTS
     CONFIGURATIONS RelWithDebInfo
 )
+endif()

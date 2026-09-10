@@ -30,14 +30,14 @@
 #include <assert.h>
 
 /*
-#ifdef _DEBUG
+#ifndef NDEBUG
 #include <GFSDK_Aftermath_GpuCrashDump.h>
 #endif
 */
 
 void _bsgfx_onDeviceLost() {
     /*
-#ifdef _DEBUG
+#ifndef NDEBUG
     GFSDK_Aftermath_CrashDump_Status status = 0;
     _bsgfx_checkGFSDK(GFSDK_Aftermath_GetCrashDumpStatus(&status));
 

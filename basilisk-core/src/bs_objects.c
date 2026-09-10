@@ -245,7 +245,7 @@ BSAPI bs_Result _bs_loadPackageN(int* out, char* path, int path_length) {
         bs_I32 name_length = bs_getLittleEndian32(resource_types_offset + BPAK_OFFSET_RESOURCE_NAME_LENGTH);
         bs_I32 type = bs_getLittleEndian32(resource_types_offset + BPAK_OFFSET_RESOURCE_TYPE);
 
-#ifdef _DEBUG
+#ifndef NDEBUG
         if (chunk < 0 || offset < 0 || size < 0 || name_length < 0 || type < 0) {
             bs_warnF("%s at %s:%d: Corrupted resource (%d) in package \"%s\"", __func__, __FILE__, __LINE__, i, path); // TODO: warn macro
             return BS_RESULT_CORRUPTED;

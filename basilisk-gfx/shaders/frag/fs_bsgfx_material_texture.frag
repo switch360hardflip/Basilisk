@@ -9,7 +9,7 @@ layout (location = BSGFX_LO_SUBPASS_0_OUT_NORMAL) out vec4 out_normal;
 layout (location = BSGFX_LO_SUBPASS_0_OUT_INDEX) out uint out_index;
 layout (location = BSGFX_LO_SUBPASS_0_OUT_FLAGS) out uint out_flags;
 layout (location = BSGFX_LO_SUBPASS_0_OUT_POSITION) out vec4 out_position;
-#ifdef _DEBUG
+#ifndef NDEBUG
 layout (location = BSGFX_LO_SUBPASS_0_OUT_POSITION_LOCAL) out vec4 out_local_position;
 #endif
 

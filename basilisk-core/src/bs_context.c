@@ -42,6 +42,12 @@
 #define VK_USE_PLATFORM_WAYLAND_KHR
 #include <vulkan.h>
 
+#include <wayland-client.h>
+#include <xdg-shell.h>
+#include <xdg-decoration-unstable-v1.h>
+#include <viewporter.h>
+#include <single-pixel-buffer-v1.h>
+
 #endif
 
 #include <vulkan.h>
@@ -198,7 +204,7 @@ static void _bs_readQueueFamilies(bs_PhysicalDevice* physical_device, VkSurfaceK
 static void _bs_readSurfaceFormats(bs_PhysicalDevice* physical_device, VkSurfaceKHR surface) {
     VkResult result;
 
-    bs_U32 surface_formats_count;
+    bs_U32 surface_formats_count = 0;
     result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device->vk_device, surface, &surface_formats_count, NULL);
     if (result != VK_SUCCESS) {
         BS_CRITICAL_VULKAN_ERROR("vkGetPhysicalDeviceSurfaceFormatsKHR", result, "");
@@ -234,7 +240,7 @@ static void _bs_readSurfaceFormats(bs_PhysicalDevice* physical_device, VkSurface
 static void _bs_preparePhysicalDevice(bs_Context* context) {
     VkResult result;
 
-    bs_U32 num_devices = 0;
+    bs_U32 num_devices;
     vkEnumeratePhysicalDevices(_bs_instance_->instance, &num_devices, NULL);
     if (num_devices == 0) {
         _bs_criticalN(BS_CONSTANT_STRING("No GPU with Vulkan support was found"));
@@ -348,7 +354,7 @@ static void _bs_prepareLogicalDevice(bs_PhysicalDevice* physical_device) {
        // "VK_KHR_get_physical_device_properties2",
         "VK_KHR_shader_float_controls",
         "VK_KHR_spirv_1_4",
-#ifdef _DEBUG
+#ifndef NDEBUG
       //  "VK_NV_device_diagnostics_config"
       //  "VK_NV_ray_tracing_validation",
 #endif
@@ -741,7 +747,7 @@ BSAPI void _bs_advance() {
 }
 
 BSAPI double _bs_deltaTime() {
-//#ifdef _DEBUG
+//#ifndef NDEBUG
 //	if (_bs_wnd.delta_time == 0.0)
 //		_bs_throwBasiliskF(BSX_GENERAL, "Delta time is 0.0"); // some bug is ruining my life
 //#endif
@@ -1392,6 +1398,8 @@ BSAPI void _bs_moveWindow(bs_Context* context, int x, int y) {
 	#endif
 }
 
+void _test(bs_Context* context, const char* title);
+
 BSAPI bs_Result _bs_window(
     bs_Context* context,
     bs_Context* parent,
@@ -1411,6 +1419,8 @@ BSAPI bs_Result _bs_window(
 
     bs_Timer timer = _bs_timer();
     _bs_setTargetFramerate(120);
+
+    _test(context, title);
 
     #ifdef _WIN32
     const char* class_name = title;
@@ -1496,7 +1506,11 @@ BSAPI bs_Result _bs_window(
     HDC hdc = GetDC(context->hwnd);
     int pixel_format = ChoosePixelFormat(hdc, &pixel_format_descriptor);
     SetPixelFormat(hdc, pixel_format, &pixel_format_descriptor);
-#endif
+    #elif defined __linux__
+
+
+
+    #endif
 
     _bs_createSurface();
 
@@ -1550,4 +1564,130 @@ BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
     _bs_queryProcedures(procedures, sizeof(procedures) / sizeof(*procedures), 0, &_bs_procs_);
 
     _bs_scope_.context = NULL;
+}
+
+
+
+  /*==============================================================================
+   * Wayland
+   *============================================================================*/
+
+ /**
+  Base Listener
+  */
+static void _bs_onPing(void* data, struct xdg_wm_base* xdg_wm_base, uint32_t serial) {
+    bs_Context* context = data;
+
+    xdg_wm_base_pong(xdg_wm_base, serial);
+}
+
+static struct xdg_wm_base_listener _bs_xdg_wm_base_listener_ = {
+    .ping = _bs_onPing,
+};
+
+ /**
+  Registry Listener
+  */
+static void _bs_onGlobal(void* data, struct wl_registry *wl_registry, uint32_t name, const char* interface, uint32_t version) {
+    bs_Context* context = data;
+
+    if (strcmp(interface, wl_compositor_interface.name) == 0)
+        context->compositor = wl_registry_bind(wl_registry, name, &wl_compositor_interface, version);
+    else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
+        context->wm_base = wl_registry_bind(wl_registry, name, &xdg_wm_base_interface, version);
+        xdg_wm_base_add_listener(context->wm_base, &_bs_xdg_wm_base_listener_, context);
+    }
+    else if (strcmp(interface, zxdg_decoration_manager_v1_interface.name) == 0)
+        context->decoration_manager = wl_registry_bind(wl_registry, name, &zxdg_decoration_manager_v1_interface, version);
+    else if (strcmp(interface, wp_viewporter_interface.name) == 0)
+        context->viewporter = wl_registry_bind(wl_registry, name, &wp_viewporter_interface, version);
+    else if (strcmp(interface, wp_single_pixel_buffer_manager_v1_interface.name) == 0)
+        context->single_pixel_buffer_manager = wl_registry_bind(wl_registry, name, &wp_single_pixel_buffer_manager_v1_interface, version);
+}
+
+static void _bs_onGlobalRemove(void* data, struct wl_registry* wl_registry, uint32_t name) {
+}
+
+static struct wl_registry_listener _bs_registry_listener_ = {
+    .global = _bs_onGlobal,
+    .global_remove = _bs_onGlobalRemove,
+};
+
+ /**
+  Toplevel Listener
+  */
+static void _bs_onToplevelConfigure(void* data, struct xdg_toplevel* xdg_toplevel, int32_t width, int32_t height, struct wl_array* states) {
+    bs_Context* context = data;
+    if (width == 0)
+        context->dimensions.x = width;
+    if (height == 0)
+        context->dimensions.y = height;
+}
+
+static void _bs_onClose(void* data, struct xdg_toplevel* xdg_toplevel) {
+    bs_Context* context = data;
+    // context->close = true;
+}
+
+static void _bs_onConfigureBounds(void* data, struct xdg_toplevel* xdg_toplevel, int32_t width, int32_t height) {
+    bs_Context* context = data;
+}
+
+static void _bs_onWmCapabilities(void* data, struct xdg_toplevel* xdg_toplevel, struct wl_array* capabilities) {
+    bs_Context* context = data;
+}
+
+static struct xdg_toplevel_listener _bs_toplevel_listener_ = {
+    .configure = _bs_onToplevelConfigure,
+    .close = _bs_onClose,
+    .configure_bounds = _bs_onConfigureBounds,
+    .wm_capabilities = _bs_onWmCapabilities,
+};
+
+ /**
+  XDG Surface Listener
+  */
+
+static void _bs_onConfigureSurfaceListener(void* data, struct xdg_surface* xdg_surface, uint32_t serial) {
+    bs_Context* context = data;
+
+    xdg_surface_ack_configure(xdg_surface, serial);
+    wl_surface_attach(context->_wl_surface, context->buffer, 0, 0);
+    wl_surface_damage_buffer(context->_wl_surface, 0, 0, context->dimensions.x, context->dimensions.y);
+    wl_surface_commit(context->_wl_surface);
+}
+static struct xdg_surface_listener _bs_surface_listener_ = {
+    .configure = _bs_onConfigureSurfaceListener,
+};
+
+void _test(bs_Context* context, const char* title) {
+    context->display = wl_display_connect(NULL);
+    if (!context->display) {
+    	printf("%d\n", errno);
+        BS_WARN_ERRNO_PATH("wl_display_connect", title);
+        return;
+    }
+
+    context->registry = wl_display_get_registry(context->display);
+
+    wl_registry_add_listener(context->registry, &_bs_registry_listener_, context);
+    wl_display_roundtrip(context->display);
+
+    context->buffer = wp_single_pixel_buffer_manager_v1_create_u32_rgba_buffer(context->single_pixel_buffer_manager, 0, 0, 0, 0);
+
+    context->_wl_surface = wl_compositor_create_surface(context->compositor);
+    context->xdg_surface = xdg_wm_base_get_xdg_surface(context->wm_base, context->_wl_surface);
+
+    xdg_surface_add_listener(context->xdg_surface, &_bs_surface_listener_, context);
+
+    context->xdg_toplevel = xdg_surface_get_toplevel(context->xdg_surface);
+
+    xdg_toplevel_add_listener(context->xdg_surface, &_bs_toplevel_listener_, context);
+    xdg_toplevel_set_title(context->xdg_toplevel, title);
+
+    wl_surface_commit(context->_wl_surface);
+
+    while (1) {
+        wl_display_dispatch(context->display);
+    }
 }

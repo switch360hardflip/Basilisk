@@ -11,21 +11,32 @@ file(GLOB_RECURSE SOURCE_FILES "src/*.c")
 file(GLOB_RECURSE HEADER_FILES "include/*.h")
 file(GLOB_RECURSE GENERATED_FILES "generated/*.*")
 
-add_library(${PROJECT_NAME} SHARED
-    ${LODEPNG_FILES}
-    ${YYJSON_FILES}
-    ${SOURCE_FILES}
-    ${HEADER_FILES}
-    ${GENERATED_FILES}
-)
+if (WIN32)
+    add_library(${PROJECT_NAME} SHARED
+        ${LODEPNG_FILES}
+        ${YYJSON_FILES}
+        ${SOURCE_FILES}
+        ${HEADER_FILES}
+        ${GENERATED_FILES}
+    )
+elseif (UNIX)
+    file(GLOB_RECURSE XDG_FILES "${CMAKE_SOURCE_DIR}/external/wayland/*.c")
 
-if (UNIX)
+    add_library(${PROJECT_NAME} SHARED
+        ${LODEPNG_FILES}
+        ${YYJSON_FILES}
+        ${SOURCE_FILES}
+        ${HEADER_FILES}
+        ${GENERATED_FILES}
+        ${XDG_FILES}
+    )
+
     add_definitions(-W)
 
     target_compile_options(${PROJECT_NAME} PRIVATE
-        -Wno-discarded-qualifiers
-        -Wdiscarded-array-qualifiers
-        -Wsign-compare
+            -Wno-discarded-qualifiers
+            -Wdiscarded-array-qualifiers
+            -Wsign-compare
     )
 endif()
 
@@ -43,6 +54,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/external/cglm-0.9.6/include
     ${CMAKE_SOURCE_DIR}/external/vulkan
 )
+
+if (UNIX)
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/wayland
+    )
+endif()
+
 
 target_link_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/external/
@@ -68,6 +86,7 @@ if (UNIX)
         vulkan
         dl
         uuid
+        wayland-client
     )
 endif ()
 

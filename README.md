@@ -1,5 +1,7 @@
 # Basilisk
 
+apt-get install libwayland-dev
+
 Linux glslang build: cmake -S . -B build -DENABLE_OPT=OFF
 
 # Attribution

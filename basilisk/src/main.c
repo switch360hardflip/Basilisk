@@ -126,7 +126,7 @@ static void onLog(const bs_LogQueueItem* item) {
 		[BS_MESSAGE_VALIDATION_ERROR] = "[VALIDATION]",
 	};
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 	static const char* levels_color[BS_MESSAGE_LEVELS_COUNT] = {
 		[BS_MESSAGE_INFO] = BS_PRINT_COLOR("[INFO]", BS_PRINT_CYAN),
 		[BS_MESSAGE_WARNING] = BS_PRINT_COLOR("[WARNING]", BS_PRINT_YELLOW),
@@ -141,11 +141,19 @@ static void onLog(const bs_LogQueueItem* item) {
 	if (item->function) {
 		printf("    at %s at %s:%d\n", item->function, item->file, item->line);
 	}
+
+	if (item->code != 0) {
+		printf("    code: %d\n", item->code);
+	}
 #endif
 
 	bs_writeLogFileF("%s %s [%d] %s\n", libraries[item->library], levels[item->level], item->thread_id, item->message);
 	if (item->function) {
 		bs_writeLogFileF("    at %s at %s:%d\n", item->function, item->file, item->line);
+	}
+
+	if (item->code != 0) {
+		bs_writeLogFileF("    code: %d\n", item->code);
 	}
 }
 

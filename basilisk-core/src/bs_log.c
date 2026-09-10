@@ -135,6 +135,7 @@ BSAPI void _bs_writeLogger(
         .function = function,
         .file = file,
         .line = line,
+        .code = code,
 #ifdef _WIN32
         .thread_id = thrd_current()._Tid,
 #else

@@ -3261,7 +3261,6 @@ struct bs_PhysicalDevice {
 struct bs_Context {
     bs_Header head;
     const char* title;
-    void* hwnd;
     bs_Timer timer;
     bs_ivec2 dimensions;
     bs_Callback destroy;
@@ -3286,6 +3285,23 @@ struct bs_Context {
     bs_Object* swapchain_image;
     struct VkSwapchainKHR_T* swapchain;
     bs_IO io;
+#ifdef _WIN32
+    void* hwnd;
+#endif
+#ifdef __linux__
+    void* display;
+    void* registry;
+    void* compositor;
+    void* wm_base;
+    void* decoration_manager;
+    void* viewporter;
+    void* single_pixel_buffer_manager;
+    void* _wl_surface;
+    void* xdg_surface;
+    void* xdg_toplevel;
+    void* viewport;
+    void* buffer;
+#endif
     struct {
         struct VkSemaphore_T* semaphore;
     }_[];
