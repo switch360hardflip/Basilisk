@@ -23,6 +23,9 @@
   SOFTWARE.
   */
 
+#include <stdlib.h>
+#include <unistd.h>
+
 #include "basilisk-core.gen.h"
 #ifdef _WIN32
 #include <windows.h>
@@ -63,7 +66,7 @@ static void _bs_createSurface() {
 
     #ifdef _WIN32
     if (_bs_instance_->extensions.surface_type == BS_SURFACE_TYPE_WIN32) {
-        VkWin32SurfaceCreateInfoKHR ci = {
+        const VkWin32SurfaceCreateInfoKHR ci = {
             .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
             .hinstance = GetModuleHandle(0),
             .hwnd = _bs_scope_.context->hwnd,
@@ -73,9 +76,16 @@ static void _bs_createSurface() {
     }
     #elif defined(__linux__)
     if (_bs_instance_->extensions.surface_type == BS_SURFACE_TYPE_WAYLAND) {
-        VkWaylandSurfaceCreateInfoKHR ci = {
+        const VkWaylandSurfaceCreateInfoKHR ci = {
             .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
+            .display = _bs_scope_.context->display,
+            .surface = _bs_scope_.context->_wl_surface,
         };
+
+        if (!_bs_scope_.context->display) {
+            BS_WARN("Cannot create Wayland surface for context \"%s\", display is NULL", _bs_scope_.context->title);
+            return;
+        }
 
         result = vkCreateWaylandSurfaceKHR(_bs_instance_->instance, &ci, NULL, &_bs_scope_.context->surface);
     }
@@ -83,7 +93,7 @@ static void _bs_createSurface() {
     if (0) { }
     #endif
     else if (_bs_instance_->extensions.surface_type == BS_SURFACE_TYPE_HEADLESS) {
-        VkHeadlessSurfaceCreateInfoEXT ci = {
+        const VkHeadlessSurfaceCreateInfoEXT ci = {
             .sType = VK_STRUCTURE_TYPE_HEADLESS_SURFACE_CREATE_INFO_EXT,
         };
 
@@ -510,6 +520,7 @@ static void _bs_querySwapchainMode(VkPresentModeKHR candidates[], int candidates
 }
 
 static void _bs_prepareSwapchain() {
+    bs_Context* context = _bs_scope_.context;
     VkResult result;
 
     const VkPresentModeKHR modes[] = {
@@ -535,87 +546,92 @@ static void _bs_prepareSwapchain() {
     _bs_querySwapchainFormat(formats, sizeof(formats) / sizeof(*formats));
 
     VkSurfaceCapabilitiesKHR capabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_bs_instance_->physical_device->vk_device, _bs_scope_.context->surface, &capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_bs_instance_->physical_device->vk_device, context->surface, &capabilities);
 
     const bool same_family = true; // TODO: this shouldn't always be true
 
-    _bs_scope_.context->swapchain_image = _bs_scope_.context->swapchain_image ? _bs_scope_.context->swapchain_image : NULL;
+    context->swapchain_image = context->swapchain_image ? context->swapchain_image : NULL;
 
-    bs_ivec2 resolution = { capabilities.minImageExtent.width, capabilities.minImageExtent.height };
+    bs_ivec2 resolution = {
+        bs_clamp(context->dimensions.x, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+        bs_clamp(context->dimensions.y, capabilities.minImageExtent.height, capabilities.maxImageExtent.height),
+    };
     bs_Image image = {
         .head = {
             .type = BS_OBJECT_IMAGE
         },
         .flags = BS_IMAGE_SWAPS_BIT,
-        .format = _bs_scope_.context->surface_format.format,
+        .format = context->surface_format.format,
         .dim = resolution,
     };
 
-    const int frames_in_flight_target = 2;
-    const int frames_in_flight_max = 3;
+    context->frames_in_flight = _bs_instance_->max_frames_in_flight;
 
-    _bs_scope_.context->frames_in_flight = bs_clamp(frames_in_flight_target, capabilities.minImageCount, frames_in_flight_max);
-
-    _bs_instance_->max_frames_in_flight = BS_MAX(_bs_instance_->max_frames_in_flight, _bs_scope_.context->frames_in_flight);
+    bs_U32 images_count = capabilities.minImageCount + 1;
+    if (capabilities.maxImageCount > 0 && images_count > capabilities.maxImageCount)
+        images_count = capabilities.maxImageCount;
 
     VkSwapchainCreateInfoKHR swapchain_ci = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = _bs_scope_.context->surface,
+        .surface = context->surface,
         .imageArrayLayers = 1,
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .minImageCount = _bs_scope_.context->frames_in_flight,
+        .minImageCount = images_count,
         .imageExtent = { resolution.x, resolution.y },
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         .imageSharingMode = same_family ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT,
-        .queueFamilyIndexCount = same_family ? 0 : 2,
+        .queueFamilyIndexCount = same_family ? 0 : 2, // TODO: why is this 2
         .pQueueFamilyIndices = same_family ? NULL : NULL,
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .clipped = VK_TRUE,
         .preTransform = capabilities.currentTransform,
-        .presentMode = (VkPresentModeKHR)_bs_scope_.context->present_mode,
-        .imageFormat = (VkFormat)_bs_scope_.context->surface_format.format,
-        .imageColorSpace = (VkColorSpaceKHR)_bs_scope_.context->surface_format.color_space,
+        .presentMode = (VkPresentModeKHR)context->present_mode,
+        .imageFormat = (VkFormat)context->surface_format.format,
+        .imageColorSpace = (VkColorSpaceKHR)context->surface_format.color_space,
     };
 
-    result = vkCreateSwapchainKHR(_bs_instance_->device, &swapchain_ci, NULL, &_bs_scope_.context->swapchain);
+    result = vkCreateSwapchainKHR(_bs_instance_->device, &swapchain_ci, NULL, &context->swapchain);
     if (result != VK_SUCCESS) {
-        _bs_warnF("Failed to create swapchain for window \"%s\"", _bs_scope_.context->title);
+        _bs_warnF("Failed to create swapchain for window \"%s\"", context->title);
         return;
     }
 
-    bsi_nameHandle((bs_U64)_bs_scope_.context->swapchain, VK_OBJECT_TYPE_SWAPCHAIN_KHR, _bs_scope_.context->title);
+    bsi_nameHandle((bs_U64)context->swapchain, VK_OBJECT_TYPE_SWAPCHAIN_KHR, context->title);
 
     /**
      Swapchain images
      */
     VkImage images[3];
-    vkGetSwapchainImagesKHR(_bs_instance_->device, _bs_scope_.context->swapchain, &_bs_scope_.context->frames_in_flight, images);
-    _bs_infoF("Swapchain\n  Format: %d\n  Mode: %d\n  Images: %d", swapchain_ci.imageFormat, swapchain_ci.presentMode, _bs_scope_.context->frames_in_flight);
+    vkGetSwapchainImagesKHR(_bs_instance_->device, context->swapchain, &images_count, images);
+    _bs_infoF("Swapchain\n  Format: %d\n  Mode: %d\n  Images: %d", swapchain_ci.imageFormat, swapchain_ci.presentMode, images_count);
 
-    if (_bs_scope_.context->swapchain_image == NULL)
-        _bs_scope_.context->swapchain_image = BS_OBJECT(bs_Image, -1, 0, _bs_scope_.context->frames_in_flight, BS_OBJECT_HAS_SWAPS_BIT, BS_OBJECT_IMAGE);
+    if (images_count == 0)
+        return;
 
-    memcpy(_bs_scope_.context->swapchain_image->image, &image, sizeof(image));
+    if (context->swapchain_image == NULL)
+        context->swapchain_image = BS_OBJECT(bs_Image, -1, 0, images_count, BS_OBJECT_HAS_SWAPS_BIT, BS_OBJECT_IMAGE);
+
+    memcpy(context->swapchain_image->image, &image, sizeof(image));
 
     /**
      Swapchain image views
      */
-    for (int i = 0; i < _bs_scope_.context->frames_in_flight; i++) {
-        _bs_scope_.context->swapchain_image->image->_[i].vk_image = images[i];
+    for (int i = 0; i < images_count; i++) {
+        context->swapchain_image->image->_[i].vk_image = images[i];
 
         VkImageViewCreateInfo image_view_ci = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = _bs_scope_.context->swapchain_image->image->_[i].vk_image,
+            .image = context->swapchain_image->image->_[i].vk_image,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = (VkFormat)_bs_scope_.context->surface_format.format,
+            .format = (VkFormat)context->surface_format.format,
             .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .subresourceRange.levelCount = 1,
             .subresourceRange.layerCount = 1,
         };
 
-        result = vkCreateImageView(_bs_instance_->device, &image_view_ci, NULL, &_bs_scope_.context->swapchain_image->image->_[i].vk_image_view);
+        result = vkCreateImageView(_bs_instance_->device, &image_view_ci, NULL, &context->swapchain_image->image->_[i].vk_image_view);
         if (result != VK_SUCCESS) {
-            _bs_warnF("Failed to create swapchain image view for window \"%s\"", _bs_scope_.context->title);
+            _bs_warnF("Failed to create swapchain image view for window \"%s\"", context->title);
         }
     }
 
@@ -626,10 +642,10 @@ static void _bs_prepareSwapchain() {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
 
-    for (int i = 0; i < _bs_scope_.context->frames_in_flight; i++) {
-        result = vkCreateSemaphore(_bs_instance_->device, &semaphore_ci, NULL, &_bs_scope_.context->_[i].semaphore);
+    for (int i = 0; i < context->frames_in_flight; i++) {
+        result = vkCreateSemaphore(_bs_instance_->device, &semaphore_ci, NULL, &context->_[i].semaphore);
         if (result != VK_SUCCESS) {
-            _bs_warnF("Failed to create swapchain semaphore for window \"%s\"", _bs_scope_.context->title);
+            _bs_warnF("Failed to create swapchain semaphore for window \"%s\"", context->title);
         }
     }
 }
@@ -1040,10 +1056,10 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
     }
     #endif
 
-    /**
-        Cache contexts
-        Should be improved maybe somehow
-        */
+   /**
+    Cache contexts
+    Should be improved maybe somehow
+    */
     bs_List* object_sources = bs_objectSources();
     static bs_List contexts = { .unit_size = sizeof(bs_Context*), .increment = 4 };
     contexts.count = 0;
@@ -1201,7 +1217,7 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
        /**
         Message loop
         */
-       #ifdef _WIN32
+#ifdef _WIN32
         MSG msg;
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
             _bs_scope_.context = NULL;
@@ -1228,7 +1244,12 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
-        #endif
+#endif
+
+        for (int i = 0; i < contexts.count; i++) {
+            bs_Context* ctx = *(bs_Context**)bs_fetchUnit(&contexts, i);
+            wl_display_dispatch(ctx->display);
+        }
 
         if (!separate_message_thread) {
             _bs_renderTick(fixed_tick);
@@ -1420,8 +1441,6 @@ BSAPI bs_Result _bs_window(
     bs_Timer timer = _bs_timer();
     _bs_setTargetFramerate(120);
 
-    _test(context, title);
-
     #ifdef _WIN32
     const char* class_name = title;
     HINSTANCE hinstance = GetModuleHandle(0);
@@ -1506,11 +1525,11 @@ BSAPI bs_Result _bs_window(
     HDC hdc = GetDC(context->hwnd);
     int pixel_format = ChoosePixelFormat(hdc, &pixel_format_descriptor);
     SetPixelFormat(hdc, pixel_format, &pixel_format_descriptor);
-    #elif defined __linux__
-
-
-
     #endif
+
+#ifdef __linux__
+    _test(context, title);
+#endif
 
     _bs_createSurface();
 
@@ -1618,10 +1637,11 @@ static struct wl_registry_listener _bs_registry_listener_ = {
   */
 static void _bs_onToplevelConfigure(void* data, struct xdg_toplevel* xdg_toplevel, int32_t width, int32_t height, struct wl_array* states) {
     bs_Context* context = data;
-    if (width == 0)
+    if (width != 0)
         context->dimensions.x = width;
-    if (height == 0)
+    if (height != 0)
         context->dimensions.y = height;
+    xdg_surface_set_window_geometry(context->xdg_surface, 0, 0, context->dimensions.x, context->dimensions.y);
 }
 
 static void _bs_onClose(void* data, struct xdg_toplevel* xdg_toplevel) {
@@ -1652,8 +1672,9 @@ static void _bs_onConfigureSurfaceListener(void* data, struct xdg_surface* xdg_s
     bs_Context* context = data;
 
     xdg_surface_ack_configure(xdg_surface, serial);
-    wl_surface_attach(context->_wl_surface, context->buffer, 0, 0);
+   //wl_surface_attach(context->_wl_surface, context->buffer, 0, 0);
     wl_surface_damage_buffer(context->_wl_surface, 0, 0, context->dimensions.x, context->dimensions.y);
+    wp_viewport_set_destination(context->viewport, context->dimensions.x, context->dimensions.y);
     wl_surface_commit(context->_wl_surface);
 }
 static struct xdg_surface_listener _bs_surface_listener_ = {
@@ -1663,7 +1684,6 @@ static struct xdg_surface_listener _bs_surface_listener_ = {
 void _test(bs_Context* context, const char* title) {
     context->display = wl_display_connect(NULL);
     if (!context->display) {
-    	printf("%d\n", errno);
         BS_WARN_ERRNO_PATH("wl_display_connect", title);
         return;
     }
@@ -1673,21 +1693,23 @@ void _test(bs_Context* context, const char* title) {
     wl_registry_add_listener(context->registry, &_bs_registry_listener_, context);
     wl_display_roundtrip(context->display);
 
-    context->buffer = wp_single_pixel_buffer_manager_v1_create_u32_rgba_buffer(context->single_pixel_buffer_manager, 0, 0, 0, 0);
+    context->buffer = wp_single_pixel_buffer_manager_v1_create_u32_rgba_buffer(context->single_pixel_buffer_manager, BS_U32_MAX, 0, 0, BS_U32_MAX);
 
     context->_wl_surface = wl_compositor_create_surface(context->compositor);
+    context->viewport = wp_viewporter_get_viewport(context->viewporter, context->_wl_surface);
     context->xdg_surface = xdg_wm_base_get_xdg_surface(context->wm_base, context->_wl_surface);
 
     xdg_surface_add_listener(context->xdg_surface, &_bs_surface_listener_, context);
 
     context->xdg_toplevel = xdg_surface_get_toplevel(context->xdg_surface);
 
-    xdg_toplevel_add_listener(context->xdg_surface, &_bs_toplevel_listener_, context);
+    xdg_toplevel_add_listener(context->xdg_toplevel, &_bs_toplevel_listener_, context);
     xdg_toplevel_set_title(context->xdg_toplevel, title);
 
-    wl_surface_commit(context->_wl_surface);
-
-    while (1) {
-        wl_display_dispatch(context->display);
+    if (context->decoration_manager) {
+        context->decoration = zxdg_decoration_manager_v1_get_toplevel_decoration(context->decoration_manager, context->xdg_toplevel);
+        zxdg_toplevel_decoration_v1_set_mode(context->decoration, ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
     }
+
+    wl_surface_commit(context->_wl_surface);
 }

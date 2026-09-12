@@ -432,6 +432,9 @@ typedef void(* PFN_trackFunction)(bsmod_TrackParams params);
 BSMODAPI void _bsmod_onTrack() {
 	static bs_String* last;
 	bs_String* cwd = bs_workingDirectory();
+	if (!cwd)
+		return;
+
 	last = bs_stringN(last, cwd->value, cwd->len);
 
 	bs_infoF(BS_PRINT_COLOR("track", BS_PRINT_RED));

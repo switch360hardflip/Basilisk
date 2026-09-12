@@ -70,6 +70,7 @@ BSAPI bool _bs_hasAlpha(bs_Format format) {
 BSAPI void _val_bs_transition(bs_Queue* queue, bs_Image* image, int index, bs_ImageLayout old_layout, bs_ImageLayout new_layout) {
     BS_VALIDATE(old_layout != new_layout,,);
     BS_VALIDATE(index == 0 || index < image->num_indices,,);
+    BS_VALIDATE(image->_->vk_image != NULL,,);
     _bs_transition(queue, image, index, old_layout, new_layout);
 }
 
@@ -347,10 +348,14 @@ static bs_Result _bs_depthImage(bs_Object* object, bs_ivec2 dim, int num_indices
     return BS_RESULT_OK;
 }
 
-BSAPI bs_Result _bs_image(bs_Object* object, bs_ivec2 dim, int num_indices, bs_Format format, bs_U32 flags) {
-    if (!object)
-        return BS_RESULT_INVALID_PARAM;
+BSAPI bs_Result _val_bs_image(bs_Object* object, bs_ivec2 dim, int num_indices, bs_Format format, bs_U32 flags) {
+    BS_VALIDATE(dim.x > 0.0, BS_RESULT_VALIDATION_ERROR,);
+    BS_VALIDATE(dim.y > 0.0, BS_RESULT_VALIDATION_ERROR,);
 
+    return _bs_image(object, dim, num_indices, format, flags);
+}
+
+BSAPI bs_Result _bs_image(bs_Object* object, bs_ivec2 dim, int num_indices, bs_Format format, bs_U32 flags) {
     if (!object->image)
         return BS_RESULT_OK;
 

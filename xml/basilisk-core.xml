@@ -1973,6 +1973,7 @@
 			 <field><type>void*</type><name>registry</name></field>
 			 <field><type>void*</type><name>compositor</name></field>
 			 <field><type>void*</type><name>wm_base</name></field>
+			 <field><type>void*</type><name>decoration</name></field>
 			 <field><type>void*</type><name>decoration_manager</name></field>
 			 <field><type>void*</type><name>viewporter</name></field>
 			 <field><type>void*</type><name>single_pixel_buffer_manager</name></field>

@@ -3293,6 +3293,7 @@ struct bs_Context {
     void* registry;
     void* compositor;
     void* wm_base;
+    void* decoration;
     void* decoration_manager;
     void* viewporter;
     void* single_pixel_buffer_manager;

@@ -349,6 +349,7 @@ BSAPI void _bs_ini() {
     _bs_instance_ = _bs_calloc(1, sizeof(bs_Instance));
     _bs_instance_->log = _bs_stringN(_bs_instance_->log, "", 0);
     _bs_instance_->fixed_time = 0.025;
+    _bs_instance_->max_frames_in_flight = 2;
 
     _bs_iniLogger();
 
