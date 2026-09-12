@@ -72,59 +72,33 @@ if (MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /wd6255 /wd4047 /wd4090 /wd4024 /wd4133)
 endif()
 
-
 if (${IS_DEBUG_BUILD})
     target_link_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_SOURCE_DIR}/external/
-        ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/Debug #todo release
-        ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang
-        ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Unix
-        ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Windows/Debug
-        ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV/Debug
-        ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV
-        ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build/Debug
-        ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build
+        ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang/Debug
+        ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang
+        ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang/OSDependent/Unix
+        ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang/OSDependent/Windows/Debug
+        ${CMAKE_SOURCE_DIR}/build/external/glslang/SPIRV/Debug
+        ${CMAKE_SOURCE_DIR}/build/external/glslang/SPIRV
+        ${CMAKE_SOURCE_DIR}/build/external/SPIRV-Cross/Debug
+        ${CMAKE_SOURCE_DIR}/build/external/SPIRV-Cross
         ${CMAKE_SOURCE_DIR}/external/freetype/objs
         ${CMAKE_SOURCE_DIR}/external/freetype/objs/.libs
-    )
-
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        OSDependentd
-        GenericCodeGend
-        glslangd
-        glslang-default-resource-limitsd
-        MachineIndependentd
-        SPIRVd
-        spirv-cross-cd
-        spirv-cross-cored
-        spirv-cross-glsld
     )
 else()
 target_link_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/external/
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/Release #todo release
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Unix
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Windows/Release
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV/Release
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV
-    ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build/Release
-    ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build
+    ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang/Release
+    ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang
+    ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang/OSDependent/Unix
+    ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang/OSDependent/Windows/Release
+    ${CMAKE_SOURCE_DIR}/build/external/glslang/SPIRV/Release
+    ${CMAKE_SOURCE_DIR}/build/external/glslang/SPIRV
+    ${CMAKE_SOURCE_DIR}/build/external/SPIRV-Cross/Release
+    ${CMAKE_SOURCE_DIR}/build/external/SPIRV-Cross
     ${CMAKE_SOURCE_DIR}/external/freetype/objs
     ${CMAKE_SOURCE_DIR}/external/freetype/objs/.libs
-
-)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    OSDependent
-    GenericCodeGen
-    glslang
-    glslang-default-resource-limits
-    MachineIndependent
-    SPIRV
-    spirv-cross-c
-    spirv-cross-core
-    spirv-cross-glsl
 )
 endif()
 
@@ -135,15 +109,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     #steam_api64
     #GFSDK_Aftermath_Lib.x64
     freetype
-    OSDependent
-    GenericCodeGen
-    glslang
-    glslang-default-resource-limits
-    MachineIndependent
-    SPIRV
-    spirv-cross-c
-    spirv-cross-core
-    spirv-cross-glsl
 )
 
 if (WIN32)

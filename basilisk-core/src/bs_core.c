@@ -99,8 +99,9 @@ BSAPI struct VkDevice_T* _bsi_fetchDevice() {
  /**
   Begin Comment
   */
-BSAPI void _val_bs_beginComment(bs_Queue* queue, char* message, int message_len) {
-    BS_VALIDATE(_bs_procs_.vkCmdBeginDebugUtilsLabelEXT != NULL, , );
+
+BSAPI void _val_bs_beginCommentN(bs_Queue* queue, char* message, int message_len) {
+    BS_VALIDATE_TIMES(_bs_procs_.vkCmdBeginDebugUtilsLabelEXT != NULL, , 1,);
     _bs_beginCommentN(queue, message, message_len);
 }
 
@@ -120,7 +121,7 @@ BSAPI void _bs_beginCommentN(bs_Queue* queue, char* message, int message_len) {
   End Comment
   */
 BSAPI void _val_bs_endComment(bs_Queue* queue) {
-    BS_VALIDATE(_bs_procs_.vkCmdEndDebugUtilsLabelEXT != NULL, , );
+    BS_VALIDATE_TIMES(_bs_procs_.vkCmdEndDebugUtilsLabelEXT != NULL, , 1,);
     _bs_endComment(queue);
 }
 

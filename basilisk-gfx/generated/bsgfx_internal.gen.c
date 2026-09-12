@@ -37,7 +37,7 @@
 bsgfx_Material* _bsgfx_material(
     char* name)
 {
-    return _bsgfx_materialN(name, strlen(name));
+    return bsgfx_materialN(name, strlen(name));
 }
 
 bsgfx_Material* _bsgfx_materialV(
@@ -70,7 +70,7 @@ bsgfx_Range _bsgfx_instantiateASCIIText(
     bs_vec2* out_size, 
     char* text)
 {
-    return _bsgfx_instantiateASCIITextN(subtype, font, position, pt_size, material_id, out_size, text, strlen(text));
+    return bsgfx_instantiateASCIITextN(subtype, font, position, pt_size, material_id, out_size, text, strlen(text));
 }
 
 bsgfx_Range _bsgfx_instantiateASCIITextV(

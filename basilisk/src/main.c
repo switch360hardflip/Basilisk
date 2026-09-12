@@ -210,7 +210,7 @@ int main(int argc, char* argv[]) {
 	should probably be put in bsmod instead
     */
 	bs_configureQueuesCount(2);
-	bsgfx_ini("Basilisk", 1920, 1080, BS_WINDOW_NO_TITLE_BAR, argc, argv);
+	bsgfx_ini("Basilisk", 1200, 900, BS_WINDOW_NO_TITLE_BAR, argc, argv);
 
 	basilisk.context = bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context;
 

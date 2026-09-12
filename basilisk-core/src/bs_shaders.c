@@ -128,10 +128,14 @@ static void _bs_pushDescriptorPools() {
     static VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
     if (descriptor_pool) {
         for (int i = 0; i < BS_MAX_NUM_BIND_SETS; i++) {
-            if (_bs_instance_->sets[i])
+            if (_bs_instance_->sets[i]) {
                 vkFreeDescriptorSets(_bs_instance_->device, descriptor_pool, 1, _bs_instance_->sets + i); // @todo reuse
-            if (_bs_instance_->layouts[i])
+                _bs_instance_->sets[i] = NULL;
+            }
+            if (_bs_instance_->layouts[i]) {
                 vkDestroyDescriptorSetLayout(_bs_instance_->device, _bs_instance_->layouts[i], NULL);
+                _bs_instance_->layouts[i] = NULL;
+            }
         }
 
         vkDestroyDescriptorPool(_bs_instance_->device, descriptor_pool, NULL);
@@ -214,6 +218,9 @@ BSAPI void _bs_pushDescriptors() {
             continue;
 
         if (!bind_set->vk_update_template)
+            continue;
+
+        if (!bind_set->vk_set)
             continue;
 
         bind_set->needs_update = false;

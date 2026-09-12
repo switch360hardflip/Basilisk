@@ -47,7 +47,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 					<xsl:text>return </xsl:text>
 				</xsl:if>
 
-				<xsl:text>_</xsl:text>
+				<!--<xsl:text>_</xsl:text>-->
 				<xsl:value-of select="@name"/>
 				<xsl:text>N(</xsl:text>
 				<xsl:for-each select="param">

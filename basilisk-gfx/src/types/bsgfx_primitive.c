@@ -170,8 +170,8 @@ BSGFXAPI void _bsgfx_renderPrimitives(bs_RendererScope* scope, bs_Queue* queue, 
     bs_pipeline(scope, queue, &hash, &pipeline);
 
     bs_pushConstant(queue, pipeline, 0, sizeof(&push_const), &push_const);
-    _bsgfx_renderSubtype(queue, _bsgfx_subtypes_[BSGFX_SUBTYPE_PRIMITIVE_BOX], pipeline);
-    _bsgfx_renderSubtype(queue, _bsgfx_subtypes_[BSGFX_SUBTYPE_PRIMITIVE_SPHERE], pipeline);
+    bsgfx_renderSubtype(queue, _bsgfx_subtypes_[BSGFX_SUBTYPE_PRIMITIVE_BOX], pipeline);
+    bsgfx_renderSubtype(queue, _bsgfx_subtypes_[BSGFX_SUBTYPE_PRIMITIVE_SPHERE], pipeline);
 }
 
 BSGFXAPI int _bsgfx_queryPrimitive(bs_GUID* guid) {

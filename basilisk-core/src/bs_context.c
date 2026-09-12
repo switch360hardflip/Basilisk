@@ -1091,6 +1091,14 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
     }
     _bs_checkTimer(&_bs_instance_->timer);
 
+#ifdef __linux__
+    for (int i = 0; i < contexts.count; i++) {
+        bs_Context* ctx = *(bs_Context**)bs_fetchUnit(&contexts, i);
+        if (strcmp(ctx->title, "Basilisk") == 0) // very temp
+            wl_display_dispatch(ctx->display);
+    }
+#endif
+
     #ifdef _WIN32
     while ((_bs_instance_->timer.seconds - frame_start) < _bs_instance_->target_frame_time) {
         Sleep(0);
@@ -1245,13 +1253,6 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
 
             TranslateMessage(&msg);
             DispatchMessage(&msg);
-        }
-#endif
-
-#ifdef __linux__
-        for (int i = 0; i < contexts.count; i++) {
-            bs_Context* ctx = *(bs_Context**)bs_fetchUnit(&contexts, i);
-            wl_display_dispatch(ctx->display);
         }
 #endif
 

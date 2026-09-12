@@ -12,7 +12,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     </xsl:template>
 
     <xsl:template match="variadicStringTemplate">
-        <function name="{@name}">
+        <function name="{@name}" variadic="">>
             <xsl:copy-of select="return | param"/>
             <xsl:choose>
                 <xsl:when test="@string">
@@ -24,7 +24,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             </xsl:choose>
         </function>
 
-		<function name="{@name}N" type="allowBody" variadic="N">
+		<function name="{@name}N" type="allowBody">
             <xsl:copy-of select="return | param"/>
             <xsl:choose>
                 <xsl:when test="@string">

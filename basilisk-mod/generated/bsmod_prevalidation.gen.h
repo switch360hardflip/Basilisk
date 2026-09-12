@@ -77,7 +77,7 @@ static inline bsmod_FunctionTable* _preval_bsmod_getFunctions() {
     functions.bsmod_onPackBinary = (PFN_bsmod_onPackBinary)bs_getProcAddress(module, "_preval_bsmod_onPackBinary");
     functions.bsmod_onPackTextureArray = (PFN_bsmod_onPackTextureArray)bs_getProcAddress(module, "_preval_bsmod_onPackTextureArray");
     functions.bsmod_packFont = (PFN_bsmod_packFont)bs_getProcAddress(module, "_preval_bsmod_packFont");
-    functions.bsmod_packAtlasTexture = (PFN_bsmod_packAtlasTexture)bs_getProcAddress(module, "_preval_bsmod_packAtlasTexture");
+    functions.bsmod_packAtlasTextureN = (PFN_bsmod_packAtlasTextureN)bs_getProcAddress(module, "_preval_bsmod_packAtlasTextureN");
     functions.bsmod_destroyAtlasPacker = (PFN_bsmod_destroyAtlasPacker)bs_getProcAddress(module, "_preval_bsmod_destroyAtlasPacker");
     functions.bsmod_packAtlas = (PFN_bsmod_packAtlas)bs_getProcAddress(module, "_preval_bsmod_packAtlas");
     functions.bsmod_createAtlasPacker = (PFN_bsmod_createAtlasPacker)bs_getProcAddress(module, "_preval_bsmod_createAtlasPacker");
@@ -88,8 +88,8 @@ static inline bsmod_FunctionTable* _preval_bsmod_getFunctions() {
     functions.bsmod_queryResource = (PFN_bsmod_queryResource)bs_getProcAddress(module, "_preval_bsmod_queryResource");
     functions.bsmod_loadResource = (PFN_bsmod_loadResource)bs_getProcAddress(module, "_preval_bsmod_loadResource");
     functions.bsmod_iniPackage = (PFN_bsmod_iniPackage)bs_getProcAddress(module, "_preval_bsmod_iniPackage");
-    functions.bsmod_packResource = (PFN_bsmod_packResource)bs_getProcAddress(module, "_preval_bsmod_packResource");
-    functions.bsmod_savePackage = (PFN_bsmod_savePackage)bs_getProcAddress(module, "_preval_bsmod_savePackage");
+    functions.bsmod_packResourceN = (PFN_bsmod_packResourceN)bs_getProcAddress(module, "_preval_bsmod_packResourceN");
+    functions.bsmod_savePackageN = (PFN_bsmod_savePackageN)bs_getProcAddress(module, "_preval_bsmod_savePackageN");
     functions.bsmod_loadShaderReferences = (PFN_bsmod_loadShaderReferences)bs_getProcAddress(module, "_preval_bsmod_loadShaderReferences");
     functions.bsmod_updateShaderReferences = (PFN_bsmod_updateShaderReferences)bs_getProcAddress(module, "_preval_bsmod_updateShaderReferences");
     functions.bsmod_iniCompiler = (PFN_bsmod_iniCompiler)bs_getProcAddress(module, "_preval_bsmod_iniCompiler");
@@ -104,7 +104,7 @@ static inline bsmod_FunctionTable* _preval_bsmod_getFunctions() {
     functions.bsmod_queryType = (PFN_bsmod_queryType)bs_getProcAddress(module, "_preval_bsmod_queryType");
     functions.bsmod_delete = (PFN_bsmod_delete)bs_getProcAddress(module, "_preval_bsmod_delete");
     functions.bsmod_deleteSelected = (PFN_bsmod_deleteSelected)bs_getProcAddress(module, "_preval_bsmod_deleteSelected");
-    functions.bsmod_saveType = (PFN_bsmod_saveType)bs_getProcAddress(module, "_preval_bsmod_saveType");
+    functions.bsmod_saveTypeN = (PFN_bsmod_saveTypeN)bs_getProcAddress(module, "_preval_bsmod_saveTypeN");
     functions.bsmod_add = (PFN_bsmod_add)bs_getProcAddress(module, "_preval_bsmod_add");
     functions.bsmod_isSelected = (PFN_bsmod_isSelected)bs_getProcAddress(module, "_preval_bsmod_isSelected");
     functions.bsmod_select = (PFN_bsmod_select)bs_getProcAddress(module, "_preval_bsmod_select");

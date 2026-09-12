@@ -85,7 +85,7 @@ static inline bsgfx_FunctionTable* _preval_bsgfx_getFunctions() {
     functions.bsgfx_fetchMaterial = (PFN_bsgfx_fetchMaterial)bs_getProcAddress(module, "_preval_bsgfx_fetchMaterial");
     functions.bsgfx_queryMaterial = (PFN_bsgfx_queryMaterial)bs_getProcAddress(module, "_preval_bsgfx_queryMaterial");
     functions.bsgfx_loadMaterials = (PFN_bsgfx_loadMaterials)bs_getProcAddress(module, "_preval_bsgfx_loadMaterials");
-    functions.bsgfx_material = (PFN_bsgfx_material)bs_getProcAddress(module, "_preval_bsgfx_material");
+    functions.bsgfx_materialN = (PFN_bsgfx_materialN)bs_getProcAddress(module, "_preval_bsgfx_materialN");
     functions.bsgfx_highlightMaterial = (PFN_bsgfx_highlightMaterial)bs_getProcAddress(module, "_preval_bsgfx_highlightMaterial");
     functions.bsgfx_unhighlightMaterial = (PFN_bsgfx_unhighlightMaterial)bs_getProcAddress(module, "_preval_bsgfx_unhighlightMaterial");
     functions.bsgfx_tickMaterials = (PFN_bsgfx_tickMaterials)bs_getProcAddress(module, "_preval_bsgfx_tickMaterials");
@@ -125,7 +125,7 @@ static inline bsgfx_FunctionTable* _preval_bsgfx_getFunctions() {
     functions.bsgfx_instanceAtlas = (PFN_bsgfx_instanceAtlas)bs_getProcAddress(module, "_preval_bsgfx_instanceAtlas");
     functions.bsgfx_instanceAtlasFlipped = (PFN_bsgfx_instanceAtlasFlipped)bs_getProcAddress(module, "_preval_bsgfx_instanceAtlasFlipped");
     functions.bsgfx_fontHeight = (PFN_bsgfx_fontHeight)bs_getProcAddress(module, "_preval_bsgfx_fontHeight");
-    functions.bsgfx_instantiateASCIIText = (PFN_bsgfx_instantiateASCIIText)bs_getProcAddress(module, "_preval_bsgfx_instantiateASCIIText");
+    functions.bsgfx_instantiateASCIITextN = (PFN_bsgfx_instantiateASCIITextN)bs_getProcAddress(module, "_preval_bsgfx_instantiateASCIITextN");
     functions.bsgfx_instanceHeader = (PFN_bsgfx_instanceHeader)bs_getProcAddress(module, "_preval_bsgfx_instanceHeader");
     functions.bsgfx_instanceData = (PFN_bsgfx_instanceData)bs_getProcAddress(module, "_preval_bsgfx_instanceData");
     functions.bsgfx_matrix = (PFN_bsgfx_matrix)bs_getProcAddress(module, "_preval_bsgfx_matrix");

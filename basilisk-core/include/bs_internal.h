@@ -69,10 +69,37 @@ BSAPI void _bs_writeLogger(
 #define BS_WARN_ERRNO_PATH(function, path)                           \
     _bs_writeLogger(BS_LIBRARY_BASILISK, BS_MESSAGE_VALIDATION_ERROR, _bs_convertErrno(errno), errno, __func__, __FILE__, __LINE__, "%s %s", function, path)
 
-#define BS_VALIDATE(condition, ret, format, ...)                     \
-    if (!(condition)) {                                              \
-        if (_bs_callbacks_.error) _bs_callbacks_.error();            \
-        _bs_writeLogger(BS_LIBRARY_BASILISK, BS_MESSAGE_VALIDATION_ERROR, BS_RESULT_VALIDATION_ERROR, BS_RESULT_VALIDATION_ERROR, __func__, __FILE__, __LINE__, "%s" format, #condition __VA_OPT__(, ) __VA_ARGS__); \
+#define BS_LOG_VALIDATION(assertion, ret, format, ...)               \
+    _bs_writeLogger(                                                 \
+        BS_LIBRARY_BASILISK,                                         \
+        BS_MESSAGE_VALIDATION_ERROR,                                 \
+        BS_RESULT_VALIDATION_ERROR,                                  \
+        BS_RESULT_VALIDATION_ERROR,                                  \
+        __func__,                                                    \
+        __FILE__,                                                    \
+        __LINE__,                                                    \
+        "%s" format,                                                 \
+        assertion __VA_OPT__(, ) __VA_ARGS__                        \
+    )
+
+#define BS_VALIDATE(assertion, ret, format, ...)                     \
+    if (!(assertion)) {                                              \
+        if (_bs_callbacks_.error)                                    \
+            _bs_callbacks_.error();                                  \
+                                                                     \
+        BS_LOG_VALIDATION(assertion, #ret, format __VA_OPT__(, ) __VA_ARGS__);      \
+        return ret;                                                  \
+    }
+
+#define BS_VALIDATE_TIMES(assertion, ret, times, format, ...)        \
+    if (!(assertion)) {                                              \
+        if (_bs_callbacks_.error)                                    \
+            _bs_callbacks_.error();                                  \
+                                                                     \
+        static int logged_times;                                     \
+        if (logged_times++ < times)                                  \
+            BS_LOG_VALIDATION(assertion, ret, format __VA_OPT__(, ) __VA_ARGS__);  \
+                                                                     \
         return ret;                                                  \
     }
 
@@ -92,6 +119,5 @@ BSAPI void _bs_writeLogger(
 BSAPI struct VkCommandBuffer_T* _bsi_fetchCommands(bs_Queue* queue);
 
 extern _Thread_local bs_Scope _bs_scope_;
-
 
 #endif

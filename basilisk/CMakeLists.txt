@@ -3,6 +3,7 @@ project(basilisk)
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(IS_DEBUG_BUILD CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 file(GLOB SOURCE_FILES "src/*.c")
 file(GLOB UI_FILES "src/ui/*.c")
@@ -83,53 +84,70 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 else()
 target_link_libraries(${PROJECT_NAME} PRIVATE
     vulkan
-    GenericCodeGen
-    glslang
-    glslang-default-resource-limits
-    OSDependent
-    MachineIndependent
-    SPIRV
-    spirv-cross-c
-    spirv-cross-core
-    spirv-cross-glsl
     stdc++
 )
-
 endif()
 
+if (WIN32 AND ${IS_DEBUG_BUILD})
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        OSDependentd
+        GenericCodeGend
+        glslangd
+        glslang-default-resource-limitsd
+        MachineIndependentd
+        SPIRVd
+        spirv-cross-cd
+        spirv-cross-cored
+        spirv-cross-glsld
+    )
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        OSDependent
+        GenericCodeGen
+        glslang
+        glslang-default-resource-limits
+        MachineIndependent
+        SPIRV
+        spirv-cross-c
+        spirv-cross-core
+        spirv-cross-glsl
+    )
+endif()
+
+if (WIN32)
+
 set(PROJECT_LINK
-    cmd.exe /c
-    "mklink /J \"${CMAKE_CURRENT_BINARY_DIR}/Debug/project\" \"${PROJECT_SOURCE_DIR}/..\" || exit /b 0"
+        cmd.exe /c
+        "mklink /J \"${CMAKE_CURRENT_BINARY_DIR}/Debug/project\" \"${PROJECT_SOURCE_DIR}/..\" || exit /b 0"
 )
 
 set(CONTENT_LINK
-    cmd.exe /c
-    "mklink /J \"${CMAKE_CURRENT_BINARY_DIR}/Debug/content\" \"${PROJECT_SOURCE_DIR}/../content\" || exit /b 0"
+        cmd.exe /c
+        "mklink /J \"${CMAKE_CURRENT_BINARY_DIR}/Debug/content\" \"${PROJECT_SOURCE_DIR}/../content\" || exit /b 0"
 )
 
 set(CONTENT_COPY_RELEASE
-    ${CMAKE_COMMAND} -E copy_directory
-    "${PROJECT_SOURCE_DIR}/../content"
-    "${CMAKE_CURRENT_BINARY_DIR}/Release/content"
+        ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_SOURCE_DIR}/../content"
+        "${CMAKE_CURRENT_BINARY_DIR}/Release/content"
 )
 
 set(CONTENT_COPY_RELEASE_DEBUG
-    ${CMAKE_COMMAND} -E copy_directory
-    "${PROJECT_SOURCE_DIR}/../content"
-    "${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/content"
+        ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_SOURCE_DIR}/../content"
+        "${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/content"
 )
 
 set(RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE_DEBUG
-    ${CMAKE_COMMAND} -E make_directory
-    "${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/content"
+        ${CMAKE_COMMAND} -E make_directory
+        "${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/content"
 )
 
 set(RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE
-    ${CMAKE_COMMAND} -E make_directory
-    "${CMAKE_CURRENT_BINARY_DIR}/Release/content"
+        ${CMAKE_COMMAND} -E make_directory
+        "${CMAKE_CURRENT_BINARY_DIR}/Release/content"
 )
 
-if (WIN32)
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND "$<$<CONFIG:Debug>:${PROJECT_LINK}>" COMMENT "POST_BUILD: Creating junction to /"
@@ -153,4 +171,24 @@ add_custom_command(
     COMMAND_EXPAND_LISTS
     CONFIGURATIONS RelWithDebInfo
 )
+else()
+    set(PROJECT_LINK
+        ${CMAKE_COMMAND} -E create_symlink
+        "${PROJECT_SOURCE_DIR}/.."
+        "${CMAKE_CURRENT_BINARY_DIR}/project"
+    )
+    set(CONTENT_LINK
+        ${CMAKE_COMMAND} -E create_symlink
+        "${PROJECT_SOURCE_DIR}/../content"
+        "${CMAKE_CURRENT_BINARY_DIR}/content"
+    )
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "$<$<CONFIG:Debug>:${PROJECT_LINK}>" COMMENT "POST_BUILD: Creating junction to /"
+        COMMAND "$<$<CONFIG:Debug>:${CONTENT_LINK}>" COMMENT "POST_BUILD: Creating junction to content/"
+        COMMAND_EXPAND_LISTS
+        CONFIGURATIONS Debug
+    )
+
+
 endif()
