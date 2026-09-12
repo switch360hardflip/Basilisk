@@ -17,3 +17,8 @@ add_subdirectory(basilisk-mod/)
 #add_subdirectory(basilisk-test/)
 #add_subdirectory(basilisk-test-runner/)
 add_subdirectory(basilisk/)
+add_subdirectory(external/SPIRV-Cross/)
+
+set(ENABLE_OPT OFF)
+
+add_subdirectory(external/glslang/)

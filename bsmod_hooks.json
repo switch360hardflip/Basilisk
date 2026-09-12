@@ -5,7 +5,7 @@
         "package": "content/bsgfx.bpak",
         "prefix": "",
         "callOnce": false,
-        "lastModified": "2026-09-05 17:20:18",
+        "lastModified": "2026-09-12 03:54:41",
         "entries": [
             "project/basilisk-gfx/shaders/bsgfx.glsl",
             "project/basilisk-gfx/shaders/bsgfx_atlas.glsl",
@@ -93,7 +93,7 @@
         "package": "content/bsmod.bpak",
         "prefix": "",
         "callOnce": false,
-        "lastModified": "2026-09-05 17:20:18",
+        "lastModified": "2026-09-12 03:54:41",
         "entries": [
             "project/basilisk-mod/shaders/frag/fs_bsmod_billboard.frag",
             "project/basilisk-mod/shaders/frag/fs_bsmod_material_icon.frag",

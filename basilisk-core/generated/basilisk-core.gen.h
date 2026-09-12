@@ -734,6 +734,9 @@ typedef enum bs_VkObjectType bs_VkObjectType;
 #define BS_SWAPS_COUNT(flags)                                        \
     ((flags & BS_OBJECT_HAS_SWAPS_BIT) ? (bs_scope()->context ? bs_scope()->context->frames_in_flight : bs_instance()->max_frames_in_flight) : 1)
 
+#define BS_SWAPCHAIN_IMAGES_COUNT(flags)                             \
+    ((flags & BS_OBJECT_HAS_SWAPS_BIT) ? (bs_scope()->context ? bs_scope()->context->swapchain_image->head->swaps_count : bs_instance()->max_swapchain_images_count) : 1)
+
 #define BS_OBJECT(type, source_id, id, swaps_count, flags, object_type) \
         bs_object(source_id, id, sizeof(type), BS_SWAP_SIZE(type), swaps_count, flags, object_type)
 
@@ -747,13 +750,13 @@ typedef enum bs_VkObjectType bs_VkObjectType;
     BS_OBJECT(bs_Sampler, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_SAMPLER)
 
 #define BS_RENDERER(source_id, id, flags)                            \
-    BS_OBJECT(bs_Renderer, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_RENDERER)
+    BS_OBJECT(bs_Renderer, source_id, id, BS_SWAPCHAIN_IMAGES_COUNT(flags), flags, BS_OBJECT_RENDERER)
 
 #define BS_BATCH(source_id, id, flags)                               \
     BS_OBJECT(bs_Batch, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_BATCH)
 
 #define BS_QUEUE(source_id, id, flags)                               \
-    BS_OBJECT(bs_Queue, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_QUEUE)
+    BS_OBJECT(bs_Queue, source_id, id, BS_SWAPCHAIN_IMAGES_COUNT(flags), flags, BS_OBJECT_QUEUE)
 
 #define BS_BUFFER(source_id, id, flags)                              \
     BS_OBJECT(bs_Buffer, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_BUFFER)
@@ -3217,6 +3220,7 @@ struct bs_Instance {
     struct {
         bs_SurfaceType surface_type;
     } extensions;
+    int max_swapchain_images_count;
     int max_frames_in_flight;
     bs_PhysicalDevice* physical_device;
     bs_QueueFamily* queue_family;

@@ -1693,7 +1693,7 @@ BSAPI void _val_bs_autoResizeRenderer(bs_Renderer* renderer, bs_Context* context
     if (renderer->head.source_id < 0)
         bs_criticalN(BS_CONSTANT_STRING("Renderer cannot be auto resized without id"));
 
-    return _bs_autoResizeRenderer(renderer, context);
+    _bs_autoResizeRenderer(renderer, context);
 }
 
 BSAPI void _bs_autoResizeRenderer(bs_Renderer* renderer, bs_Context* context) {
@@ -2634,6 +2634,7 @@ BSAPI bs_I32 _bs_queueFamily(bs_QueueBits _bs_flags) {
 }
 
 BSAPI int _bs_queueSwap(bs_Queue* queue) {
+   // return queue->flags & BSI_QUEUE_SWAPS_BIT ? _bs_scope_.context->frame : 0;
     return queue->flags & BSI_QUEUE_SWAPS_BIT ? _bs_scope_.context->image_index : 0;
 }
 
@@ -2868,6 +2869,7 @@ BSAPI bs_Result _bs_resetQueue(bs_Queue* queue) {
     VkResult result;
 
     int swap = _bs_queueSwap(queue);
+
     VkCommandBuffer command_buffer = queue->_[swap].command_buffer;
     VkCommandBufferBeginInfo ci = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,

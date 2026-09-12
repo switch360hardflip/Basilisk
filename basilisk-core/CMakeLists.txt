@@ -34,9 +34,9 @@ elseif (UNIX)
     add_definitions(-W)
 
     target_compile_options(${PROJECT_NAME} PRIVATE
-            -Wno-discarded-qualifiers
-            -Wdiscarded-array-qualifiers
-            -Wsign-compare
+        -Wno-discarded-qualifiers
+        -Wdiscarded-array-qualifiers
+        -Wsign-compare
     )
 endif()
 

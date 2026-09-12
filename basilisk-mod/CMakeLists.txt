@@ -3,6 +3,7 @@ project(basilisk-mod)
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(IS_DEBUG_BUILD CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 file(GLOB SOURCE_FILES "src/*.c")
 
@@ -67,21 +68,64 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/external/freetype/include
 )
 
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /wd6255 /wd4047 /wd4090 /wd4024 /wd4133)
+endif()
+
+
+if (${IS_DEBUG_BUILD})
+    target_link_directories(${PROJECT_NAME} PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/
+        ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/Debug #todo release
+        ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang
+        ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Unix
+        ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Windows/Debug
+        ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV/Debug
+        ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV
+        ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build/Debug
+        ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build
+        ${CMAKE_SOURCE_DIR}/external/freetype/objs
+        ${CMAKE_SOURCE_DIR}/external/freetype/objs/.libs
+    )
+
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        OSDependentd
+        GenericCodeGend
+        glslangd
+        glslang-default-resource-limitsd
+        MachineIndependentd
+        SPIRVd
+        spirv-cross-cd
+        spirv-cross-cored
+        spirv-cross-glsld
+    )
+else()
 target_link_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/external/
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/Debug #todo release
+    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/Release #todo release
     ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang
     ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Unix
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV/Debug
+    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Windows/Release
+    ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV/Release
     ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV
-    ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build/Debug
+    ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build/Release
     ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build
     ${CMAKE_SOURCE_DIR}/external/freetype/objs
     ${CMAKE_SOURCE_DIR}/external/freetype/objs/.libs
+
 )
 
-if (MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /wd6255 /wd4047 /wd4090 /wd4024 /wd4133)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    OSDependent
+    GenericCodeGen
+    glslang
+    glslang-default-resource-limits
+    MachineIndependent
+    SPIRV
+    spirv-cross-c
+    spirv-cross-core
+    spirv-cross-glsl
+)
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -91,32 +135,24 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     #steam_api64
     #GFSDK_Aftermath_Lib.x64
     freetype
+    OSDependent
+    GenericCodeGen
+    glslang
+    glslang-default-resource-limits
+    MachineIndependent
+    SPIRV
+    spirv-cross-c
+    spirv-cross-core
+    spirv-cross-glsl
 )
 
 if (WIN32)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     vulkan-1
     dwmapi
-    GenericCodeGend
-    glslangd optimized glslangd
-    glslang-default-resource-limitsd optimized glslang-default-resource-limitsd
-    MachineIndependentd optimized MachineIndependentd
-    SPIRVd optimized SPIRVd
-    spirv-cross-cd optimized spirv-cross-cd
-    spirv-cross-cored optimized spirv-cross-cored
-    spirv-cross-glsld optimized spirv-cross-glsld
 )
 else()
 target_link_libraries(${PROJECT_NAME} PRIVATE
     vulkan
-    GenericCodeGen
-    glslang
-    glslang-default-resource-limits
-    OSDependent
-    MachineIndependent
-    SPIRV
-    spirv-cross-c
-    spirv-cross-core
-    spirv-cross-glsl
 )
 endif()

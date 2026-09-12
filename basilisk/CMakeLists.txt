@@ -26,10 +26,6 @@ add_executable(${PROJECT_NAME}
     ${FS_SHADER_FILES}
 )
 
-if (DEBUG_LEVEL)
-    add_compile_definitions(_DEBUG)
-endif()
-
 set_property(TARGET ${PROJECT_NAME}
     PROPERTY VS_DEBUGGER_WORKING_DIRECTORY
     "${CMAKE_SOURCE_DIR}/build/${PROJECT_NAME}/$<CONFIG>"

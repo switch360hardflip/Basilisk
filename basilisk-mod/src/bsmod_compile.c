@@ -29,7 +29,7 @@
 
 #include <spirv_cross_c.h>
 #include <glslang/Include/glslang_c_interface.h>
-//#include <glslang/Public/resource_limits_c.h>
+#include <glslang/Public/resource_limits_c.h>
 
 static spvc_context _bsmod_compiler_context_;
 
@@ -464,7 +464,7 @@ BSMODAPI bs_Result _bsmod_compileShader(char* path, char* name, char* package_na
 		.force_default_version_and_profile = false,
 		.forward_compatible = false,
 		.messages = GLSLANG_MSG_DEFAULT_BIT,
-	//	.resource = glslang_default_resource(),
+		.resource = glslang_default_resource(),
 	};
 
 	glslang_shader_t* shader = glslang_shader_create(&input);

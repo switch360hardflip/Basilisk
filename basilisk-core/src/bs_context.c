@@ -24,7 +24,6 @@
   */
 
 #include <stdlib.h>
-#include <unistd.h>
 
 #include "basilisk-core.gen.h"
 #ifdef _WIN32
@@ -50,6 +49,7 @@
 #include <xdg-decoration-unstable-v1.h>
 #include <viewporter.h>
 #include <single-pixel-buffer-v1.h>
+#include <unistd.h>
 
 #endif
 
@@ -570,6 +570,8 @@ static void _bs_prepareSwapchain() {
     bs_U32 images_count = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 && images_count > capabilities.maxImageCount)
         images_count = capabilities.maxImageCount;
+
+    _bs_instance_->max_swapchain_images_count = BS_MAX(_bs_instance_->max_swapchain_images_count, images_count);
 
     VkSwapchainCreateInfoKHR swapchain_ci = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -1246,10 +1248,12 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
         }
 #endif
 
+#ifdef __linux__
         for (int i = 0; i < contexts.count; i++) {
             bs_Context* ctx = *(bs_Context**)bs_fetchUnit(&contexts, i);
             wl_display_dispatch(ctx->display);
         }
+#endif
 
         if (!separate_message_thread) {
             _bs_renderTick(fixed_tick);
@@ -1590,6 +1594,7 @@ BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
   /*==============================================================================
    * Wayland
    *============================================================================*/
+#ifdef __linux__
 
  /**
   Base Listener
@@ -1713,3 +1718,4 @@ void _test(bs_Context* context, const char* title) {
 
     wl_surface_commit(context->_wl_surface);
 }
+#endif
