@@ -45,6 +45,7 @@
 #include <vulkan.h>
 
 #include <wayland-client.h>
+#include <wayland-cursor.h>
 #include <xdg-shell.h>
 #include <xdg-decoration-unstable-v1.h>
 #include <viewporter.h>
@@ -831,7 +832,12 @@ BSAPI bs_ivec2 _bs_windowPosition(bs_Context* context) {
    * Inputs
    *============================================================================*/
 
-const bool separate_message_thread = true; // temp
+// temp
+#ifdef _WIN32
+const bool separate_message_thread = true;
+#else
+const bool separate_message_thread = false;
+#endif
 
 #ifdef _WIN32
 static inline void bs_setBit(long A[], unsigned int k) {
@@ -856,21 +862,21 @@ static inline int bs_testBit(long A[], unsigned int k) {
 
 #elif defined(__linux__)
 #include <stdatomic.h>
-static inline void bs_setBit(bs_U32 A[], unsigned int k) {
-    atomic_fetch_or((_Atomic bs_U32 *)&A[k / 32U], 1L << (k % 32U));
+static inline void bs_setBit(_Atomic bs_U32 A[], unsigned int k) {
+    atomic_fetch_or(&A[k / 32U], 1L << (k % 32U));
 }
 
-static inline void bs_clearBit(bs_U32 A[], unsigned int k) {
-    atomic_fetch_and((_Atomic bs_U32 *)&A[k / 32U], ~(1L << (k % 32U)));
+static inline void bs_clearBit(_Atomic bs_U32 A[], unsigned int k) {
+    atomic_fetch_and(&A[k / 32U], ~(1L << (k % 32U)));
 }
 
 static inline int bs_getBit(bs_U32 A[], unsigned int k) {
-    bs_U32 value = atomic_load((_Atomic bs_U32 *)&A[k / 32U]);
+    bs_U32 value = A[k / 32U];
     return (value & (1L << (k % 32U))) != 0;
 }
 
 static inline int bs_testBit(bs_U32 A[], unsigned int k) {
-    bs_U32 value = atomic_load((_Atomic bs_U32 *)&A[k / 32U]);
+    bs_U32 value = A[k / 32U];
     return (value & (1L << (k % 32U))) != 0;
 }
 
@@ -1091,14 +1097,6 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
     }
     _bs_checkTimer(&_bs_instance_->timer);
 
-#ifdef __linux__
-    for (int i = 0; i < contexts.count; i++) {
-        bs_Context* ctx = *(bs_Context**)bs_fetchUnit(&contexts, i);
-        if (strcmp(ctx->title, "Basilisk") == 0) // very temp
-            wl_display_dispatch(ctx->display);
-    }
-#endif
-
     #ifdef _WIN32
     while ((_bs_instance_->timer.seconds - frame_start) < _bs_instance_->target_frame_time) {
         Sleep(0);
@@ -1263,6 +1261,16 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
             if (_hide_menu_windows_)
                 _bs_hideMenuWindows(&contexts);
         }
+
+#ifdef __linux__
+        for (int i = 0; i < contexts.count; i++) {
+            bs_Context* ctx = *(bs_Context**)bs_fetchUnit(&contexts, i);
+            if (strcmp(ctx->title, "Basilisk") == 0) // very temp
+            {
+                wl_display_dispatch(ctx->display);
+            }
+        }
+#endif
 
         /*
         while ((_bs_instance_->timer.seconds - frame_start) < _bs_instance_->target_frame_time) {
@@ -1586,7 +1594,7 @@ BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
 
     bs_Procedure procedures[] = { BS_FOREACH_PROC(BS_STRING_GEN_2) };
     _bs_queryProcedures(procedures, sizeof(procedures) / sizeof(*procedures), 0, &_bs_procs_);
-
+BS_KEY_A
     _bs_scope_.context = NULL;
 }
 
@@ -1622,6 +1630,10 @@ static void _bs_onGlobal(void* data, struct wl_registry *wl_registry, uint32_t n
         context->wm_base = wl_registry_bind(wl_registry, name, &xdg_wm_base_interface, version);
         xdg_wm_base_add_listener(context->wm_base, &_bs_xdg_wm_base_listener_, context);
     }
+    else if (strcmp(interface, wl_shm_interface.name) == 0)
+        context->shm = wl_registry_bind(wl_registry, name, &wl_shm_interface, 1);
+    else if (strcmp(interface, wl_seat_interface.name) == 0)
+        context->seat = wl_registry_bind(wl_registry, name, &wl_seat_interface, version);
     else if (strcmp(interface, zxdg_decoration_manager_v1_interface.name) == 0)
         context->decoration_manager = wl_registry_bind(wl_registry, name, &zxdg_decoration_manager_v1_interface, version);
     else if (strcmp(interface, wp_viewporter_interface.name) == 0)
@@ -1673,7 +1685,6 @@ static struct xdg_toplevel_listener _bs_toplevel_listener_ = {
  /**
   XDG Surface Listener
   */
-
 static void _bs_onConfigureSurfaceListener(void* data, struct xdg_surface* xdg_surface, uint32_t serial) {
     bs_Context* context = data;
 
@@ -1685,6 +1696,129 @@ static void _bs_onConfigureSurfaceListener(void* data, struct xdg_surface* xdg_s
 }
 static struct xdg_surface_listener _bs_surface_listener_ = {
     .configure = _bs_onConfigureSurfaceListener,
+};
+
+ /**
+  Pointer Listener
+  */
+
+static void _bs_onPointerEnter(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t serial,
+    struct wl_surface *surface,
+    wl_fixed_t x,
+    wl_fixed_t y
+)
+{
+    bs_Context* context = data;
+    struct wl_cursor_image* cursor_image = _bs_instance_->wl.cursor_image;
+    wl_pointer_set_cursor(
+        pointer,
+        serial,
+        _bs_instance_->wl.cursor_surface,
+        cursor_image->hotspot_x,
+        cursor_image->hotspot_y);
+}
+
+static void _bs_onPointerLeave(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t serial,
+    struct wl_surface *surface
+) {
+    bs_Context* context = data;
+}
+
+static void _bs_onPointerMotion(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t time,
+    wl_fixed_t x,
+    wl_fixed_t y
+) {
+    bs_Context* context = data;
+    context->cursor = BS_V2((float)wl_fixed_to_int(x), (float)wl_fixed_to_int(y));
+}
+
+static void _bs_onPointerButton(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t serial,
+    uint32_t time,
+    uint32_t button,
+    uint32_t state
+) {
+    bs_Context* context = data;
+
+    if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
+        switch (button) {
+            case 0x110: bs_setBit(context->io.input_down_events, BS_LEFT_MOUSE_BUTTON); break;
+            case 0x111: bs_setBit(context->io.input_down_events, BS_RIGHT_MOUSE_BUTTON); break;
+            case 0x112: bs_setBit(context->io.input_down_events, BS_MIDDLE_MOUSE_BUTTON); break;
+        }
+    } else if (state == WL_POINTER_BUTTON_STATE_RELEASED) {
+        switch (button) {
+            case 0x110: bs_setBit(context->io.input_up_events, BS_LEFT_MOUSE_BUTTON); break;
+            case 0x111: bs_setBit(context->io.input_up_events, BS_RIGHT_MOUSE_BUTTON); break;
+            case 0x112: bs_setBit(context->io.input_up_events, BS_MIDDLE_MOUSE_BUTTON); break;
+        }
+    }
+}
+
+static void _bs_onPointerAxis(
+    void *data,
+    struct wl_pointer *pointer,
+    uint32_t time,
+    uint32_t axis,
+    wl_fixed_t value
+) {
+    bs_Context* context = data;
+}
+
+static void _bs_onPointerFrame(
+    void* data,
+    struct wl_pointer* wl_pointer
+) {
+    bs_Context* context = data;
+}
+
+static void _bs_onPointerAxisSource(
+    void* data,
+    struct wl_pointer* wl_pointer,
+    uint32_t axis_source
+) {
+    bs_Context* context = data;
+}
+
+static void _bs_onPointerAxisStop(
+    void* data,
+    struct wl_pointer* wl_pointer,
+    uint32_t time,
+    uint32_t axis_source
+) {
+    bs_Context* context = data;
+}
+
+static void _bs_onPointerAxisDiscrete(
+    void* data,
+    struct wl_pointer* wl_pointer,
+    uint32_t axis,
+    int32_t discrete
+) {
+    bs_Context* context = data;
+}
+
+static const struct wl_pointer_listener _bs_pointer_listener_ = {
+    .enter = _bs_onPointerEnter,
+    .leave = _bs_onPointerLeave,
+    .motion = _bs_onPointerMotion,
+    .button = _bs_onPointerButton,
+    .axis = _bs_onPointerAxis,
+    .frame = _bs_onPointerFrame,
+    .axis_source = _bs_onPointerAxisSource,
+    .axis_stop = _bs_onPointerAxisStop,
+    .axis_discrete = _bs_onPointerAxisDiscrete,
 };
 
 void _test(bs_Context* context, const char* title) {
@@ -1718,5 +1852,22 @@ void _test(bs_Context* context, const char* title) {
     }
 
     wl_surface_commit(context->_wl_surface);
+    wl_display_roundtrip(context->display);
+
+    if (context->seat) {
+        _bs_instance_->wl.pointer = wl_seat_get_pointer(context->seat);
+        wl_pointer_add_listener(_bs_instance_->wl.pointer, &_bs_pointer_listener_, context);
+
+        struct wl_cursor_theme *cursor_theme = wl_cursor_theme_load(NULL, 24, context->shm);
+        struct wl_cursor *cursor = wl_cursor_theme_get_cursor(cursor_theme, "left_ptr");
+
+        _bs_instance_->wl.cursor_image = cursor->images[0];
+        struct wl_buffer *cursor_buffer = wl_cursor_image_get_buffer(_bs_instance_->wl.cursor_image);
+
+        _bs_instance_->wl.cursor_surface = wl_compositor_create_surface(context->compositor);
+        wl_surface_attach(_bs_instance_->wl.cursor_surface, cursor_buffer, 0, 0);
+        wl_surface_commit(_bs_instance_->wl.cursor_surface);
+    }
+    wl_display_roundtrip(context->display);
 }
 #endif

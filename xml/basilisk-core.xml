@@ -804,6 +804,8 @@
             <name>#define BS_WRITE_BIT(array, index, value)</name>
             <line>    do { if (value) BS_SET_BIT(array, index); else BS_CLEAR_BIT(array, index); } while (0)</line>
         </macro>
+
+		<ifdef cond="_WIN32"/>
         <macro><name>#define BS_LEFT_MOUSE_BUTTON</name><line>0x01</line></macro>
         <macro><name>#define BS_RIGHT_MOUSE_BUTTON</name><line>0x02</line></macro>
 
@@ -1020,7 +1022,9 @@
         <macro><name>#define BS_KEY_NONAME</name><line>0xFC</line></macro>
         <macro><name>#define BS_KEY_PA1</name><line>0xFD</line></macro>
         <macro><name>#define BS_KEY_OEM_CLEAR</name><line>0xFE</line></macro>
+		<elifdef cond="__linux__"/>
 
+		<endif/>
 
 	</macros>
 
@@ -1902,6 +1906,14 @@
             <field><type>bs_PhysicalDevice*</type><name>physical_device</name></field>
             <field><type>bs_QueueFamily*</type><name>queue_family</name></field>
 
+			<ifdef cond="__linux__"/>
+				<structure instance="wl">
+					<field><type>void*</type><name>pointer</name></field>
+					<field><type>void*</type><name>cursor_surface</name></field>
+					<field><type>void*</type><name>cursor_image</name></field>
+				</structure>structure>
+			<endif/>
+
             <field><type>struct VkDescriptorSet_T*</type><name>sets</name><size>BS_MAX_NUM_BIND_SETS</size></field>
             <field><type>struct VkDescriptorSetLayout_T*</type><name>layouts</name><size>BS_MAX_NUM_BIND_SETS</size></field>
             <field><type>struct VkInstance_T*</type><name>instance</name></field>
@@ -1967,7 +1979,7 @@
             <field><type>bs_IO</type><name>io</name></field>
 
 	 		<ifdef cond="_WIN32"/>
-	 			<field><type>void*</type><name>hwnd</name></field>
+			 <field><type>void*</type><name>hwnd</name></field>
 		 	<endif/>
 
 			<ifdef cond="__linux__"/>
@@ -1975,6 +1987,8 @@
 			 <field><type>void*</type><name>registry</name></field>
 			 <field><type>void*</type><name>compositor</name></field>
 			 <field><type>void*</type><name>wm_base</name></field>
+			 <field><type>void*</type><name>seat</name></field>
+			 <field><type>void*</type><name>shm</name></field>
 			 <field><type>void*</type><name>decoration</name></field>
 			 <field><type>void*</type><name>decoration_manager</name></field>
 			 <field><type>void*</type><name>viewporter</name></field>

@@ -115,73 +115,38 @@ else()
 endif()
 
 if (WIN32)
-
-set(PROJECT_LINK
+    set(PROJECT_LINK
         cmd.exe /c
         "mklink /J \"${CMAKE_CURRENT_BINARY_DIR}/Debug/project\" \"${PROJECT_SOURCE_DIR}/..\" || exit /b 0"
-)
+    )
 
-set(CONTENT_LINK
+    set(CONTENT_LINK
         cmd.exe /c
         "mklink /J \"${CMAKE_CURRENT_BINARY_DIR}/Debug/content\" \"${PROJECT_SOURCE_DIR}/../content\" || exit /b 0"
-)
+    )
 
-set(CONTENT_COPY_RELEASE
+    set(CONTENT_COPY_RELEASE
         ${CMAKE_COMMAND} -E copy_directory
         "${PROJECT_SOURCE_DIR}/../content"
         "${CMAKE_CURRENT_BINARY_DIR}/Release/content"
-)
+    )
 
-set(CONTENT_COPY_RELEASE_DEBUG
+    set(CONTENT_COPY_RELEASE_DEBUG
         ${CMAKE_COMMAND} -E copy_directory
         "${PROJECT_SOURCE_DIR}/../content"
         "${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/content"
-)
+    )
 
-set(RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE_DEBUG
+    set(RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE_DEBUG
         ${CMAKE_COMMAND} -E make_directory
         "${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/content"
-)
+    )
 
-set(RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE
+    set(RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE
         ${CMAKE_COMMAND} -E make_directory
         "${CMAKE_CURRENT_BINARY_DIR}/Release/content"
-)
-
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND "$<$<CONFIG:Debug>:${PROJECT_LINK}>" COMMENT "POST_BUILD: Creating junction to /"
-    COMMAND "$<$<CONFIG:Debug>:${CONTENT_LINK}>" COMMENT "POST_BUILD: Creating junction to content/"
-    COMMAND_EXPAND_LISTS
-    CONFIGURATIONS Debug
-)
-
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND "$<$<CONFIG:Release>:${RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE}>" COMMENT "POST_BUILD: Creating content/ directory in Release/"
-    COMMAND "$<$<CONFIG:Release>:${CONTENT_COPY_RELEASE}>" COMMENT "POST_BUILD: Copying content to Release/"
-    COMMAND_EXPAND_LISTS
-    CONFIGURATIONS Release
-)
-
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND "$<$<CONFIG:RelWithDebInfo>:${RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE_DEBUG}>" COMMENT "POST_BUILD: Creating content/ directory in RelWithDebInfo/"
-    COMMAND "$<$<CONFIG:RelWithDebInfo>:${CONTENT_COPY_RELEASE_DEBUG}>" COMMENT "POST_BUILD: Copying content to RelWithDebInfo/"
-    COMMAND_EXPAND_LISTS
-    CONFIGURATIONS RelWithDebInfo
-)
-else()
-    set(PROJECT_LINK
-        ${CMAKE_COMMAND} -E create_symlink
-        "${PROJECT_SOURCE_DIR}/.."
-        "${CMAKE_CURRENT_BINARY_DIR}/project"
     )
-    set(CONTENT_LINK
-        ${CMAKE_COMMAND} -E create_symlink
-        "${PROJECT_SOURCE_DIR}/../content"
-        "${CMAKE_CURRENT_BINARY_DIR}/content"
-    )
+
     add_custom_command(
         TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND "$<$<CONFIG:Debug>:${PROJECT_LINK}>" COMMENT "POST_BUILD: Creating junction to /"
@@ -190,5 +155,46 @@ else()
         CONFIGURATIONS Debug
     )
 
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "$<$<CONFIG:Release>:${RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE}>" COMMENT "POST_BUILD: Creating content/ directory in Release/"
+        COMMAND "$<$<CONFIG:Release>:${CONTENT_COPY_RELEASE}>" COMMENT "POST_BUILD: Copying content to Release/"
+        COMMAND_EXPAND_LISTS
+        CONFIGURATIONS Release
+    )
 
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "$<$<CONFIG:RelWithDebInfo>:${RESOURCE_CREATE_CONTENT_DIRECTORY_RELEASE_DEBUG}>" COMMENT "POST_BUILD: Creating content/ directory in RelWithDebInfo/"
+        COMMAND "$<$<CONFIG:RelWithDebInfo>:${CONTENT_COPY_RELEASE_DEBUG}>" COMMENT "POST_BUILD: Copying content to RelWithDebInfo/"
+        COMMAND_EXPAND_LISTS
+        CONFIGURATIONS RelWithDebInfo
+    )
+else()
+    set(PROJECT_LINK
+        ${CMAKE_COMMAND} -E create_symlink
+        "${PROJECT_SOURCE_DIR}/.."
+        "${CMAKE_CURRENT_BINARY_DIR}/project"
+    )
+
+    set(CONTENT_LINK
+        ${CMAKE_COMMAND} -E create_symlink
+        "${PROJECT_SOURCE_DIR}/../content"
+        "${CMAKE_CURRENT_BINARY_DIR}/content"
+    )
+
+    set(CONTENT_COPY_RELEASE
+        ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_SOURCE_DIR}/../content"
+        "${CMAKE_CURRENT_BINARY_DIR}/content"
+    )
+
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND "$<$<CONFIG:Debug>:${PROJECT_LINK}>"
+        COMMAND "$<$<CONFIG:Debug>:${CONTENT_LINK}>"
+        COMMAND "$<$<CONFIG:Release>:${CONTENT_COPY_RELEASE}>"
+        COMMAND "$<$<CONFIG:RelWithDebInfo>:${CONTENT_COPY_RELEASE}>"
+        COMMAND_EXPAND_LISTS
+    )
 endif()

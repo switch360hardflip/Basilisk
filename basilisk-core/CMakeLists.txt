@@ -87,6 +87,7 @@ if (UNIX)
         dl
         uuid
         wayland-client
+        wayland-cursor
     )
 endif ()
 

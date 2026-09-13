@@ -3224,6 +3224,13 @@ struct bs_Instance {
     int max_frames_in_flight;
     bs_PhysicalDevice* physical_device;
     bs_QueueFamily* queue_family;
+#ifdef __linux__
+    struct {
+        void* pointer;
+        void* cursor_surface;
+        void* cursor_image;
+    }wl;
+#endif
     struct VkDescriptorSet_T* sets[BS_MAX_NUM_BIND_SETS];
     struct VkDescriptorSetLayout_T* layouts[BS_MAX_NUM_BIND_SETS];
     struct VkInstance_T* instance;
@@ -3297,6 +3304,8 @@ struct bs_Context {
     void* registry;
     void* compositor;
     void* wm_base;
+    void* seat;
+    void* shm;
     void* decoration;
     void* decoration_manager;
     void* viewporter;
