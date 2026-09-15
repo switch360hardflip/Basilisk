@@ -35,6 +35,52 @@
 
 BSGFX_CACHE_COLOR_MATERIAL(context_menu_button_hover_color, BS_RGBA(0, 120, 215, 255))
 
+ContextMenuElement _context_menu_open_recent_elements_[] = {
+    {
+        .left_text = "Testing...",
+    },
+    {
+        .left_text = "Abc123",
+    },
+};
+
+ContextMenuElement _context_menu_file_elements_[] = {
+    {
+        .left_text = "New...",
+        .right_text = "Ctrl+N",
+    },
+    {
+        .left_text = "Open...",
+    },
+    {
+        .left_text = "Open Recent",
+        .hover_menu_type = CONTEXT_MENU_OPEN_RECENT,
+    },
+    {
+        .left_text = "Save",
+        .right_text = "Ctrl+S",
+    },
+    {
+        .left_text = "Save As...",
+        .right_text = "Shift+Ctrl+S",
+    },
+    {
+        .left_text = "Exit",
+        .right_text = "Alt+F4",
+    }
+};
+
+#define CONTEXT_MENU(array) \
+    { .elements = array, .elements_count = sizeof(array) / sizeof(*array) }
+
+struct {
+    ContextMenuElement* elements;
+    int elements_count;
+} context_menus[CONTEXT_MENU_COUNT] = {
+    [CONTEXT_MENU_FILE] = CONTEXT_MENU(_context_menu_file_elements_),
+    [CONTEXT_MENU_OPEN_RECENT] = CONTEXT_MENU(_context_menu_open_recent_elements_),
+};
+
 static void instantiateContextMenuUI(bs_Context* context, ContextMenuElement elements[], int elements_count) {
     int window_height = elements_count * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT;
     const int border_size = 1;
@@ -272,21 +318,31 @@ void onContextMenuTick(bs_Context* context, void* params) {
         .dim = resolution,
     };
 
-    bsgfx_tickInstanceTypes();
-
-    basilisk_pipeline(context->popup.queue_obj->queue, &renderer, BASILISK_CONTEXT_MENU_CLEAR_COLOR);
-
-    bsgfx_resetInstanceTypes();
+//    bsgfx_tickInstanceTypes();
+//
+//    basilisk_pipeline(context->popup.queue_obj->queue, &renderer, BASILISK_CONTEXT_MENU_CLEAR_COLOR);
+//
+//    bsgfx_resetInstanceTypes();
 }
 
-void openContextMenu(bs_ivec2 position, ContextMenuElement context_menu_file_elements[], int context_menu_file_elements_count) {
+void toggleContextMenu(bs_ivec2 position, ContextMenuType type) {
+    bs_Context* ctx = bs_queryPopupWindow(type);
+    if (ctx) {
+        printf("exists\n");
+        bs_closePopupWindow(ctx);
+        return;
+    }
+
     bs_ivec2 new_position = bs_windowPosition(bs_scope()->context);
     new_position.x += position.x;
     new_position.y -= position.y;
 
-    int height = context_menu_file_elements_count * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT;
+    ContextMenuElement* element = context_menus[type].elements_count;
+
+    int height = context_menus[type].elements_count * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT;
+    printf("creating\n");
 
     bs_openPopupWindow((bs_ContextListener) {
         .tick = onContextMenuTick,
-    }, new_position.x, new_position.y, BASILISK_CONTEXT_MENU_WIDTH, height, "RightClickMenu");
+    }, type, new_position.x, new_position.y, BASILISK_CONTEXT_MENU_WIDTH, height, "RightClickMenu");
 }

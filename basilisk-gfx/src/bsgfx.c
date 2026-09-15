@@ -86,8 +86,8 @@ static void _bsgfx_configure() {
 }
 
 static void _bsgfx_fixedTick() {
-    if (_bsgfx_callbacks_.fixedTick)
-        _bsgfx_callbacks_.fixedTick();
+    //if (_bsgfx_callbacks_.fixedTick)
+    //    _bsgfx_callbacks_.fixedTick();
 }
 
 
@@ -116,15 +116,14 @@ void _bsgfx_tickInstanceTypes() {
     int to_reset_count = sizeof(to_reset) / sizeof(*to_reset);
 
     for (int i = 0; i < to_reset_count; i++)
-        bsgfx_tickInstanceType(_bsgfx_instance_types_[to_reset[i]]);
-
+        _bsgfx_tickInstanceType(_bsgfx_instance_types_[to_reset[i]]);
 }
 
 void _bsgfx_resetInstanceTypes() {
     int to_reset_count = sizeof(to_reset) / sizeof(*to_reset);
 
     for (int i = 0; i < to_reset_count; i++)
-        bsgfx_resetInstanceType(_bsgfx_instance_types_[to_reset[i]]);
+        _bsgfx_resetInstanceType(_bsgfx_instance_types_[to_reset[i]]);
 }
 
 BSGFXAPI void _bsgfx_setCamera(const bs_mat4* proj, const bs_mat4* view) {
@@ -150,7 +149,7 @@ BSGFXAPI void _bsgfx_ini(const char* name, bs_U32 width, bs_U32 height, bs_U32 w
     bs_ini();
 
     bs_Object* context_object = BS_CONTEXT(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN, 0);
-    bs_window(context_object->context, NULL, (bs_ContextListener) { .tick = _bsgfx_callbacks_.tick }, width, height, name, window_flags);
+    bs_window(context_object->context, NULL, _bsgfx_callbacks_.context_listener, width, height, name, window_flags);
     bs_showWindow(context_object->context);
     bs_device(context_object->context, NULL);
     bs_swapchain(context_object->context);

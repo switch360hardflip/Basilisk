@@ -1253,11 +1253,10 @@ struct bsgfx_Settings {
 };
 
 struct bsgfx_Callbacks {
-    bs_ContextTickFunction tick;
-    PFN_void fixedTick;
     PFN_void loadScene;
     PFN_bsgfx_onQueue queue;
     PFN_void pipeline;
+    bs_ContextListener context_listener;
 };
 
 struct bsgfx_Application {
@@ -2671,6 +2670,16 @@ bsgfx_instanceData(
     int instance_id);
 
  /**
+  @param subtype
+  @param offset
+  @return bool
+  */
+BSGFXAPI bool
+bsgfx_hoveringQuadInstance(
+    bsgfx_InstanceSubtype* subtype,
+    int offset);
+
+ /**
   @param position
   @param scale
   @return bs_mat4x3
@@ -3279,9 +3288,9 @@ bsgfx_instantiateTextUI(
  /**
   @param solid
   @param element
-  @return void
+  @return bsgfx_Range
   */
-BSGFXAPI void
+BSGFXAPI bsgfx_Range
 bsgfx_instantiateSolidUI(
     bsgfx_UISolid solid,
     bsgfx_UIElement* element);
@@ -3289,9 +3298,9 @@ bsgfx_instantiateSolidUI(
  /**
   @param solid
   @param element
-  @return void
+  @return bsgfx_Range
   */
-BSGFXAPI void
+BSGFXAPI bsgfx_Range
 bsgfx_instantiateSolidUIElement(
     bsgfx_UISolid solid,
     const bsgfx_UIElement* element);

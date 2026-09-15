@@ -2442,9 +2442,22 @@ BSAPI void _preval_bs_moveWindow(bs_Context* context, int x, int y) {
     next.bs_moveWindow(context, x, y);
 }
 
-BSAPI bs_Context* _preval_bs_openPopupWindow(bs_ContextListener listener, bs_I32 x, bs_I32 y, bs_I32 width, bs_I32 height, const char* title) {
-    BS_VALIDATE(title != NULL, NULL,);
-    return next.bs_openPopupWindow(listener, x, y, width, height, title);
+BSAPI bs_Context* _preval_bs_queryPopupWindow(bs_I32 id) {
+    return next.bs_queryPopupWindow(id);
+}
+
+BSAPI void _preval_bs_closeAllPopupWindows() {
+    next.bs_closeAllPopupWindows();
+}
+
+BSAPI void _preval_bs_closePopupWindow(bs_Context* context) {
+    BS_VALIDATE(context != NULL, ,);
+    next.bs_closePopupWindow(context);
+}
+
+BSAPI bs_Result _preval_bs_openPopupWindow(bs_ContextListener listener, bs_I32 id, bs_I32 x, bs_I32 y, bs_I32 width, bs_I32 height, const char* title) {
+    BS_VALIDATE(title != NULL, BS_RESULT_VALIDATION_ERROR,);
+    return next.bs_openPopupWindow(listener, id, x, y, width, height, title);
 }
 
 BSAPI bs_Result _preval_bs_window(bs_Context* context, bs_Context* parent, bs_ContextListener listener, bs_U32 width, bs_U32 height, const char* title, bs_WindowType type) {
@@ -3180,6 +3193,9 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_scroll = _preval_bs_scroll;
     functions.bs_resizeWindow = _preval_bs_resizeWindow;
     functions.bs_moveWindow = _preval_bs_moveWindow;
+    functions.bs_queryPopupWindow = _preval_bs_queryPopupWindow;
+    functions.bs_closeAllPopupWindows = _preval_bs_closeAllPopupWindows;
+    functions.bs_closePopupWindow = _preval_bs_closePopupWindow;
     functions.bs_openPopupWindow = _preval_bs_openPopupWindow;
     functions.bs_window = _preval_bs_window;
     functions.bs_swapchain = _preval_bs_swapchain;

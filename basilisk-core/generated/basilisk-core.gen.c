@@ -4176,15 +4176,33 @@ void bs_moveWindow(
     next.bs_moveWindow(context, x, y);
 }
 
-bs_Context* bs_openPopupWindow(
+bs_Context* bs_queryPopupWindow(
+    bs_I32 id)
+{
+    return next.bs_queryPopupWindow(id);
+}
+
+void bs_closeAllPopupWindows()
+{
+    next.bs_closeAllPopupWindows();
+}
+
+void bs_closePopupWindow(
+    bs_Context* context)
+{
+    next.bs_closePopupWindow(context);
+}
+
+bs_Result bs_openPopupWindow(
     bs_ContextListener listener, 
+    bs_I32 id, 
     bs_I32 x, 
     bs_I32 y, 
     bs_I32 width, 
     bs_I32 height, 
     const char* title)
 {
-    return next.bs_openPopupWindow(listener, x, y, width, height, title);
+    return next.bs_openPopupWindow(listener, id, x, y, width, height, title);
 }
 
 bs_Result bs_window(

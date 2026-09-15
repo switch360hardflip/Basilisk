@@ -425,6 +425,9 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_scroll = (PFN_bs_scroll)bs_getProcAddress(module, "_preval_bs_scroll");
     functions.bs_resizeWindow = (PFN_bs_resizeWindow)bs_getProcAddress(module, "_preval_bs_resizeWindow");
     functions.bs_moveWindow = (PFN_bs_moveWindow)bs_getProcAddress(module, "_preval_bs_moveWindow");
+    functions.bs_queryPopupWindow = (PFN_bs_queryPopupWindow)bs_getProcAddress(module, "_preval_bs_queryPopupWindow");
+    functions.bs_closeAllPopupWindows = (PFN_bs_closeAllPopupWindows)bs_getProcAddress(module, "_preval_bs_closeAllPopupWindows");
+    functions.bs_closePopupWindow = (PFN_bs_closePopupWindow)bs_getProcAddress(module, "_preval_bs_closePopupWindow");
     functions.bs_openPopupWindow = (PFN_bs_openPopupWindow)bs_getProcAddress(module, "_preval_bs_openPopupWindow");
     functions.bs_window = (PFN_bs_window)bs_getProcAddress(module, "_preval_bs_window");
     functions.bs_swapchain = (PFN_bs_swapchain)bs_getProcAddress(module, "_preval_bs_swapchain");

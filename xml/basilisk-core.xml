@@ -74,13 +74,14 @@
 		<typedef><type>void</type><name>(* bs_NameObjectFunction)(bs_Object*, const char*)</name></typedef>
 		<typedef><type>void</type><name>(* bs_ValidationErrorFunction)()</name></typedef>
 		<typedef><type>bs_NonClientArea</type><name>(* bs_NonClientAreaTickFunction)(bs_Context*, bs_ivec2)</name></typedef>
-		<typedef><type>void</type><name>(* bs_ContextResizeFunction)(bs_Context*)</name></typedef>
 		<typedef><type>void</type><name>(* bs_SubpassFunction)(bs_RendererScope*)</name></typedef>
 		
         <typedef><type>void</type><name>(* bs_ContextTickFunction)(bs_Context* context, void* params)</name></typedef>
-        <typedef><type>void</type><name>(* bs_ContextInputFunction)(bs_Context* context, void* params)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextInputFunction)(bs_Context* context, bs_ContextInputParams params)</name></typedef>
         <typedef><type>void</type><name>(* bs_ContextEnterFunction)(bs_Context* context, void* params)</name></typedef>
         <typedef><type>void</type><name>(* bs_ContextLeaveFunction)(bs_Context* context, void* params)</name></typedef>
+		<typedef><type>void</type><name>(* bs_ContextResizeFunction)(bs_Context*)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextActivateFunction)(bs_Context* context, bs_ContextActivateParams params)</name></typedef>
 
 		<typedef><type>long long</type><name>bs_I64</name></typedef>
 		<typedef><type>int</type><name>bs_I32</name></typedef>
@@ -158,6 +159,10 @@
 			<line><name>BS_RESULT_OUT_OF_BOUNDS</name></line>
 			<line><name>BS_RESULT_VALIDATION_ERROR</name></line>
 			<line><name>BS_RESULT_ZERO_ALLOC</name></line>
+		</enum>
+		<enum name="bs_InputState">
+			<line><name>BS_INPUT_PRESSED</name><value>1</value></line>
+			<line><name>BS_INPUT_RELEASED</name><value>2</value></line>
 		</enum>
 		<enum name="bs_IniFlag">
 			<line><name>BS_INI_AUDIO_BIT</name><value>1 &lt;&lt; 0</value></line>
@@ -559,7 +564,7 @@
 
 		<macro>
 			<name>#define BS_KEYS_COUNT</name>
-			<line>256</line>
+			<line>260</line>
 		</macro>
 
 		<macro>
@@ -808,7 +813,7 @@
             <line>    do { if (value) BS_SET_BIT(array, index); else BS_CLEAR_BIT(array, index); } while (0)</line>
         </macro>
 
-		<ifdef cond="_WIN32"/>
+        <ifdef cond="_WIN32"/>
             <macro><name>#define BS_LEFT_MOUSE_BUTTON</name><line>0x01</line></macro>
             <macro><name>#define BS_RIGHT_MOUSE_BUTTON</name><line>0x02</line></macro>
 
@@ -816,13 +821,13 @@
             <macro><name>#define BS_THUMB_FORWARD</name><line>0x05</line></macro>
             <macro><name>#define BS_THUMB_BACK</name><line>0x06</line></macro>
 
-		    <macro><name>#define BS_KEY_BACKSPACE</name><line>0x08</line></macro>
+            <macro><name>#define BS_KEY_BACKSPACE</name><line>0x08</line></macro>
             <macro><name>#define BS_KEY_TAB</name><line>0x09</line></macro>
 
-		    <macro><name>#define BS_KEY_CLEAR</name><line>0x0C</line></macro>
+            <macro><name>#define BS_KEY_CLEAR</name><line>0x0C</line></macro>
             <macro><name>#define BS_KEY_ENTER</name><line>0x0D</line></macro>
 
-		    <macro><name>#define BS_KEY_LEFT_SHIFT</name><line>0x10</line></macro>
+            <macro><name>#define BS_KEY_LEFT_SHIFT</name><line>0x10</line></macro>
             <macro><name>#define BS_KEY_LEFT_CONTROL</name><line>0x11</line></macro>
             <macro><name>#define BS_KEY_ALT</name><line>0x12</line></macro>
             <macro><name>#define BS_KEY_PAUSE</name><line>0x13</line></macro>
@@ -896,7 +901,7 @@
             <macro><name>#define BS_KEY_RIGHT_WIN</name><line>0x5C</line></macro>
             <macro><name>#define BS_KEY_APPS</name><line>0x5D</line></macro>
 
-		    <macro><name>#define BS_KEY_SLEEP</name><line>0x5F</line></macro>
+            <macro><name>#define BS_KEY_SLEEP</name><line>0x5F</line></macro>
             <macro><name>#define BS_KEY_NUMPAD0</name><line>0x60</line></macro>
             <macro><name>#define BS_KEY_NUMPAD1</name><line>0x61</line></macro>
             <macro><name>#define BS_KEY_NUMPAD2</name><line>0x62</line></macro>
@@ -938,7 +943,7 @@
             <macro><name>#define BS_KEY_F23</name><line>0x86</line></macro>
             <macro><name>#define BS_KEY_F24</name><line>0x87</line></macro>
 
-		    <macro><name>#define BS_KEY_NAVIGATION_VIEW</name><line>0x88</line></macro>
+            <macro><name>#define BS_KEY_NAVIGATION_VIEW</name><line>0x88</line></macro>
             <macro><name>#define BS_KEY_NAVIGATION_MENU</name><line>0x89</line></macro>
             <macro><name>#define BS_KEY_NAVIGATION_UP</name><line>0x8A</line></macro>
             <macro><name>#define BS_KEY_NAVIGATION_DOWN</name><line>0x8B</line></macro>
@@ -1025,10 +1030,14 @@
             <macro><name>#define BS_KEY_NONAME</name><line>0xFC</line></macro>
             <macro><name>#define BS_KEY_PA1</name><line>0xFD</line></macro>
             <macro><name>#define BS_KEY_OEM_CLEAR</name><line>0xFE</line></macro>
-		<endif/>
+		
+            <macro><name>#define BS_LEFT_MOUSE_BUTTON_NON_CLIENT</name><line>0x100</line></macro>
+            <macro><name>#define BS_RIGHT_MOUSE_BUTTON_NON_CLIENT</name><line>0x101</line></macro>
+            <macro><name>#define BS_MIDDLE_MOUSE_BUTTON_NON_CLIENT</name><line>0x102</line></macro>
+        <endif/>
 
-		<ifdef cond="__linux__"/>
-		<macro><name>#define BS_LEFT_MOUSE_BUTTON</name><line>0x110</line></macro> <!-- BTN_LEFT -->
+        <ifdef cond="__linux__"/>
+            <macro><name>#define BS_LEFT_MOUSE_BUTTON</name><line>0x110</line></macro> <!-- BTN_LEFT -->
             <macro><name>#define BS_RIGHT_MOUSE_BUTTON</name><line>0x111</line></macro> <!-- BTN_RIGHT -->
 
             <macro><name>#define BS_MIDDLE_MOUSE_BUTTON</name><line>0x112</line></macro> <!-- BTN_MIDDLE -->
@@ -2169,12 +2178,21 @@
             <field><type>bs_List</type><name>surface_formats</name></field>
             <field><type>const char</type><name>name</name><size>BS_MAX_PHYSICAL_DEVICE_NAME_SIZE</size></field>
         </structure>
+		<structure name="bs_ContextInputParams">
+			<field><type>int</type><name>code</name></field>
+			<field><type>bs_InputState</type><name>state</name></field>
+			<field><type>bool</type><name>non_client_area</name></field>
+		</structure>
+		<structure name="bs_ContextActivateParams">
+			<field><type>bool</type><name>active</name></field>
+		</structure>
 		<structure name="bs_ContextListener">
 			<field><type>bs_ContextTickFunction</type><name>tick</name></field>
 			<field><type>bs_ContextInputFunction</type><name>input</name></field>
 			<field><type>bs_ContextLeaveFunction</type><name>leave</name></field>
 			<field><type>bs_ContextEnterFunction</type><name>enter</name></field>
 			<field><type>bs_ContextResizeFunction</type><name>resize</name></field>
+			<field><type>bs_ContextActivateFunction</type><name>activate</name></field>
 		</structure>
          <structure name="bs_Context">
             <field><type>bs_Header</type><name>head</name></field>
@@ -2188,7 +2206,6 @@
             <field><type>bs_SurfaceFormat</type><name>surface_format</name></field>
             <field><type>bs_PresentMode</type><name>present_mode</name></field>
 
-            <field><type>int</type><name>id</name></field>
             <field><type>int</type><name>frames_in_flight</name></field>
             <field><type>int</type><name>frame</name></field>
             <field><type>int</type><name>image_index</name></field>
@@ -2205,6 +2222,7 @@
 
             <structure type="union">
                 <structure instance="popup">
+                    <field><type>bs_I32</type><name>id</name></field>
                     <field><type>bs_Object*</type><name>queue_obj</name></field>
                 </structure>
             </structure>
@@ -4393,9 +4411,21 @@
             <param><type>int</type><name>x</name></param>
             <param><type>int</type><name>y</name></param>
         </function>
-		<function name="bs_openPopupWindow">
+		<function name="bs_queryPopupWindow">
             <return>bs_Context*</return>
+            <param><type>bs_I32</type><name>id</name></param>
+        </function>
+		<function name="bs_closeAllPopupWindows">
+            <return>void</return>
+        </function>
+		<function name="bs_closePopupWindow">
+            <return>void</return>
+            <param><type>bs_Context*</type><name>context</name></param>
+        </function>
+		<function name="bs_openPopupWindow">
+            <return>bs_Result</return>
             <param><type>bs_ContextListener</type><name>listener</name></param>
+            <param><type>bs_I32</type><name>id</name></param>
 			<param><type>bs_I32</type><name>x</name></param>
             <param><type>bs_I32</type><name>y</name></param>
             <param><type>bs_I32</type><name>width</name></param>

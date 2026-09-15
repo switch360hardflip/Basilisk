@@ -673,6 +673,13 @@ void* bsgfx_instanceData(
     return next.bsgfx_instanceData(subtype, instance_id);
 }
 
+bool bsgfx_hoveringQuadInstance(
+    bsgfx_InstanceSubtype* subtype, 
+    int offset)
+{
+    return next.bsgfx_hoveringQuadInstance(subtype, offset);
+}
+
 bs_mat4x3 bsgfx_matrix(
     bs_vec3 position, 
     bs_vec3 scale)
@@ -1094,18 +1101,18 @@ void bsgfx_instantiateTextUI(
     next.bsgfx_instantiateTextUI(text, element);
 }
 
-void bsgfx_instantiateSolidUI(
+bsgfx_Range bsgfx_instantiateSolidUI(
     bsgfx_UISolid solid, 
     bsgfx_UIElement* element)
 {
-    next.bsgfx_instantiateSolidUI(solid, element);
+    return next.bsgfx_instantiateSolidUI(solid, element);
 }
 
-void bsgfx_instantiateSolidUIElement(
+bsgfx_Range bsgfx_instantiateSolidUIElement(
     bsgfx_UISolid solid, 
     const bsgfx_UIElement* element)
 {
-    next.bsgfx_instantiateSolidUIElement(solid, element);
+    return next.bsgfx_instantiateSolidUIElement(solid, element);
 }
 
 void bsgfx_solidUIElement(

@@ -121,43 +121,6 @@ typedef struct {
     ContextMenuType hover_menu_type;
 } ContextMenuElement;
 
-
-static ContextMenuElement _context_menu_open_recent_elements_[] = {
-    {
-        .left_text = "Testing...",
-    },
-    {
-        .left_text = "Abc123",
-    },
-};
-
-static ContextMenuElement _context_menu_file_elements_[] = {
-    {
-        .left_text = "New...",
-        .right_text = "Ctrl+N",
-    },
-    {
-        .left_text = "Open...",
-    },
-    {
-        .left_text = "Open Recent",
-        .hover_menu_type = CONTEXT_MENU_OPEN_RECENT,
-    },
-    {
-        .left_text = "Save",
-        .right_text = "Ctrl+S",
-    },
-    {
-        .left_text = "Save As...",
-        .right_text = "Shift+Ctrl+S",
-    },
-    {
-        .left_text = "Exit",
-        .right_text = "Alt+F4",
-    }
-};
-
-
 bs_Object* basilisk_createHiResRenderer(bs_Context* context, int id);
 void basilisk_createRenderers();
 
@@ -167,7 +130,7 @@ void basilisk_instantiateBaseUI();
 bs_NonClientArea onClientAreaTick(bs_Context* context, bs_ivec2 pt);
 
 void onContextMenuTick(bs_Context* context, void* params);
-void openContextMenu(bs_ivec2 position, ContextMenuElement context_menu_file_elements[], int context_menu_file_elements_count);
+void toggleContextMenu(bs_ivec2 position, ContextMenuType type);
 void onTitleBarTick();
 
 void basilisk_renderDither(bs_RendererScope* scope, bs_Queue* queue);

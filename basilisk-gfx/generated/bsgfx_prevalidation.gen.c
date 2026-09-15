@@ -453,6 +453,11 @@ BSGFXAPI void* _preval_bsgfx_instanceData(bsgfx_InstanceSubtype* subtype, int in
     return next.bsgfx_instanceData(subtype, instance_id);
 }
 
+BSGFXAPI bool _preval_bsgfx_hoveringQuadInstance(bsgfx_InstanceSubtype* subtype, int offset) {
+    BSGFX_VALIDATE(subtype != NULL, false,);
+    return next.bsgfx_hoveringQuadInstance(subtype, offset);
+}
+
 BSGFXAPI bs_mat4x3 _preval_bsgfx_matrix(bs_vec3 position, bs_vec3 scale) {
     return next.bsgfx_matrix(position, scale);
 }
@@ -735,14 +740,14 @@ BSGFXAPI void _preval_bsgfx_instantiateTextUI(bsgfx_UIText text, bsgfx_UIElement
     next.bsgfx_instantiateTextUI(text, element);
 }
 
-BSGFXAPI void _preval_bsgfx_instantiateSolidUI(bsgfx_UISolid solid, bsgfx_UIElement* element) {
-    BSGFX_VALIDATE(element != NULL, ,);
-    next.bsgfx_instantiateSolidUI(solid, element);
+BSGFXAPI bsgfx_Range _preval_bsgfx_instantiateSolidUI(bsgfx_UISolid solid, bsgfx_UIElement* element) {
+    BSGFX_VALIDATE(element != NULL, (bsgfx_Range) { 0 },);
+    return next.bsgfx_instantiateSolidUI(solid, element);
 }
 
-BSGFXAPI void _preval_bsgfx_instantiateSolidUIElement(bsgfx_UISolid solid, const bsgfx_UIElement* element) {
-    BSGFX_VALIDATE(element != NULL, ,);
-    next.bsgfx_instantiateSolidUIElement(solid, element);
+BSGFXAPI bsgfx_Range _preval_bsgfx_instantiateSolidUIElement(bsgfx_UISolid solid, const bsgfx_UIElement* element) {
+    BSGFX_VALIDATE(element != NULL, (bsgfx_Range) { 0 },);
+    return next.bsgfx_instantiateSolidUIElement(solid, element);
 }
 
 BSGFXAPI void _preval_bsgfx_solidUIElement(bsgfx_UISolid solid, bsgfx_UIElement* element) {
@@ -862,6 +867,7 @@ bsgfx_FunctionTable* _preval_bsgfx_getFunctionTable() {
     functions.bsgfx_instantiateASCIITextV = _preval_bsgfx_instantiateASCIITextV;
     functions.bsgfx_instanceHeader = _preval_bsgfx_instanceHeader;
     functions.bsgfx_instanceData = _preval_bsgfx_instanceData;
+    functions.bsgfx_hoveringQuadInstance = _preval_bsgfx_hoveringQuadInstance;
     functions.bsgfx_matrix = _preval_bsgfx_matrix;
     functions.bsgfx_renderFineShadowVolumes = _preval_bsgfx_renderFineShadowVolumes;
     functions.bsgfx_renderShadowVolumes = _preval_bsgfx_renderShadowVolumes;

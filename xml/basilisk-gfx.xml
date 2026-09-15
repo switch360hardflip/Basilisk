@@ -1155,11 +1155,10 @@
 		</structure>
 
 		<structure name="bsgfx_Callbacks">
-			<field><type>bs_ContextTickFunction</type><name>tick</name></field>
-			<field><type>PFN_void</type><name>fixedTick</name></field>
 			<field><type>PFN_void</type><name>loadScene</name></field>
 			<field><type>PFN_bsgfx_onQueue</type><name>queue</name></field>
 			<field><type>PFN_void</type><name>pipeline</name></field>
+			<field><type>bs_ContextListener</type><name>context_listener</name></field>
 		</structure>
 
 		<structure name="bsgfx_Application">
@@ -2090,6 +2089,12 @@
 			<param><type>bsgfx_InstanceSubtype*</type><name>subtype</name></param>
 			<param><type>int</type><name>instance_id</name></param>
 		</function>
+		
+		<function name="bsgfx_hoveringQuadInstance">
+			<return>bool</return>
+			<param><type>bsgfx_InstanceSubtype*</type><name>subtype</name></param>
+			<param><type>int</type><name>offset</name></param>
+		</function>
 
 		<function name="bsgfx_matrix">
 			<return>bs_mat4x3</return>
@@ -2385,12 +2390,12 @@
 		</function>
 
 		<function name="bsgfx_instantiateSolidUI">
-			<return>void</return>
+			<return>bsgfx_Range</return>
 			<param><type>bsgfx_UISolid</type><name>solid</name></param>
 			<param><type>bsgfx_UIElement*</type><name>element</name></param>
 		</function>
 		<function name="bsgfx_instantiateSolidUIElement">
-			<return>void</return>
+			<return>bsgfx_Range</return>
 			<param><type>bsgfx_UISolid</type><name>solid</name></param>
 			<param><type>const bsgfx_UIElement*</type><name>element</name></param>
 		</function>

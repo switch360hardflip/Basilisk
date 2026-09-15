@@ -101,6 +101,15 @@ static void onLoadScene() {
    *============================================================================*/
 
 static void onTick(bs_Context* context) {
+	// todo move outside of tick
+	static bool ticked = false;
+	if (!ticked) {
+		basilisk_instantiateTitleBarUI();
+		bsgfx_tickInstanceTypes();
+		//bsgfx_resetInstanceTypes();
+		ticked = true;
+	}
+
 	onTitleBarTick();
 
 }
@@ -171,6 +180,17 @@ static void onResizeContext(bs_Context* context) {
 	//bs_resizeImage();
 }
 
+static void onApplicationWindowActivate(bs_Context* context, bs_ContextActivateParams params) {
+	if (!params.active) {
+		bs_closeAllPopupWindows();
+	}
+}
+
+static void onApplicationWindowInput(bs_Context* context, bs_ContextInputParams params) {
+	//if (params.state == BS_INPUT_PRESSED)
+	//	bs_closeAllPopupWindows();
+}
+
 int main(int argc, char* argv[]) {
 	bs_enableValidation();
 	bsgfx_enableValidation();
@@ -192,7 +212,11 @@ int main(int argc, char* argv[]) {
 	*gfx_callbacks = (bsgfx_Callbacks) {
 		.loadScene = onLoadScene,
 		.pipeline = basilisk_pipeline,
-		.tick = onTick,
+		.context_listener = {
+			.tick = onTick,
+			.activate = onApplicationWindowActivate,
+			.input = onApplicationWindowInput,
+		}
 	};
 
 	BS_CONFIGURE_SOURCE(basilisk.sources, BS_OBJECT_CONTEXT, BASILISK_CONTEXTS_COUNT, BASILISK_CONTEXT_IDS);

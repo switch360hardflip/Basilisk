@@ -629,22 +629,6 @@ BSAPI void _bs_setTargetFramerate(int fps) {
     _bs_instance_->target_frame_time = 1.0 / (double)fps;
 }
 
- /**
-  Ugly implementation
-  */
-static _Thread_local bool _hide_menu_windows_ = false;
-
-static void _bs_hideMenuWindows(bs_List* contexts) {
-    for (int i = 0; i < contexts->count; i++) {
-        bs_Context* ctx = *(bs_Context**)_bs_fetchUnit(contexts, i);
-        if (ctx->window_type == BS_WINDOW_POPUP) {
-          //  _bs_hideWindow(ctx);
-        }
-    }
-
-    _hide_menu_windows_ = false;
-}
-
 static void _bs_tickContext(bs_Context* context) {
    // if (bs_getBit(context->io.keys, BS_KEY_ALT) && bs_getBit(context->io.keys, BS_KEY_F4))
    //     _bs_exit();
@@ -719,6 +703,17 @@ static bs_List* _bs_getAllContexts() {
     }
 
     return &contexts;
+}
+
+// not the best
+void _bs_closeAllPopupWindows() {
+    bs_List* contexts = _bs_getAllContexts();
+    for (int i = 0; i < contexts->count; i++) {
+        bs_Context* ctx = *(bs_Context**)_bs_fetchUnit(contexts, i);
+        if (ctx->window_type == BS_WINDOW_POPUP) {
+            bs_closePopupWindow(ctx);
+        }
+    }
 }
 
 static void _bs_renderTick(bs_Callback fixed_tick) {
@@ -797,34 +792,45 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
         SetCapture(context->hwnd);
         bs_setBit(context->io.input_down_events, BS_LEFT_MOUSE_BUTTON);
 
-        if (context->window_type != BS_WINDOW_POPUP)
-            _hide_menu_windows_ = true;
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_LEFT_MOUSE_BUTTON, .state = BS_INPUT_PRESSED, });
         break;
     case WM_LBUTTONUP:
         ReleaseCapture();
         bs_setBit(context->io.input_up_events, BS_LEFT_MOUSE_BUTTON);
+
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_LEFT_MOUSE_BUTTON, .state = BS_INPUT_RELEASED, });
         break;
 
     case WM_RBUTTONDOWN:
         SetCapture(context->hwnd);
         bs_setBit(context->io.input_down_events, BS_RIGHT_MOUSE_BUTTON);
-        if (context->window_type != BS_WINDOW_POPUP)
-            _hide_menu_windows_ = true;
+
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_RIGHT_MOUSE_BUTTON, .state = BS_INPUT_PRESSED, });
         break;
     case WM_RBUTTONUP:
         ReleaseCapture();
         bs_setBit(context->io.input_up_events, BS_RIGHT_MOUSE_BUTTON);
+
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_RIGHT_MOUSE_BUTTON, .state = BS_INPUT_RELEASED, });
         break;
 
     case WM_MBUTTONDOWN:
         SetCapture(context->hwnd);
         bs_setBit(context->io.input_down_events, BS_MIDDLE_MOUSE_BUTTON);
-        if (context->window_type != BS_WINDOW_POPUP)
-            _hide_menu_windows_ = true;
+
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_MIDDLE_MOUSE_BUTTON, .state = BS_INPUT_PRESSED, });
         break;
     case WM_MBUTTONUP:
         ReleaseCapture();
         bs_setBit(context->io.input_up_events, BS_MIDDLE_MOUSE_BUTTON);
+
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_MIDDLE_MOUSE_BUTTON, .state = BS_INPUT_RELEASED, });
         break;
 
     case WM_MOUSEWHEEL: {
@@ -849,19 +855,42 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
         //    bs_setBit(context->io.key_events, (bs_U32)msg.wParam);
     } break;
     case WM_SYSKEYUP: {
-      // if (msg.wParam < 256)
+        // if (msg.wParam < 256)
       //     bs_clearBit(context->io.key_events, (bs_U32)msg.wParam);
     } break;
     case WM_NCLBUTTONDOWN:
+        bs_setBit(context->io.input_down_events, BS_LEFT_MOUSE_BUTTON_NON_CLIENT);
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_LEFT_MOUSE_BUTTON, .state = BS_INPUT_PRESSED, .non_client_area = true });
+        break;
     case WM_NCLBUTTONUP:
-    case WM_NCLBUTTONDBLCLK:
+        bs_setBit(context->io.input_up_events, BS_LEFT_MOUSE_BUTTON_NON_CLIENT);
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_LEFT_MOUSE_BUTTON, .state = BS_INPUT_RELEASED, .non_client_area = true });
+        break;
     case WM_NCRBUTTONDOWN:
+        bs_setBit(context->io.input_down_events, BS_RIGHT_MOUSE_BUTTON_NON_CLIENT);
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_RIGHT_MOUSE_BUTTON, .state = BS_INPUT_PRESSED, .non_client_area = true });
+        break;
     case WM_NCRBUTTONUP:
-    case WM_NCRBUTTONDBLCLK:
+        bs_setBit(context->io.input_up_events, BS_RIGHT_MOUSE_BUTTON_NON_CLIENT);
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_RIGHT_MOUSE_BUTTON, .state = BS_INPUT_RELEASED, .non_client_area = true });
+        break;
     case WM_NCMBUTTONDOWN:
+        bs_setBit(context->io.input_down_events, BS_MIDDLE_MOUSE_BUTTON_NON_CLIENT);
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_MIDDLE_MOUSE_BUTTON, .state = BS_INPUT_PRESSED, .non_client_area = true });
+        break;
     case WM_NCMBUTTONUP:
-    case WM_NCMBUTTONDBLCLK:
-        _hide_menu_windows_ = true;
+        bs_setBit(context->io.input_up_events, BS_MIDDLE_MOUSE_BUTTON_NON_CLIENT);
+        if (context->listener.input)
+            context->listener.input(context, (bs_ContextInputParams) { .code = BS_MIDDLE_MOUSE_BUTTON, .state = BS_INPUT_RELEASED, .non_client_area = true });
+        break;
+    //case WM_NCLBUTTONDBLCLK:
+    //case WM_NCRBUTTONDBLCLK:
+    //case WM_NCMBUTTONDBLCLK:
     case WM_MOUSEMOVE:
         TRACKMOUSEEVENT track_mouse_event = {
             .cbSize = sizeof(TRACKMOUSEEVENT),
@@ -888,9 +917,6 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
 
         break;
     }
-
-    if (_hide_menu_windows_)
-        _bs_hideMenuWindows(contexts);
 }
 #endif
 
@@ -938,10 +964,6 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
 
         if (!separate_message_thread) {
             _bs_renderTick(fixed_tick);
-        }
-        else {
-            if (_hide_menu_windows_)
-                _bs_hideMenuWindows(contexts);
         }
 
 #ifdef __linux__
@@ -1009,8 +1031,12 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
 
     switch (msg) {
     case WM_ACTIVATE:
-        if (LOWORD(w_param) == WA_INACTIVE)
-            _hide_menu_windows_ = true;
+        if (context && context->listener.activate) {
+            context->listener.activate(context, (bs_ContextActivateParams) {
+                .active = LOWORD(w_param) != WA_INACTIVE,
+            });
+        }
+
         break;
     case WM_DPICHANGED:
         _bs_updateWindowDPI(context);
@@ -1111,7 +1137,27 @@ BSAPI void _bs_moveWindow(bs_Context* context, int x, int y) {
 
 void _test(bs_Context* context, const char* title);
 
-BSAPI bs_Context* _bs_openPopupWindow(bs_ContextListener listener, bs_I32 x, bs_I32 y, bs_U32 width, bs_U32 height, const char* title) {
+BSAPI bs_Context* _bs_queryPopupWindow(bs_I32 id) {
+    for (int i = 0; i < _bs_instance_->popup_windows.count; i++) {
+        bs_Object* obj = *(bs_Object**)_bs_fetchUnit(&_bs_instance_->popup_windows, i);
+
+        if (obj->context->popup.id == id)
+            return obj->context->hidden ? NULL : obj->context;
+    }
+
+    return NULL;
+}
+
+BSAPI void _bs_closePopupWindow(bs_Context* context) {
+    bs_hideWindow(context);
+}
+
+BSAPI bs_Result _val_bs_openPopupWindow(bs_ContextListener listener, bs_I32 id, bs_I32 x, bs_I32 y, bs_U32 width, bs_U32 height, static const char* title) {
+    BS_VALIDATE(_bs_queryPopupWindow(id) == NULL, BS_RESULT_VALIDATION_ERROR,);
+    return _bs_openPopupWindow(listener, id, x, y, width, height, title);
+}
+
+BSAPI bs_Result _bs_openPopupWindow(bs_ContextListener listener, bs_I32 id, bs_I32 x, bs_I32 y, bs_U32 width, bs_U32 height, static const char* title) {
     bs_Context* last_context = _bs_scope_.context;
     _bs_scope_.context = NULL;
 
@@ -1119,9 +1165,13 @@ BSAPI bs_Context* _bs_openPopupWindow(bs_ContextListener listener, bs_I32 x, bs_
     bs_Context* context = NULL;
 
     for (int i = 0; i < _bs_instance_->popup_windows.count; i++) {
-        bs_Object* obj = *(bs_Object**)bs_fetchUnit(&_bs_instance_->popup_windows, i);
+        bs_Object* obj = *(bs_Object**)_bs_fetchUnit(&_bs_instance_->popup_windows, i);
 
-        //if (obj->context-> ...)
+        if (obj->context->hidden) {
+            context = obj->context;
+            bs_showWindow(context);
+            break;
+        }
     }
 
     if (!context) {
@@ -1130,23 +1180,24 @@ BSAPI bs_Context* _bs_openPopupWindow(bs_ContextListener listener, bs_I32 x, bs_
         result = _bs_window(new_ctx->context, NULL, listener, width, height, title, BS_WINDOW_POPUP);
         if (result != BS_RESULT_OK) {
             _bs_scope_.context = last_context;
-            return NULL;
+            return result;
         }
 
         result = _bs_swapchain(new_ctx->context);
         if (result != BS_RESULT_OK) {
             _bs_scope_.context = last_context;
-            return NULL;
+            return result;
         }
 
         bs_Object* obj = *(bs_Object**)bs_pushBack(&_bs_instance_->popup_windows, &new_ctx);
         context = obj->context;
 
+        context->popup.id = id;
         context->popup.queue_obj = BS_QUEUE(-1, -1, BS_OBJECT_SWAPCHAIN_IMAGE_BIT);
         result = _bs_queue(context->popup.queue_obj, 0, BS_QUEUE_GRAPHICS_BIT);
         if (result != BS_RESULT_OK) {
             _bs_scope_.context = last_context;
-            return NULL;
+            return result;
         }
     }
     else {
@@ -1157,7 +1208,8 @@ BSAPI bs_Context* _bs_openPopupWindow(bs_ContextListener listener, bs_I32 x, bs_
     _bs_showWindow(context);
 
     _bs_scope_.context = last_context;
-    return context;
+
+    return BS_RESULT_OK;
 }
 
 BSAPI bs_Result _val_bs_window(

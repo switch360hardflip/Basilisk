@@ -114,7 +114,7 @@ BSGFXAPI void _bsgfx_solidUIElement(bsgfx_UISolid solid, bsgfx_UIElement* elemen
 	};
 }
 
-BSGFXAPI void _bsgfx_instantiateSolidUIElement(bsgfx_UISolid solid, const bsgfx_UIElement* element) {
+BSGFXAPI bs_Range _bsgfx_instantiateSolidUIElement(bsgfx_UISolid solid, const bsgfx_UIElement* element) {
 	bs_mat4 transform = BS_MAT4_IDENTITY;
 
 	bs_m4Translate(&transform, &element->position, &transform);
@@ -122,12 +122,14 @@ BSGFXAPI void _bsgfx_instantiateSolidUIElement(bsgfx_UISolid solid, const bsgfx_
 
 	bsgfx_InstanceSubtype* subtype = _bsgfx_subtypes_[BSGFX_SUBTYPE_UI_COLOR];
 	bs_vec4 coords = BS_V4(0, 0, 1, 1);
-	_bsgfx_instantiateQuad(subtype, bs_m4x3(&transform), coords, 0, 0, solid.material_id);
+	int offset = _bsgfx_instantiateQuad(subtype, bs_m4x3(&transform), coords, 0, 0, solid.material_id);
+
+	return (bs_Range) { .offset = offset, .num = 1 };
 }
 
-BSGFXAPI void _bsgfx_instantiateSolidUI(bsgfx_UISolid solid, bsgfx_UIElement* element) {
+BSGFXAPI bs_Range _bsgfx_instantiateSolidUI(bsgfx_UISolid solid, bsgfx_UIElement* element) {
 	_bsgfx_solidUIElement(solid, element);
-	_bsgfx_instantiateSolidUIElement(solid, element);
+	return _bsgfx_instantiateSolidUIElement(solid, element);
 }
 
 

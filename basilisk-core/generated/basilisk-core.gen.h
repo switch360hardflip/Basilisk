@@ -143,6 +143,8 @@ typedef struct bs_Config bs_Config;
 typedef struct bs_QueueFamily bs_QueueFamily;
 typedef struct bs_SurfaceFormat bs_SurfaceFormat;
 typedef struct bs_PhysicalDevice bs_PhysicalDevice;
+typedef struct bs_ContextInputParams bs_ContextInputParams;
+typedef struct bs_ContextActivateParams bs_ContextActivateParams;
 typedef struct bs_ContextListener bs_ContextListener;
 typedef struct bs_Context bs_Context;
 typedef struct bs_Scope bs_Scope;
@@ -155,6 +157,7 @@ typedef struct bs_LogQueueItem bs_LogQueueItem;
 typedef enum bs_Library bs_Library;
 typedef enum bs_MessageLevel bs_MessageLevel;
 typedef enum bs_Result bs_Result;
+typedef enum bs_InputState bs_InputState;
 typedef enum bs_IniFlag bs_IniFlag;
 typedef enum bs_NonClientArea bs_NonClientArea;
 typedef enum bs_WindowType bs_WindowType;
@@ -429,7 +432,7 @@ typedef enum bs_VkObjectType bs_VkObjectType;
     60000000000000
 
 #define BS_KEYS_COUNT                                                \
-    256
+    260
 
 #define BS_KEY_BYTES_COUNT                                           \
     ((BS_KEYS_COUNT + 31) / 32)
@@ -1465,6 +1468,15 @@ typedef enum bs_VkObjectType bs_VkObjectType;
 #define BS_KEY_OEM_CLEAR                                             \
     0xFE
 
+#define BS_LEFT_MOUSE_BUTTON_NON_CLIENT                              \
+    0x100
+
+#define BS_RIGHT_MOUSE_BUTTON_NON_CLIENT                             \
+    0x101
+
+#define BS_MIDDLE_MOUSE_BUTTON_NON_CLIENT                            \
+    0x102
+
 #endif
 #ifdef __linux__
 #define BS_LEFT_MOUSE_BUTTON                                         \
@@ -1994,12 +2006,13 @@ typedef void (* bs_MessageFunction)(const bs_LogQueueItem*);
 typedef void (* bs_NameObjectFunction)(bs_Object*, const char*);
 typedef void (* bs_ValidationErrorFunction)();
 typedef bs_NonClientArea (* bs_NonClientAreaTickFunction)(bs_Context*, bs_ivec2);
-typedef void (* bs_ContextResizeFunction)(bs_Context*);
 typedef void (* bs_SubpassFunction)(bs_RendererScope*);
 typedef void (* bs_ContextTickFunction)(bs_Context* context, void* params);
-typedef void (* bs_ContextInputFunction)(bs_Context* context, void* params);
+typedef void (* bs_ContextInputFunction)(bs_Context* context, bs_ContextInputParams params);
 typedef void (* bs_ContextEnterFunction)(bs_Context* context, void* params);
 typedef void (* bs_ContextLeaveFunction)(bs_Context* context, void* params);
+typedef void (* bs_ContextResizeFunction)(bs_Context*);
+typedef void (* bs_ContextActivateFunction)(bs_Context* context, bs_ContextActivateParams params);
 typedef long long bs_I64;
 typedef int bs_I32;
 typedef short bs_I16;
@@ -2072,6 +2085,11 @@ enum bs_Result {
     BS_RESULT_OUT_OF_BOUNDS,
     BS_RESULT_VALIDATION_ERROR,
     BS_RESULT_ZERO_ALLOC,
+};
+
+enum bs_InputState {
+    BS_INPUT_PRESSED = 1,
+    BS_INPUT_RELEASED = 2,
 };
 
 enum bs_IniFlag {
@@ -3792,12 +3810,23 @@ struct bs_PhysicalDevice {
     const char name[BS_MAX_PHYSICAL_DEVICE_NAME_SIZE];
 };
 
+struct bs_ContextInputParams {
+    int code;
+    bs_InputState state;
+    bool non_client_area;
+};
+
+struct bs_ContextActivateParams {
+    bool active;
+};
+
 struct bs_ContextListener {
     bs_ContextTickFunction tick;
     bs_ContextInputFunction input;
     bs_ContextLeaveFunction leave;
     bs_ContextEnterFunction enter;
     bs_ContextResizeFunction resize;
+    bs_ContextActivateFunction activate;
 };
 
 struct bs_Context {
@@ -3810,7 +3839,6 @@ struct bs_Context {
     bs_CursorIcon cursor_icon;
     bs_SurfaceFormat surface_format;
     bs_PresentMode present_mode;
-    int id;
     int frames_in_flight;
     int frame;
     int image_index;
@@ -3825,6 +3853,7 @@ struct bs_Context {
     bs_ContextListener listener;
     union {
         struct {
+            bs_I32 id;
             bs_Object* queue_obj;
         }popup;
     };
@@ -9721,17 +9750,41 @@ bs_moveWindow(
     int y);
 
  /**
+  @param id
+  @return bs_Context*
+  */
+BSAPI bs_Context*
+bs_queryPopupWindow(
+    bs_I32 id);
+
+ /**
+  @return void
+  */
+BSAPI void
+bs_closeAllPopupWindows();
+
+ /**
+  @param context
+  @return void
+  */
+BSAPI void
+bs_closePopupWindow(
+    bs_Context* context);
+
+ /**
   @param listener
+  @param id
   @param x
   @param y
   @param width
   @param height
   @param title
-  @return bs_Context*
+  @return bs_Result
   */
-BSAPI bs_Context*
+BSAPI bs_Result
 bs_openPopupWindow(
     bs_ContextListener listener,
+    bs_I32 id,
     bs_I32 x,
     bs_I32 y,
     bs_I32 width,

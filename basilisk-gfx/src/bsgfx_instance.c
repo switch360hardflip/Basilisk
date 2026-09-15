@@ -64,7 +64,7 @@ BSGFXAPI bs_Result _bsgfx_ensureInstanceCount(bsgfx_InstanceType* instance_type,
 
 		bs_destroyBuffer(instance_type->device_instances);
 
-		bs_Object* object = BS_BUFFER(-1, -1, false);
+		bs_Object* object = BS_BUFFER(-1, -1, 0);
 		result = bs_buffer(object, total_size,
 			BS_BUFFER_USAGE_UNIFORM_BUFFER_BIT | BS_BUFFER_USAGE_TRANSFER_DST_BIT | BS_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			BS_MEMORY_PROPERTY_HOST_VISIBLE_BIT | BS_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -564,12 +564,35 @@ BSGFXAPI bs_mat4x3 _bsgfx_matrix(bs_vec3 position, bs_vec3 scale) {
 	};
 }
 
-BSGFXAPI bsgfx_InstanceHeader* _bsgfx_instanceHeader(bsgfx_InstanceSubtype* subtype, int instance_id) {
+/*
+BSGFXAPI bsgfx_InstanceHeader* _bsgfx_hostInstanceHeader(bsgfx_InstanceSubtype* subtype, int instance_id) {
 	bsgfx_InstanceHeader* header = bs_fetchUnit(&subtype->host_instances, instance_id);
 	return header;
+}
+
+BSGFXAPI void* _bsgfx_hostInstanceData(bsgfx_InstanceSubtype* subtype, int instance_id) {
+	bsgfx_InstanceHeader* header = _bsgfx_instanceHeader(subtype, instance_id);
+	return (void*)(header + 1);
+}
+*/
+
+BSGFXAPI bsgfx_InstanceHeader* _bsgfx_instanceHeader(bsgfx_InstanceSubtype* subtype, int instance_id) {
+	unsigned char* device_instances = bs_bufferMap(subtype->instance_type2->device_instances);
+	//bsgfx_InstanceHeader* header = bs_fetchUnit(&subtype->host_instances, instance_id);
+	return device_instances + subtype->instance_type2->instance_size * (subtype->instance_offset + instance_id);
 }
 
 BSGFXAPI void* _bsgfx_instanceData(bsgfx_InstanceSubtype* subtype, int instance_id) {
 	bsgfx_InstanceHeader* header = _bsgfx_instanceHeader(subtype, instance_id);
 	return (void*)(header + 1);
+}
+
+BSGFXAPI bool _bsgfx_hoveringQuadInstance(bsgfx_InstanceSubtype* subtype, int offset) {
+	bsgfx_QuadInstance* instance = bsgfx_instanceData(subtype, offset);
+
+	bs_vec2 position = instance->transform.v[3].xy;
+	bs_vec2 size = BS_V2(instance->transform.v[0].x, instance->transform.v[1].y);
+	bs_vec2 cursor = _bs_windowCursorPosition(bs_scope()->context);
+
+	return bs_rectangleVsPoint(&position, &size, &cursor);
 }
