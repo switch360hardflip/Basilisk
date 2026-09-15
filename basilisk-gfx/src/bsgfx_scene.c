@@ -50,7 +50,7 @@ static void _bsgfx_loadResources() {
     
     // batches
     bs_Object* screen_batch = BS_BATCH(BSGFX_BATCHES, BSGFX_BATCH_SCREEN, 0);
-    bs_Object* volume_batch = BS_BATCH(BSGFX_BATCHES, BSGFX_BATCH_VOLUME_COMPUTED, BS_OBJECT_HAS_SWAPS_BIT);
+    bs_Object* volume_batch = BS_BATCH(BSGFX_BATCHES, BSGFX_BATCH_VOLUME_COMPUTED, BS_OBJECT_IN_FLIGHT_BIT);
     bs_Object* prefab_volume_batch = BS_BATCH(BSGFX_BATCHES, BSGFX_BATCH_PREFAB_SHADOWS, 0);
     bs_Object* volume_screen_batch = BS_BATCH(BSGFX_BATCHES, BSGFX_BATCH_VOLUME_SCREEN, 0);
     bs_Object* line_batch = BS_BATCH(BSGFX_BATCHES, BSGFX_BATCH_LINE_INSTANCED, 0);

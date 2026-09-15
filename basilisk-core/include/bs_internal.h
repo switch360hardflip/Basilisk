@@ -79,7 +79,7 @@ BSAPI void _bs_writeLogger(
         __FILE__,                                                    \
         __LINE__,                                                    \
         "%s" format,                                                 \
-        assertion __VA_OPT__(, ) __VA_ARGS__                        \
+        #assertion __VA_OPT__(, ) __VA_ARGS__                        \
     )
 
 #define BS_VALIDATE(assertion, ret, format, ...)                     \

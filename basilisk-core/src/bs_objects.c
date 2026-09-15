@@ -511,6 +511,14 @@ static bs_Object* _bs_update(bs_U32 source_id, bs_U32 id, int size, int swap_siz
     return object;
 }
 
+BSAPI int _bs_swapsCount(bs_U32 flags) {
+    if (flags & BS_OBJECT_IN_FLIGHT_BIT)
+        return _bs_scope_.context ? _bs_scope_.context->frames_in_flight : _bs_instance_->max_frames_in_flight;
+    else if (flags & BS_OBJECT_SWAPCHAIN_IMAGE_BIT)
+        return _bs_scope_.context ? _bs_scope_.context->swapchain_image->head->swaps_count : _bs_instance_->max_swapchain_images_count;
+    return 1;
+}
+
 BSAPI bs_Object* _val_bs_object(bs_U32 source_id, bs_U32 id, size_t size, size_t flexible_array_size, int flexible_count, bs_U32 flags, bs_ObjectType object_type) {
     if (source_id != BS_U32_MAX) {
         BS_VALIDATE_SOURCE(source_id, NULL);
@@ -520,6 +528,11 @@ BSAPI bs_Object* _val_bs_object(bs_U32 source_id, bs_U32 id, size_t size, size_t
     }
 
     BS_VALIDATE(flexible_count >= 0, NULL,);
+
+    if (flags & BS_OBJECT_IN_FLIGHT_BIT) {
+        BS_VALIDATE(flags & BS_OBJECT_IN_FLIGHT_BIT && object_type != BS_OBJECT_QUEUE, , );
+        BS_VALIDATE(flags & BS_OBJECT_IN_FLIGHT_BIT && object_type != BS_OBJECT_RENDERER, , );
+    }
 
     return _bs_object(source_id, id, size, flexible_array_size, flexible_count, flags, object_type);
 }

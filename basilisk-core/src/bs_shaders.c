@@ -377,7 +377,7 @@ BSAPI bs_Result _bs_bindImages(bs_U32 bind_set_slot, bs_U32 bind_point_slot, bs_
         descriptors[i] = (bs_Descriptor) {
             .as_image = {
                 .vk_image_layout = (VkImageLayout)descriptor->layout,
-                .vk_image_view = descriptor->image->_[descriptor->image->flags & BS_IMAGE_SWAPS_BIT ? _bs_scope_.context->frame : 0].vk_image_view,
+                .vk_image_view = descriptor->image->_[_bs_imageSwap(descriptor->image)].vk_image_view,
                 .vk_sampler = descriptor->sampler ? descriptor->sampler->_->vk_sampler : VK_NULL_HANDLE,
                 .image = descriptor->image,
                 .sampler = descriptor->sampler,

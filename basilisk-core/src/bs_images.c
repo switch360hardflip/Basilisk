@@ -67,6 +67,14 @@ BSAPI bool _bs_hasAlpha(bs_Format format) {
         format == BS_FORMAT_B8G8R8A8_SRGB;
 }
 
+static inline int _bs_imageSwap(bs_Image* image) {
+    if (image->flags & BS_IMAGE_IN_FLIGHT_BIT)
+        return _bs_scope_.context->frame;
+    else if (image->flags & BS_IMAGE_SWAPCHAIN_IMAGE_BIT)
+        return _bs_scope_.context->image_index;
+    return 0;
+}
+
 BSAPI void _val_bs_transition(bs_Queue* queue, bs_Image* image, int index, bs_ImageLayout old_layout, bs_ImageLayout new_layout) {
     BS_VALIDATE(old_layout != new_layout,,);
     BS_VALIDATE(index == 0 || index < image->num_indices,,);
@@ -87,7 +95,7 @@ BSAPI void _bs_transition(bs_Queue* queue, bs_Image* image, int index, bs_ImageL
         .newLayout = (VkImageLayout)new_layout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = image->_->vk_image,
+        .image = image->_[_bs_imageSwap(image)].vk_image,
         .subresourceRange = {
             .baseMipLevel = 0,
             .levelCount = 1,
@@ -204,8 +212,16 @@ BSAPI void _bs_transition(bs_Queue* queue, bs_Image* image, int index, bs_ImageL
         src_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
+    else if (old_layout == BS_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && new_layout == BS_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = 0;
+
+        src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
     else {
         _bs_warnF("Unknown layout transition %s -> %s", bs_serializeImageLayout(old_layout), bs_serializeImageLayout(new_layout));
+        return;
     }
 
     vkCmdPipelineBarrier(
@@ -523,8 +539,7 @@ BSAPI bs_Result _bs_loadPng(const char* path, int channels_count, bs_PngData* ou
 
 
 BSAPI void _bs_destroyImage(bs_Image* image) {
-    bs_U32 num_swaps = image->flags & BS_IMAGE_SWAPS_BIT ? _bs_scope_.context->frames_in_flight : 1;
-    for (int i = 0; i < num_swaps; i++) {
+    for (int i = 0; i < image->head.swaps_count; i++) {
         vkDestroyImageView(_bs_instance_->device, image->_[i].vk_image_view, NULL);
         vkDestroyImage(_bs_instance_->device, image->_[i].vk_image, NULL);
         vkFreeMemory(_bs_instance_->device, image->_[i].vk_memory, NULL);
@@ -639,7 +654,7 @@ BSAPI void _val_bs_copyImageToBufferAsync(bs_Queue* queue, bs_Image* image, bs_B
 
 BSAPI void _bs_copyImageToBufferAsync(bs_Queue* queue, bs_Image* image, bs_Buffer* buffer, int image_index, bs_ImageLayout layout, bs_U64 buffer_offset, bs_ivec2 offset, bs_ivec2 dim) {
     VkCommandBuffer commands = _bsi_fetchCommands(queue);
-    int image_swap = (image->flags & BS_IMAGE_SWAPS_BIT) ? _bs_scope_.context->frame : 0;
+    int image_swap = _bs_imageSwap(image);
     int buffer_swap = (buffer->flags & BSI_BUFFER_SWAPS_BIT) ? _bs_scope_.context->frame : 0;
 
     VkBufferImageCopy copy = {
@@ -688,7 +703,7 @@ BSAPI void _bs_copyBufferToImage(bs_Queue* queue, bs_Buffer* buffer, bs_Image* i
     vkCmdCopyBufferToImage(
         commands,
         buffer->flags & BSI_BUFFER_SWAPS_BIT ? buffer->_[_bs_scope_.context->frame].vk_buffer : buffer->_->vk_buffer,
-        image->flags & BS_IMAGE_SWAPS_BIT ? image->_[_bs_scope_.context->frame].vk_image : image->_->vk_image,
+        image->_[_bs_imageSwap(image)].vk_image,
         layout,
         1,
         &region);
@@ -735,9 +750,9 @@ BSAPI void _bs_blit(bs_Queue* queue, bs_BlitOperation operation)  {
 
     vkCmdBlitImage(
         commands,
-        operation.source->flags & BS_IMAGE_SWAPS_BIT ? operation.source->_[_bs_scope_.context->frame].vk_image : operation.source->_->vk_image,
+        operation.source->_[_bs_imageSwap(operation.source)].vk_image,
         operation.source_layout,
-        operation.destination->flags & BS_IMAGE_SWAPS_BIT ? operation.destination->_[_bs_scope_.context->frame].vk_image : operation.destination->_->vk_image,
+        operation.destination->_[_bs_imageSwap(operation.destination)].vk_image,
         operation.destination_layout,
         1, &region,
         VK_FILTER_NEAREST
@@ -1001,7 +1016,7 @@ BSAPI bs_Result _bs_loadAtlasMemory(bs_Queue* queue, bs_Object* object, bs_I32 p
     Create image
     */
     bs_Object* image_object = BS_IMAGE(-1, 0, flags & BS_ATLAS_FORCE_CREATE);
-    bs_U32 swaps_count = flags & BS_IMAGE_SWAPS_BIT ? _bs_scope_.context->frames_in_flight : 1;
+
     atlas->image = image_object->image;
     if (header->pages_count > 1)
         atlas->image->num_indices = header->pages_count;

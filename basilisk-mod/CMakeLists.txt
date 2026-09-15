@@ -121,3 +121,28 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     vulkan
 )
 endif()
+
+if (WIN32 AND ${IS_DEBUG_BUILD})
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        GenericCodeGend
+        glslangd
+        glslang-default-resource-limitsd
+        MachineIndependentd
+        SPIRVd
+        spirv-cross-cd
+        spirv-cross-cored
+        spirv-cross-glsld
+    )
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        OSDependent
+        GenericCodeGen
+        glslang
+        glslang-default-resource-limits
+        MachineIndependent
+        SPIRV
+        spirv-cross-c
+        spirv-cross-core
+        spirv-cross-glsl
+    )
+endif()

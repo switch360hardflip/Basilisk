@@ -73,11 +73,14 @@
 		<typedef><type>void</type><name>(* bs_MessageFunction)(const bs_LogQueueItem*)</name></typedef>
 		<typedef><type>void</type><name>(* bs_NameObjectFunction)(bs_Object*, const char*)</name></typedef>
 		<typedef><type>void</type><name>(* bs_ValidationErrorFunction)()</name></typedef>
-		<typedef><type>void</type><name>(* bs_ConfigureWindowFunction)(bs_Context*)</name></typedef>
 		<typedef><type>bs_NonClientArea</type><name>(* bs_NonClientAreaTickFunction)(bs_Context*, bs_ivec2)</name></typedef>
-		<typedef><type>void</type><name>(* bs_ResizeContextFunction)(bs_Context*)</name></typedef>
+		<typedef><type>void</type><name>(* bs_ContextResizeFunction)(bs_Context*)</name></typedef>
 		<typedef><type>void</type><name>(* bs_SubpassFunction)(bs_RendererScope*)</name></typedef>
-        <typedef><type>void</type><name>(* bs_ContextTickFunction)(bs_Context* context)</name></typedef>
+		
+        <typedef><type>void</type><name>(* bs_ContextTickFunction)(bs_Context* context, void* params)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextInputFunction)(bs_Context* context, void* params)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextEnterFunction)(bs_Context* context, void* params)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextLeaveFunction)(bs_Context* context, void* params)</name></typedef>
 
 		<typedef><type>long long</type><name>bs_I64</name></typedef>
 		<typedef><type>int</type><name>bs_I32</name></typedef>
@@ -169,7 +172,7 @@
 		<enum name="bs_WindowType">
 			<line><name>BS_WINDOW_DEFAULT</name><value>0</value></line>
 			<line><name>BS_WINDOW_NO_TITLE_BAR</name><value>1</value></line>
-			<line><name>BS_WINDOW_MENU</name><value>2</value></line>
+			<line><name>BS_WINDOW_POPUP</name><value>2</value></line>
 		</enum>
 		<enum name="bs_ImageFilter">
 			<line><name>BS_FILTER_NEAREST</name><value>0</value></line>
@@ -262,11 +265,12 @@
 		</enum>
 		<enum name="bs_ObjectFlag">
 			<line><name>BS_OBJECT_SHOULD_LOAD</name><value>(1 &lt;&lt; 0)</value></line>
-			<line><name>BS_OBJECT_HAS_SWAPS_BIT</name><value>(1 &lt;&lt; 1)</value></line>
-			<line><name>BS_OBJECT_FORCE_DESTROY</name><value>(1 &lt;&lt; 2)</value></line>
-			<line><name>BS_OBJECT_ALREADY_EXISTS</name><value>(1 &lt;&lt; 3)</value></line>
-			<line><name>BS_OBJECT_WAS_CREATED</name><value>(1 &lt;&lt; 4)</value></line>
-			<line><name>BS_OBJECT_WAS_ALTERED</name><value>(1 &lt;&lt; 5)</value></line>
+			<line><name>BS_OBJECT_IN_FLIGHT_BIT</name><value>(1 &lt;&lt; 1)</value></line>
+			<line><name>BS_OBJECT_SWAPCHAIN_IMAGE_BIT</name><value>(1 &lt;&lt; 2)</value></line>
+			<line><name>BS_OBJECT_FORCE_DESTROY</name><value>(1 &lt;&lt; 3)</value></line>
+			<line><name>BS_OBJECT_ALREADY_EXISTS</name><value>(1 &lt;&lt; 4)</value></line>
+			<line><name>BS_OBJECT_WAS_CREATED</name><value>(1 &lt;&lt; 5)</value></line>
+			<line><name>BS_OBJECT_WAS_ALTERED</name><value>(1 &lt;&lt; 6)</value></line>
 		</enum>
 		<enum name="bs_ResourceType">
 			<line><name>BS_RESOURCE_BINARY</name><value>0</value></line>
@@ -286,7 +290,8 @@
 			<line><name>BS_RESOURCE_TYPE_COUNT</name><value>12</value></line>
 		</enum>
 		<enum name="bs_ImageBit">
-			<line><name>BS_IMAGE_SWAPS_BIT</name><value>1 &lt;&lt; 0</value></line>
+			<line><name>BS_IMAGE_IN_FLIGHT_BIT</name><value>1 &lt;&lt; 0</value></line>
+			<line><name>BS_IMAGE_SWAPCHAIN_IMAGE_BIT</name><value>1 &lt;&lt; 1</value></line>
 			<line><name>BS_IMAGE_SHADER_ACCESSIBLE_BIT</name><value>1 &lt;&lt; 4</value></line>
 			<line><name>BS_IMAGE_ATTACHMENT_BIT</name><value>1 &lt;&lt; 5</value></line>
 			<line><name>BS_IMAGE_INPUT_ATTACHMENT_BIT</name><value>1 &lt;&lt; 6</value></line>
@@ -752,22 +757,20 @@
             <line>    { .capacity = c, .data = bs_alloca(c * sizeof(type)), .unit_size = sizeof(type) }</line>
         </macro>
         <macro><name>#define BS_SWAP_SIZE(type)</name><line>(sizeof(*((type*)NULL)-&gt;_))</line></macro>
-        <macro><name>#define BS_SWAPS_COUNT(flags)</name><line>((flags &amp; BS_OBJECT_HAS_SWAPS_BIT) ? (bs_scope()->context ? bs_scope()->context-&gt;frames_in_flight : bs_instance()-&gt;max_frames_in_flight) : 1)</line></macro>
-        <macro><name>#define BS_SWAPCHAIN_IMAGES_COUNT(flags)</name><line>((flags &amp; BS_OBJECT_HAS_SWAPS_BIT) ? (bs_scope()->context ? bs_scope()->context-&gt;swapchain_image-&gt;head-&gt;swaps_count : bs_instance()-&gt;max_swapchain_images_count) : 1)</line></macro>
         <macro>
             <name>#define BS_OBJECT(type, source_id, id, swaps_count, flags, object_type)</name>
             <line>    bs_object(source_id, id, sizeof(type), BS_SWAP_SIZE(type), swaps_count, flags, object_type)</line>
         </macro>
-        <macro><name>#define BS_CONTEXT(source_id, id, flags)</name><line>BS_OBJECT(bs_Context, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_CONTEXT)</line></macro>
-        <macro><name>#define BS_IMAGE(source_id, id, flags)</name><line>BS_OBJECT(bs_Image, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_IMAGE)</line></macro>
-        <macro><name>#define BS_SAMPLER(source_id, id, flags)</name><line>BS_OBJECT(bs_Sampler, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_SAMPLER)</line></macro>
-        <macro><name>#define BS_RENDERER(source_id, id, flags)</name><line>BS_OBJECT(bs_Renderer, source_id, id, BS_SWAPCHAIN_IMAGES_COUNT(flags), flags, BS_OBJECT_RENDERER)</line></macro>
-        <macro><name>#define BS_BATCH(source_id, id, flags)</name><line>BS_OBJECT(bs_Batch, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_BATCH)</line></macro>
-        <macro><name>#define BS_QUEUE(source_id, id, flags)</name><line>BS_OBJECT(bs_Queue, source_id, id, BS_SWAPCHAIN_IMAGES_COUNT(flags), flags, BS_OBJECT_QUEUE)</line></macro>
-        <macro><name>#define BS_BUFFER(source_id, id, flags)</name><line>BS_OBJECT(bs_Buffer, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_BUFFER)</line></macro>
-        <macro><name>#define BS_PIPELINE(source_id, id, flags)</name><line>BS_OBJECT(bs_Pipeline, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_PIPELINE)</line></macro>
-        <macro><name>#define BS_RAY_TRACER(source_id, id, flags)</name><line>BS_OBJECT(bs_RayTracer, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_RAY_TRACER)</line></macro>
-        <macro><name>#define BS_ATLAS(source_id, id, flags)</name><line>BS_OBJECT(bs_Atlas, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_ATLAS)</line></macro>
+        <macro><name>#define BS_CONTEXT(source_id, id, flags)</name><line>BS_OBJECT(bs_Context, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_CONTEXT)</line></macro>
+        <macro><name>#define BS_IMAGE(source_id, id, flags)</name><line>BS_OBJECT(bs_Image, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_IMAGE)</line></macro>
+        <macro><name>#define BS_SAMPLER(source_id, id, flags)</name><line>BS_OBJECT(bs_Sampler, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_SAMPLER)</line></macro>
+        <macro><name>#define BS_RENDERER(source_id, id, flags)</name><line>BS_OBJECT(bs_Renderer, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_RENDERER)</line></macro>
+        <macro><name>#define BS_BATCH(source_id, id, flags)</name><line>BS_OBJECT(bs_Batch, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_BATCH)</line></macro>
+        <macro><name>#define BS_QUEUE(source_id, id, flags)</name><line>BS_OBJECT(bs_Queue, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_QUEUE)</line></macro>
+        <macro><name>#define BS_BUFFER(source_id, id, flags)</name><line>BS_OBJECT(bs_Buffer, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_BUFFER)</line></macro>
+        <macro><name>#define BS_PIPELINE(source_id, id, flags)</name><line>BS_OBJECT(bs_Pipeline, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_PIPELINE)</line></macro>
+        <macro><name>#define BS_RAY_TRACER(source_id, id, flags)</name><line>BS_OBJECT(bs_RayTracer, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_RAY_TRACER)</line></macro>
+        <macro><name>#define BS_ATLAS(source_id, id, flags)</name><line>BS_OBJECT(bs_Atlas, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_ATLAS)</line></macro>
 
         <macro><name>#define BS_NUM_STRIKES_RULE</name><line>(1)</line></macro>
         <macro><name>#define BS_QUERY_FORCE_CREATE</name><line>(1 &lt;&lt; 31)</line></macro>
@@ -806,223 +809,441 @@
         </macro>
 
 		<ifdef cond="_WIN32"/>
-        <macro><name>#define BS_LEFT_MOUSE_BUTTON</name><line>0x01</line></macro>
-        <macro><name>#define BS_RIGHT_MOUSE_BUTTON</name><line>0x02</line></macro>
+            <macro><name>#define BS_LEFT_MOUSE_BUTTON</name><line>0x01</line></macro>
+            <macro><name>#define BS_RIGHT_MOUSE_BUTTON</name><line>0x02</line></macro>
 
-        <macro><name>#define BS_MIDDLE_MOUSE_BUTTON</name><line>0x04</line></macro>
-        <macro><name>#define BS_THUMB_FORWARD</name><line>0x05</line></macro>
-        <macro><name>#define BS_THUMB_BACK</name><line>0x06</line></macro>
+            <macro><name>#define BS_MIDDLE_MOUSE_BUTTON</name><line>0x04</line></macro>
+            <macro><name>#define BS_THUMB_FORWARD</name><line>0x05</line></macro>
+            <macro><name>#define BS_THUMB_BACK</name><line>0x06</line></macro>
 
-		<macro><name>#define BS_KEY_BACKSPACE</name><line>0x08</line></macro>
-        <macro><name>#define BS_KEY_TAB</name><line>0x09</line></macro>
+		    <macro><name>#define BS_KEY_BACKSPACE</name><line>0x08</line></macro>
+            <macro><name>#define BS_KEY_TAB</name><line>0x09</line></macro>
 
-		<macro><name>#define BS_KEY_CLEAR</name><line>0x0C</line></macro>
-        <macro><name>#define BS_KEY_ENTER</name><line>0x0D</line></macro>
+		    <macro><name>#define BS_KEY_CLEAR</name><line>0x0C</line></macro>
+            <macro><name>#define BS_KEY_ENTER</name><line>0x0D</line></macro>
 
-		<macro><name>#define BS_KEY_LEFT_SHIFT</name><line>0x10</line></macro>
-        <macro><name>#define BS_KEY_LEFT_CONTROL</name><line>0x11</line></macro>
-        <macro><name>#define BS_KEY_ALT</name><line>0x12</line></macro>
-        <macro><name>#define BS_KEY_PAUSE</name><line>0x13</line></macro>
-        <macro><name>#define BS_KEY_CAPSLOCK</name><line>0x14</line></macro>
-        <macro><name>#define BS_KEY_KANA</name><line>0x15</line></macro>
-        <macro><name>#define BS_KEY_HANGEUL</name><line>0x15</line></macro>
-        <macro><name>#define BS_KEY_HANGUL</name><line>0x15</line></macro>
-        <macro><name>#define BS_KEY_JUNJU</name><line>0x17</line></macro>
-        <macro><name>#define BS_KEY_FINAL</name><line>0x18</line></macro>
-        <macro><name>#define BS_KEY_HANJA</name><line>0x19</line></macro>
-        <macro><name>#define BS_KEY_KANJI</name><line>0x19</line></macro>
-        <macro><name>#define BS_KEY_IME_OFF</name><line>0x1A</line></macro>
-        <macro><name>#define BS_KEY_ESCAPE</name><line>0x1B</line></macro>
-        <macro><name>#define BS_KEY_CONVERT</name><line>0x1C</line></macro>
-        <macro><name>#define BS_KEY_NONCONVERT</name><line>0x1D</line></macro>
-        <macro><name>#define BS_KEY_ACCEPT</name><line>0x1E</line></macro>
-        <macro><name>#define BS_KEY_MODECHANGE</name><line>0x1F</line></macro>
-        <macro><name>#define BS_KEY_SPACE</name><line>0x20</line></macro>
-        <macro><name>#define BS_KEY_PAGEUP</name><line>0x21</line></macro>
-        <macro><name>#define BS_KEY_PAGEDOWN</name><line>0x22</line></macro>
-        <macro><name>#define BS_KEY_END</name><line>0x23</line></macro>
-        <macro><name>#define BS_KEY_HOME</name><line>0x24</line></macro>
-        <macro><name>#define BS_KEY_LEFT</name><line>0x25</line></macro>
-        <macro><name>#define BS_KEY_UP</name><line>0x26</line></macro>
-        <macro><name>#define BS_KEY_RIGHT</name><line>0x27</line></macro>
-        <macro><name>#define BS_KEY_DOWN</name><line>0x28</line></macro>
-        <macro><name>#define BS_KEY_SELECT</name><line>0x29</line></macro>
-        <macro><name>#define BS_KEY_PRINT</name><line>0x2A</line></macro>
-        <macro><name>#define BS_KEY_EXECUTE</name><line>0x2B</line></macro>
-        <macro><name>#define BS_KEY_PRINT_SCREEN</name><line>0x2C</line></macro>
-        <macro><name>#define BS_KEY_INSERT</name><line>0x2D</line></macro>
-        <macro><name>#define BS_KEY_DELETE</name><line>0x2E</line></macro>
-        <macro><name>#define BS_KEY_HELP</name><line>0x2F</line></macro>
-        <macro><name>#define BS_KEY_0</name><line>0x30</line></macro>
-        <macro><name>#define BS_KEY_1</name><line>0x31</line></macro>
-        <macro><name>#define BS_KEY_2</name><line>0x32</line></macro>
-        <macro><name>#define BS_KEY_3</name><line>0x33</line></macro>
-        <macro><name>#define BS_KEY_4</name><line>0x34</line></macro>
-        <macro><name>#define BS_KEY_5</name><line>0x35</line></macro>
-        <macro><name>#define BS_KEY_6</name><line>0x36</line></macro>
-        <macro><name>#define BS_KEY_7</name><line>0x37</line></macro>
-        <macro><name>#define BS_KEY_8</name><line>0x38</line></macro>
-        <macro><name>#define BS_KEY_9</name><line>0x39</line></macro>
-        <macro><name>#define BS_KEY_A</name><line>0x41</line></macro>
-        <macro><name>#define BS_KEY_B</name><line>0x42</line></macro>
-        <macro><name>#define BS_KEY_C</name><line>0x43</line></macro>
-        <macro><name>#define BS_KEY_D</name><line>0x44</line></macro>
-        <macro><name>#define BS_KEY_E</name><line>0x45</line></macro>
-        <macro><name>#define BS_KEY_F</name><line>0x46</line></macro>
-        <macro><name>#define BS_KEY_G</name><line>0x47</line></macro>
-        <macro><name>#define BS_KEY_H</name><line>0x48</line></macro>
-        <macro><name>#define BS_KEY_I</name><line>0x49</line></macro>
-        <macro><name>#define BS_KEY_J</name><line>0x4A</line></macro>
-        <macro><name>#define BS_KEY_K</name><line>0x4B</line></macro>
-        <macro><name>#define BS_KEY_L</name><line>0x4C</line></macro>
-        <macro><name>#define BS_KEY_M</name><line>0x4D</line></macro>
-        <macro><name>#define BS_KEY_N</name><line>0x4E</line></macro>
-        <macro><name>#define BS_KEY_O</name><line>0x4F</line></macro>
-        <macro><name>#define BS_KEY_P</name><line>0x50</line></macro>
-        <macro><name>#define BS_KEY_Q</name><line>0x51</line></macro>
-        <macro><name>#define BS_KEY_R</name><line>0x52</line></macro>
-        <macro><name>#define BS_KEY_S</name><line>0x53</line></macro>
-        <macro><name>#define BS_KEY_T</name><line>0x54</line></macro>
-        <macro><name>#define BS_KEY_U</name><line>0x55</line></macro>
-        <macro><name>#define BS_KEY_V</name><line>0x56</line></macro>
-        <macro><name>#define BS_KEY_W</name><line>0x57</line></macro>
-        <macro><name>#define BS_KEY_X</name><line>0x58</line></macro>
-        <macro><name>#define BS_KEY_Y</name><line>0x59</line></macro>
-        <macro><name>#define BS_KEY_Z</name><line>0x5A</line></macro>
-        <macro><name>#define BS_KEY_LEFT_WIN</name><line>0x5B</line></macro>
-        <macro><name>#define BS_KEY_RIGHT_WIN</name><line>0x5C</line></macro>
-        <macro><name>#define BS_KEY_APPS</name><line>0x5D</line></macro>
+		    <macro><name>#define BS_KEY_LEFT_SHIFT</name><line>0x10</line></macro>
+            <macro><name>#define BS_KEY_LEFT_CONTROL</name><line>0x11</line></macro>
+            <macro><name>#define BS_KEY_ALT</name><line>0x12</line></macro>
+            <macro><name>#define BS_KEY_PAUSE</name><line>0x13</line></macro>
+            <macro><name>#define BS_KEY_CAPSLOCK</name><line>0x14</line></macro>
+            <macro><name>#define BS_KEY_KANA</name><line>0x15</line></macro>
+            <macro><name>#define BS_KEY_HANGEUL</name><line>0x15</line></macro>
+            <macro><name>#define BS_KEY_HANGUL</name><line>0x15</line></macro>
+            <macro><name>#define BS_KEY_JUNJU</name><line>0x17</line></macro>
+            <macro><name>#define BS_KEY_FINAL</name><line>0x18</line></macro>
+            <macro><name>#define BS_KEY_HANJA</name><line>0x19</line></macro>
+            <macro><name>#define BS_KEY_KANJI</name><line>0x19</line></macro>
+            <macro><name>#define BS_KEY_IME_OFF</name><line>0x1A</line></macro>
+            <macro><name>#define BS_KEY_ESCAPE</name><line>0x1B</line></macro>
+            <macro><name>#define BS_KEY_CONVERT</name><line>0x1C</line></macro>
+            <macro><name>#define BS_KEY_NONCONVERT</name><line>0x1D</line></macro>
+            <macro><name>#define BS_KEY_ACCEPT</name><line>0x1E</line></macro>
+            <macro><name>#define BS_KEY_MODECHANGE</name><line>0x1F</line></macro>
+            <macro><name>#define BS_KEY_SPACE</name><line>0x20</line></macro>
+            <macro><name>#define BS_KEY_PAGEUP</name><line>0x21</line></macro>
+            <macro><name>#define BS_KEY_PAGEDOWN</name><line>0x22</line></macro>
+            <macro><name>#define BS_KEY_END</name><line>0x23</line></macro>
+            <macro><name>#define BS_KEY_HOME</name><line>0x24</line></macro>
+            <macro><name>#define BS_KEY_LEFT</name><line>0x25</line></macro>
+            <macro><name>#define BS_KEY_UP</name><line>0x26</line></macro>
+            <macro><name>#define BS_KEY_RIGHT</name><line>0x27</line></macro>
+            <macro><name>#define BS_KEY_DOWN</name><line>0x28</line></macro>
+            <macro><name>#define BS_KEY_SELECT</name><line>0x29</line></macro>
+            <macro><name>#define BS_KEY_PRINT</name><line>0x2A</line></macro>
+            <macro><name>#define BS_KEY_EXECUTE</name><line>0x2B</line></macro>
+            <macro><name>#define BS_KEY_PRINT_SCREEN</name><line>0x2C</line></macro>
+            <macro><name>#define BS_KEY_INSERT</name><line>0x2D</line></macro>
+            <macro><name>#define BS_KEY_DELETE</name><line>0x2E</line></macro>
+            <macro><name>#define BS_KEY_HELP</name><line>0x2F</line></macro>
+            <macro><name>#define BS_KEY_0</name><line>0x30</line></macro>
+            <macro><name>#define BS_KEY_1</name><line>0x31</line></macro>
+            <macro><name>#define BS_KEY_2</name><line>0x32</line></macro>
+            <macro><name>#define BS_KEY_3</name><line>0x33</line></macro>
+            <macro><name>#define BS_KEY_4</name><line>0x34</line></macro>
+            <macro><name>#define BS_KEY_5</name><line>0x35</line></macro>
+            <macro><name>#define BS_KEY_6</name><line>0x36</line></macro>
+            <macro><name>#define BS_KEY_7</name><line>0x37</line></macro>
+            <macro><name>#define BS_KEY_8</name><line>0x38</line></macro>
+            <macro><name>#define BS_KEY_9</name><line>0x39</line></macro>
+            <macro><name>#define BS_KEY_A</name><line>0x41</line></macro>
+            <macro><name>#define BS_KEY_B</name><line>0x42</line></macro>
+            <macro><name>#define BS_KEY_C</name><line>0x43</line></macro>
+            <macro><name>#define BS_KEY_D</name><line>0x44</line></macro>
+            <macro><name>#define BS_KEY_E</name><line>0x45</line></macro>
+            <macro><name>#define BS_KEY_F</name><line>0x46</line></macro>
+            <macro><name>#define BS_KEY_G</name><line>0x47</line></macro>
+            <macro><name>#define BS_KEY_H</name><line>0x48</line></macro>
+            <macro><name>#define BS_KEY_I</name><line>0x49</line></macro>
+            <macro><name>#define BS_KEY_J</name><line>0x4A</line></macro>
+            <macro><name>#define BS_KEY_K</name><line>0x4B</line></macro>
+            <macro><name>#define BS_KEY_L</name><line>0x4C</line></macro>
+            <macro><name>#define BS_KEY_M</name><line>0x4D</line></macro>
+            <macro><name>#define BS_KEY_N</name><line>0x4E</line></macro>
+            <macro><name>#define BS_KEY_O</name><line>0x4F</line></macro>
+            <macro><name>#define BS_KEY_P</name><line>0x50</line></macro>
+            <macro><name>#define BS_KEY_Q</name><line>0x51</line></macro>
+            <macro><name>#define BS_KEY_R</name><line>0x52</line></macro>
+            <macro><name>#define BS_KEY_S</name><line>0x53</line></macro>
+            <macro><name>#define BS_KEY_T</name><line>0x54</line></macro>
+            <macro><name>#define BS_KEY_U</name><line>0x55</line></macro>
+            <macro><name>#define BS_KEY_V</name><line>0x56</line></macro>
+            <macro><name>#define BS_KEY_W</name><line>0x57</line></macro>
+            <macro><name>#define BS_KEY_X</name><line>0x58</line></macro>
+            <macro><name>#define BS_KEY_Y</name><line>0x59</line></macro>
+            <macro><name>#define BS_KEY_Z</name><line>0x5A</line></macro>
+            <macro><name>#define BS_KEY_LEFT_WIN</name><line>0x5B</line></macro>
+            <macro><name>#define BS_KEY_RIGHT_WIN</name><line>0x5C</line></macro>
+            <macro><name>#define BS_KEY_APPS</name><line>0x5D</line></macro>
 
-		<macro><name>#define BS_KEY_SLEEP</name><line>0x5F</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD0</name><line>0x60</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD1</name><line>0x61</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD2</name><line>0x62</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD3</name><line>0x63</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD4</name><line>0x64</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD5</name><line>0x65</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD6</name><line>0x66</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD7</name><line>0x67</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD8</name><line>0x68</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD9</name><line>0x69</line></macro>
-        <macro><name>#define BS_KEY_MULTIPLY</name><line>0x6A</line></macro>
-        <macro><name>#define BS_KEY_ADD</name><line>0x6B</line></macro>
-        <macro><name>#define BS_KEY_SEPARATOR</name><line>0x6C</line></macro>
-        <macro><name>#define BS_KEY_SUBTRACT</name><line>0x6D</line></macro>
-        <macro><name>#define BS_KEY_DECIMAL</name><line>0x6E</line></macro>
-        <macro><name>#define BS_KEY_DIVIDE</name><line>0x6F</line></macro>
-        <macro><name>#define BS_KEY_F1</name><line>0x70</line></macro>
-        <macro><name>#define BS_KEY_F2</name><line>0x71</line></macro>
-        <macro><name>#define BS_KEY_F3</name><line>0x72</line></macro>
-        <macro><name>#define BS_KEY_F4</name><line>0x73</line></macro>
-        <macro><name>#define BS_KEY_F5</name><line>0x74</line></macro>
-        <macro><name>#define BS_KEY_F6</name><line>0x75</line></macro>
-        <macro><name>#define BS_KEY_F7</name><line>0x76</line></macro>
-        <macro><name>#define BS_KEY_F8</name><line>0x77</line></macro>
-        <macro><name>#define BS_KEY_F9</name><line>0x78</line></macro>
-        <macro><name>#define BS_KEY_F10</name><line>0x79</line></macro>
-        <macro><name>#define BS_KEY_F11</name><line>0x7A</line></macro>
-        <macro><name>#define BS_KEY_F12</name><line>0x7B</line></macro>
-        <macro><name>#define BS_KEY_F13</name><line>0x7C</line></macro>
-        <macro><name>#define BS_KEY_F14</name><line>0x7D</line></macro>
-        <macro><name>#define BS_KEY_F15</name><line>0x7E</line></macro>
-        <macro><name>#define BS_KEY_F16</name><line>0x7F</line></macro>
-        <macro><name>#define BS_KEY_F17</name><line>0x80</line></macro>
-        <macro><name>#define BS_KEY_F18</name><line>0x81</line></macro>
-        <macro><name>#define BS_KEY_F19</name><line>0x82</line></macro>
-        <macro><name>#define BS_KEY_F20</name><line>0x83</line></macro>
-        <macro><name>#define BS_KEY_F21</name><line>0x84</line></macro>
-        <macro><name>#define BS_KEY_F22</name><line>0x85</line></macro>
-        <macro><name>#define BS_KEY_F23</name><line>0x86</line></macro>
-        <macro><name>#define BS_KEY_F24</name><line>0x87</line></macro>
+		    <macro><name>#define BS_KEY_SLEEP</name><line>0x5F</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD0</name><line>0x60</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD1</name><line>0x61</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD2</name><line>0x62</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD3</name><line>0x63</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD4</name><line>0x64</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD5</name><line>0x65</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD6</name><line>0x66</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD7</name><line>0x67</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD8</name><line>0x68</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD9</name><line>0x69</line></macro>
+            <macro><name>#define BS_KEY_MULTIPLY</name><line>0x6A</line></macro>
+            <macro><name>#define BS_KEY_ADD</name><line>0x6B</line></macro>
+            <macro><name>#define BS_KEY_SEPARATOR</name><line>0x6C</line></macro>
+            <macro><name>#define BS_KEY_SUBTRACT</name><line>0x6D</line></macro>
+            <macro><name>#define BS_KEY_DECIMAL</name><line>0x6E</line></macro>
+            <macro><name>#define BS_KEY_DIVIDE</name><line>0x6F</line></macro>
+            <macro><name>#define BS_KEY_F1</name><line>0x70</line></macro>
+            <macro><name>#define BS_KEY_F2</name><line>0x71</line></macro>
+            <macro><name>#define BS_KEY_F3</name><line>0x72</line></macro>
+            <macro><name>#define BS_KEY_F4</name><line>0x73</line></macro>
+            <macro><name>#define BS_KEY_F5</name><line>0x74</line></macro>
+            <macro><name>#define BS_KEY_F6</name><line>0x75</line></macro>
+            <macro><name>#define BS_KEY_F7</name><line>0x76</line></macro>
+            <macro><name>#define BS_KEY_F8</name><line>0x77</line></macro>
+            <macro><name>#define BS_KEY_F9</name><line>0x78</line></macro>
+            <macro><name>#define BS_KEY_F10</name><line>0x79</line></macro>
+            <macro><name>#define BS_KEY_F11</name><line>0x7A</line></macro>
+            <macro><name>#define BS_KEY_F12</name><line>0x7B</line></macro>
+            <macro><name>#define BS_KEY_F13</name><line>0x7C</line></macro>
+            <macro><name>#define BS_KEY_F14</name><line>0x7D</line></macro>
+            <macro><name>#define BS_KEY_F15</name><line>0x7E</line></macro>
+            <macro><name>#define BS_KEY_F16</name><line>0x7F</line></macro>
+            <macro><name>#define BS_KEY_F17</name><line>0x80</line></macro>
+            <macro><name>#define BS_KEY_F18</name><line>0x81</line></macro>
+            <macro><name>#define BS_KEY_F19</name><line>0x82</line></macro>
+            <macro><name>#define BS_KEY_F20</name><line>0x83</line></macro>
+            <macro><name>#define BS_KEY_F21</name><line>0x84</line></macro>
+            <macro><name>#define BS_KEY_F22</name><line>0x85</line></macro>
+            <macro><name>#define BS_KEY_F23</name><line>0x86</line></macro>
+            <macro><name>#define BS_KEY_F24</name><line>0x87</line></macro>
 
-		<macro><name>#define BS_KEY_NAVIGATION_VIEW</name><line>0x88</line></macro>
-        <macro><name>#define BS_KEY_NAVIGATION_MENU</name><line>0x89</line></macro>
-        <macro><name>#define BS_KEY_NAVIGATION_UP</name><line>0x8A</line></macro>
-        <macro><name>#define BS_KEY_NAVIGATION_DOWN</name><line>0x8B</line></macro>
-        <macro><name>#define BS_KEY_NAVIGATION_LEFT</name><line>0x8C</line></macro>
-        <macro><name>#define BS_KEY_NAVIGATION_RIGHT</name><line>0x8D</line></macro>
-        <macro><name>#define BS_KEY_NAVIGATION_ACCEPT</name><line>0x8E</line></macro>
-        <macro><name>#define BS_KEY_NAVIGATION_CANCEL</name><line>0x8F</line></macro>
-        <macro><name>#define BS_KEY_NUMLOCK</name><line>0x90</line></macro>
-        <macro><name>#define BS_KEY_SCROLLLOCK</name><line>0x91</line></macro>
-        <macro><name>#define BS_KEY_NUMPAD_EQUAL</name><line>0x92</line></macro>
-        <macro><name>#define BS_KEY_FJ_JISHO</name><line>0x92</line></macro>
-        <macro><name>#define BS_KEY_FJ_MASSHOU</name><line>0x93</line></macro>
-        <macro><name>#define BS_KEY_FJ_TOUROKU</name><line>0x94</line></macro>
-        <macro><name>#define BS_KEY_FJ_LOYA</name><line>0x95</line></macro>
-        <macro><name>#define BS_KEY_FJ_ROYA</name><line>0x96</line></macro>
-        <macro><name>#define BS_KEY_RIGHT_SHIFT</name><line>0xA1</line></macro>
-        <macro><name>#define BS_KEY_LEFT_CTRL</name><line>0xA2</line></macro>
-        <macro><name>#define BS_KEY_RIGHT_CTRL</name><line>0xA3</line></macro>
-        <macro><name>#define BS_KEY_LEFT_MENU</name><line>0xA4</line></macro>
-        <macro><name>#define BS_KEY_RIGHT_MENU</name><line>0xA5</line></macro>
-        <macro><name>#define BS_KEY_BROWSER_BACK</name><line>0xA6</line></macro>
-        <macro><name>#define BS_KEY_BROWSER_FORWARD</name><line>0xA7</line></macro>
-        <macro><name>#define BS_KEY_BROWSER_REFRESH</name><line>0xA8</line></macro>
-        <macro><name>#define BS_KEY_BROWSER_STOP</name><line>0xA9</line></macro>
-        <macro><name>#define BS_KEY_BROWSER_SEARCH</name><line>0xAA</line></macro>
-        <macro><name>#define BS_KEY_BROWSER_FAVORITES</name><line>0xAB</line></macro>
-        <macro><name>#define BS_KEY_BROWSER_HOME</name><line>0xAC</line></macro>
-        <macro><name>#define BS_KEY_VOLUME_MUTE</name><line>0xAD</line></macro>
-        <macro><name>#define BS_KEY_VOLUME_DOWN</name><line>0xAE</line></macro>
-        <macro><name>#define BS_KEY_VOLUME_UP</name><line>0xAF</line></macro>
-        <macro><name>#define BS_KEY_NEXT_TRACK</name><line>0xB0</line></macro>
-        <macro><name>#define BS_KEY_PREV_TRACK</name><line>0xB1</line></macro>
-        <macro><name>#define BS_KEY_STOP</name><line>0xB2</line></macro>
-        <macro><name>#define BS_KEY_PLAY_PAUSE</name><line>0xB3</line></macro>
-        <macro><name>#define BS_KEY_LAUNCH_MAIL</name><line>0xB4</line></macro>
-        <macro><name>#define BS_KEY_LAUNCH_MEDIA_SELECT</name><line>0xB5</line></macro>
-        <macro><name>#define BS_KEY_LAUNCH_APP1</name><line>0xB6</line></macro>
-        <macro><name>#define BS_KEY_LAUNCH_APP2</name><line>0xB7</line></macro>
-        <macro><name>#define BS_KEY_OEM_1</name><line>0xBA</line></macro>
-        <macro><name>#define BS_KEY_OEM_PLUS</name><line>0xBB</line></macro>
-        <macro><name>#define BS_KEY_OEM_COMMA</name><line>0xBC</line></macro>
-        <macro><name>#define BS_KEY_OEM_MINUS</name><line>0xBD</line></macro>
-        <macro><name>#define BS_KEY_OEM_PERIOD</name><line>0xBE</line></macro>
-        <macro><name>#define BS_KEY_OEM_2</name><line>0xBF</line></macro>
-        <macro><name>#define BS_KEY_OEM_3</name><line>0xC0</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_A</name><line>0xC3</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_B</name><line>0xC4</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_X</name><line>0xC5</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_Y</name><line>0xC6</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_RIGHT_SHOULDER</name><line>0xC7</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_LEFT_SHOULDER</name><line>0xC8</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_LEFT_TRIGGER</name><line>0xC9</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_RIGHT_TRIGGER</name><line>0xCA</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_DPAD_UP</name><line>0xCB</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_DPAD_DOWN</name><line>0xCC</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_DPAD_LEFT</name><line>0xCD</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_DPAD_RIGHT</name><line>0xCE</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_MENU</name><line>0xCF</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_VIEW</name><line>0xD0</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_BUTTON</name><line>0xD1</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_BUTTON</name><line>0xD2</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_UP</name><line>0xD3</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_DOWN</name><line>0xD4</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_RIGHT</name><line>0xD5</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_LEFT</name><line>0xD6</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_UP</name><line>0xD7</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_DOWN</name><line>0xD8</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_RIGHT</name><line>0xD9</line></macro>
-        <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_LEFT</name><line>0xDA</line></macro>
-        <macro><name>#define BS_KEY_OEM_4</name><line>0xDB</line></macro>
-        <macro><name>#define BS_KEY_OEM_5</name><line>0xDC</line></macro>
-        <macro><name>#define BS_KEY_OEM_6</name><line>0xDD</line></macro>
-        <macro><name>#define BS_KEY_OEM_7</name><line>0xDE</line></macro>
-        <macro><name>#define BS_KEY_OEM_8</name><line>0xDF</line></macro>
-        <macro><name>#define BS_KEY_OEM_102 0xE2</name><line>0xE3</line></macro>
-        <macro><name>#define BS_KEY_PROCESSKEY</name><line>0xE5</line></macro>
-        <macro><name>#define BS_KEY_PACKET</name><line>0xE7</line></macro>
-        <macro><name>#define BS_KEY_ATTN</name><line>0xF6</line></macro>
-        <macro><name>#define BS_KEY_CRSEL</name><line>0xF7</line></macro>
-        <macro><name>#define BS_KEY_EXSEL</name><line>0xF8</line></macro>
-        <macro><name>#define BS_KEY_EREOF</name><line>0xF9</line></macro>
-        <macro><name>#define BS_KEY_PLAY</name><line>0xFA</line></macro>
-        <macro><name>#define BS_KEY_ZOOM</name><line>0xFB</line></macro>
-        <macro><name>#define BS_KEY_NONAME</name><line>0xFC</line></macro>
-        <macro><name>#define BS_KEY_PA1</name><line>0xFD</line></macro>
-        <macro><name>#define BS_KEY_OEM_CLEAR</name><line>0xFE</line></macro>
-		<elifdef cond="__linux__"/>
+		    <macro><name>#define BS_KEY_NAVIGATION_VIEW</name><line>0x88</line></macro>
+            <macro><name>#define BS_KEY_NAVIGATION_MENU</name><line>0x89</line></macro>
+            <macro><name>#define BS_KEY_NAVIGATION_UP</name><line>0x8A</line></macro>
+            <macro><name>#define BS_KEY_NAVIGATION_DOWN</name><line>0x8B</line></macro>
+            <macro><name>#define BS_KEY_NAVIGATION_LEFT</name><line>0x8C</line></macro>
+            <macro><name>#define BS_KEY_NAVIGATION_RIGHT</name><line>0x8D</line></macro>
+            <macro><name>#define BS_KEY_NAVIGATION_ACCEPT</name><line>0x8E</line></macro>
+            <macro><name>#define BS_KEY_NAVIGATION_CANCEL</name><line>0x8F</line></macro>
+            <macro><name>#define BS_KEY_NUMLOCK</name><line>0x90</line></macro>
+            <macro><name>#define BS_KEY_SCROLLLOCK</name><line>0x91</line></macro>
+            <macro><name>#define BS_KEY_NUMPAD_EQUAL</name><line>0x92</line></macro>
+            <macro><name>#define BS_KEY_FJ_JISHO</name><line>0x92</line></macro>
+            <macro><name>#define BS_KEY_FJ_MASSHOU</name><line>0x93</line></macro>
+            <macro><name>#define BS_KEY_FJ_TOUROKU</name><line>0x94</line></macro>
+            <macro><name>#define BS_KEY_FJ_LOYA</name><line>0x95</line></macro>
+            <macro><name>#define BS_KEY_FJ_ROYA</name><line>0x96</line></macro>
+            <macro><name>#define BS_KEY_RIGHT_SHIFT</name><line>0xA1</line></macro>
+            <macro><name>#define BS_KEY_LEFT_CTRL</name><line>0xA2</line></macro>
+            <macro><name>#define BS_KEY_RIGHT_CTRL</name><line>0xA3</line></macro>
+            <macro><name>#define BS_KEY_LEFT_MENU</name><line>0xA4</line></macro>
+            <macro><name>#define BS_KEY_RIGHT_MENU</name><line>0xA5</line></macro>
+            <macro><name>#define BS_KEY_BROWSER_BACK</name><line>0xA6</line></macro>
+            <macro><name>#define BS_KEY_BROWSER_FORWARD</name><line>0xA7</line></macro>
+            <macro><name>#define BS_KEY_BROWSER_REFRESH</name><line>0xA8</line></macro>
+            <macro><name>#define BS_KEY_BROWSER_STOP</name><line>0xA9</line></macro>
+            <macro><name>#define BS_KEY_BROWSER_SEARCH</name><line>0xAA</line></macro>
+            <macro><name>#define BS_KEY_BROWSER_FAVORITES</name><line>0xAB</line></macro>
+            <macro><name>#define BS_KEY_BROWSER_HOME</name><line>0xAC</line></macro>
+            <macro><name>#define BS_KEY_VOLUME_MUTE</name><line>0xAD</line></macro>
+            <macro><name>#define BS_KEY_VOLUME_DOWN</name><line>0xAE</line></macro>
+            <macro><name>#define BS_KEY_VOLUME_UP</name><line>0xAF</line></macro>
+            <macro><name>#define BS_KEY_NEXT_TRACK</name><line>0xB0</line></macro>
+            <macro><name>#define BS_KEY_PREV_TRACK</name><line>0xB1</line></macro>
+            <macro><name>#define BS_KEY_STOP</name><line>0xB2</line></macro>
+            <macro><name>#define BS_KEY_PLAY_PAUSE</name><line>0xB3</line></macro>
+            <macro><name>#define BS_KEY_LAUNCH_MAIL</name><line>0xB4</line></macro>
+            <macro><name>#define BS_KEY_LAUNCH_MEDIA_SELECT</name><line>0xB5</line></macro>
+            <macro><name>#define BS_KEY_LAUNCH_APP1</name><line>0xB6</line></macro>
+            <macro><name>#define BS_KEY_LAUNCH_APP2</name><line>0xB7</line></macro>
+            <macro><name>#define BS_KEY_OEM_1</name><line>0xBA</line></macro>
+            <macro><name>#define BS_KEY_OEM_PLUS</name><line>0xBB</line></macro>
+            <macro><name>#define BS_KEY_OEM_COMMA</name><line>0xBC</line></macro>
+            <macro><name>#define BS_KEY_OEM_MINUS</name><line>0xBD</line></macro>
+            <macro><name>#define BS_KEY_OEM_PERIOD</name><line>0xBE</line></macro>
+            <macro><name>#define BS_KEY_OEM_2</name><line>0xBF</line></macro>
+            <macro><name>#define BS_KEY_OEM_3</name><line>0xC0</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_A</name><line>0xC3</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_B</name><line>0xC4</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_X</name><line>0xC5</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_Y</name><line>0xC6</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_RIGHT_SHOULDER</name><line>0xC7</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_LEFT_SHOULDER</name><line>0xC8</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_LEFT_TRIGGER</name><line>0xC9</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_RIGHT_TRIGGER</name><line>0xCA</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_DPAD_UP</name><line>0xCB</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_DPAD_DOWN</name><line>0xCC</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_DPAD_LEFT</name><line>0xCD</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_DPAD_RIGHT</name><line>0xCE</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_MENU</name><line>0xCF</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_VIEW</name><line>0xD0</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_BUTTON</name><line>0xD1</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_BUTTON</name><line>0xD2</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_UP</name><line>0xD3</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_DOWN</name><line>0xD4</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_RIGHT</name><line>0xD5</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_LEFT</name><line>0xD6</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_UP</name><line>0xD7</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_DOWN</name><line>0xD8</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_RIGHT</name><line>0xD9</line></macro>
+            <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_LEFT</name><line>0xDA</line></macro>
+            <macro><name>#define BS_KEY_OEM_4</name><line>0xDB</line></macro>
+            <macro><name>#define BS_KEY_OEM_5</name><line>0xDC</line></macro>
+            <macro><name>#define BS_KEY_OEM_6</name><line>0xDD</line></macro>
+            <macro><name>#define BS_KEY_OEM_7</name><line>0xDE</line></macro>
+            <macro><name>#define BS_KEY_OEM_8</name><line>0xDF</line></macro>
+            <macro><name>#define BS_KEY_OEM_102 0xE2</name><line>0xE3</line></macro>
+            <macro><name>#define BS_KEY_PROCESSKEY</name><line>0xE5</line></macro>
+            <macro><name>#define BS_KEY_PACKET</name><line>0xE7</line></macro>
+            <macro><name>#define BS_KEY_ATTN</name><line>0xF6</line></macro>
+            <macro><name>#define BS_KEY_CRSEL</name><line>0xF7</line></macro>
+            <macro><name>#define BS_KEY_EXSEL</name><line>0xF8</line></macro>
+            <macro><name>#define BS_KEY_EREOF</name><line>0xF9</line></macro>
+            <macro><name>#define BS_KEY_PLAY</name><line>0xFA</line></macro>
+            <macro><name>#define BS_KEY_ZOOM</name><line>0xFB</line></macro>
+            <macro><name>#define BS_KEY_NONAME</name><line>0xFC</line></macro>
+            <macro><name>#define BS_KEY_PA1</name><line>0xFD</line></macro>
+            <macro><name>#define BS_KEY_OEM_CLEAR</name><line>0xFE</line></macro>
+		<endif/>
+
+		<ifdef cond="__linux__"/>
+		<macro><name>#define BS_LEFT_MOUSE_BUTTON</name><line>0x110</line></macro> <!-- BTN_LEFT -->
+            <macro><name>#define BS_RIGHT_MOUSE_BUTTON</name><line>0x111</line></macro> <!-- BTN_RIGHT -->
+
+            <macro><name>#define BS_MIDDLE_MOUSE_BUTTON</name><line>0x112</line></macro> <!-- BTN_MIDDLE -->
+            <macro><name>#define BS_THUMB_FORWARD</name><line>0x113</line></macro> <!-- BTN_SIDE -->
+            <macro><name>#define BS_THUMB_BACK</name><line>0x114</line></macro> <!-- BTN_EXTRA -->
+
+            <macro><name>#define BS_KEY_BACKSPACE</name><line>0x0E</line></macro> <!-- KEY_BACKSPACE -->
+            <macro><name>#define BS_KEY_TAB</name><line>0x0F</line></macro> <!-- KEY_TAB -->
+
+            <macro><name>#define BS_KEY_CLEAR</name><line>0x163</line></macro> <!-- KEY_CLEAR -->
+            <macro><name>#define BS_KEY_ENTER</name><line>0x1C</line></macro> <!-- KEY_ENTER -->
+
+            <macro><name>#define BS_KEY_LEFT_SHIFT</name><line>0x2A</line></macro> <!-- KEY_LEFTSHIFT -->
+            <macro><name>#define BS_KEY_LEFT_CONTROL</name><line>0x1D</line></macro> <!-- KEY_LEFTCTRL -->
+            <macro><name>#define BS_KEY_ALT</name><line>0x38</line></macro> <!-- KEY_LEFTALT -->
+            <macro><name>#define BS_KEY_PAUSE</name><line>0x77</line></macro> <!-- KEY_PAUSE -->
+            <macro><name>#define BS_KEY_CAPSLOCK</name><line>0x3A</line></macro> <!-- KEY_CAPSLOCK -->
+            <macro><name>#define BS_KEY_KANA</name><line>0x5D</line></macro> <!-- KEY_KATAKANAHIRAGANA -->
+            <macro><name>#define BS_KEY_HANGEUL</name><line>0x7A</line></macro> <!-- KEY_HANGEUL -->
+            <macro><name>#define BS_KEY_HANGUL</name><line>0x7A</line></macro> <!-- KEY_HANGUEL -->
+            <!-- <macro><name>#define BS_KEY_JUNJU</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_FINAL</name><line></line></macro> -->
+            <macro><name>#define BS_KEY_HANJA</name><line>0x7B</line></macro> <!-- KEY_HANJA -->
+            <!-- <macro><name>#define BS_KEY_KANJI</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_IME_OFF</name><line></line></macro> -->
+            <macro><name>#define BS_KEY_ESCAPE</name><line>0x01</line></macro> <!-- KEY_ESC -->
+            <macro><name>#define BS_KEY_CONVERT</name><line>0x5C</line></macro> <!-- KEY_HENKAN -->
+            <macro><name>#define BS_KEY_NONCONVERT</name><line>0x5E</line></macro> <!-- KEY_MUHENKAN -->
+            <!-- <macro><name>#define BS_KEY_ACCEPT</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_MODECHANGE</name><line></line></macro> -->
+            <macro><name>#define BS_KEY_SPACE</name><line>0x39</line></macro> <!-- KEY_SPACE -->
+            <macro><name>#define BS_KEY_PAGEUP</name><line>0x68</line></macro> <!-- KEY_PAGEUP -->
+            <macro><name>#define BS_KEY_PAGEDOWN</name><line>0x6D</line></macro> <!-- KEY_PAGEDOWN -->
+            <macro><name>#define BS_KEY_END</name><line>0x6B</line></macro> <!-- KEY_END -->
+            <macro><name>#define BS_KEY_HOME</name><line>0x66</line></macro> <!-- KEY_HOME -->
+            <macro><name>#define BS_KEY_LEFT</name><line>0x69</line></macro> <!-- KEY_LEFT -->
+            <macro><name>#define BS_KEY_UP</name><line>0x67</line></macro> <!-- KEY_UP -->
+            <macro><name>#define BS_KEY_RIGHT</name><line>0x6A</line></macro> <!-- KEY_RIGHT -->
+            <macro><name>#define BS_KEY_DOWN</name><line>0x6C</line></macro> <!-- KEY_DOWN -->
+            <macro><name>#define BS_KEY_SELECT</name><line>0x161</line></macro> <!-- KEY_SELECT -->
+            <macro><name>#define BS_KEY_PRINT</name><line>0xD2</line></macro> <!-- KEY_PRINT -->
+            <!-- <macro><name>#define BS_KEY_EXECUTE</name><line></line></macro> -->
+            <macro><name>#define BS_KEY_PRINT_SCREEN</name><line>0x63</line></macro> <!-- KEY_SYSRQ -->
+            <macro><name>#define BS_KEY_INSERT</name><line>0x6E</line></macro> <!-- KEY_INSERT -->
+            <macro><name>#define BS_KEY_DELETE</name><line>0x6F</line></macro> <!-- KEY_DELETE -->
+            <macro><name>#define BS_KEY_HELP</name><line>0x8A</line></macro> <!-- KEY_HELP -->
+            <macro><name>#define BS_KEY_0</name><line>0x0B</line></macro> <!-- KEY_0 -->
+            <macro><name>#define BS_KEY_1</name><line>0x02</line></macro> <!-- KEY_1 -->
+            <macro><name>#define BS_KEY_2</name><line>0x03</line></macro> <!-- KEY_2 -->
+            <macro><name>#define BS_KEY_3</name><line>0x04</line></macro> <!-- KEY_3 -->
+            <macro><name>#define BS_KEY_4</name><line>0x05</line></macro> <!-- KEY_4 -->
+            <macro><name>#define BS_KEY_5</name><line>0x06</line></macro> <!-- KEY_5 -->
+            <macro><name>#define BS_KEY_6</name><line>0x07</line></macro> <!-- KEY_6 -->
+            <macro><name>#define BS_KEY_7</name><line>0x08</line></macro> <!-- KEY_7 -->
+            <macro><name>#define BS_KEY_8</name><line>0x09</line></macro> <!-- KEY_8 -->
+            <macro><name>#define BS_KEY_9</name><line>0x0A</line></macro> <!-- KEY_9 -->
+            <macro><name>#define BS_KEY_A</name><line>0x1E</line></macro> <!-- KEY_A -->
+            <macro><name>#define BS_KEY_B</name><line>0x30</line></macro> <!-- KEY_B -->
+            <macro><name>#define BS_KEY_C</name><line>0x2E</line></macro> <!-- KEY_C -->
+            <macro><name>#define BS_KEY_D</name><line>0x20</line></macro> <!-- KEY_D -->
+            <macro><name>#define BS_KEY_E</name><line>0x12</line></macro> <!-- KEY_E -->
+            <macro><name>#define BS_KEY_F</name><line>0x21</line></macro> <!-- KEY_F -->
+            <macro><name>#define BS_KEY_G</name><line>0x22</line></macro> <!-- KEY_G -->
+            <macro><name>#define BS_KEY_H</name><line>0x23</line></macro> <!-- KEY_H -->
+            <macro><name>#define BS_KEY_I</name><line>0x17</line></macro> <!-- KEY_I -->
+            <macro><name>#define BS_KEY_J</name><line>0x24</line></macro> <!-- KEY_J -->
+            <macro><name>#define BS_KEY_K</name><line>0x25</line></macro> <!-- KEY_K -->
+            <macro><name>#define BS_KEY_L</name><line>0x26</line></macro> <!-- KEY_L -->
+            <macro><name>#define BS_KEY_M</name><line>0x32</line></macro> <!-- KEY_M -->
+            <macro><name>#define BS_KEY_N</name><line>0x31</line></macro> <!-- KEY_N -->
+            <macro><name>#define BS_KEY_O</name><line>0x18</line></macro> <!-- KEY_O -->
+            <macro><name>#define BS_KEY_P</name><line>0x19</line></macro> <!-- KEY_P -->
+            <macro><name>#define BS_KEY_Q</name><line>0x10</line></macro> <!-- KEY_Q -->
+            <macro><name>#define BS_KEY_R</name><line>0x13</line></macro> <!-- KEY_R -->
+            <macro><name>#define BS_KEY_S</name><line>0x1F</line></macro> <!-- KEY_S -->
+            <macro><name>#define BS_KEY_T</name><line>0x14</line></macro> <!-- KEY_T -->
+            <macro><name>#define BS_KEY_U</name><line>0x16</line></macro> <!-- KEY_U -->
+            <macro><name>#define BS_KEY_V</name><line>0x2F</line></macro> <!-- KEY_V -->
+            <macro><name>#define BS_KEY_W</name><line>0x11</line></macro> <!-- KEY_W -->
+            <macro><name>#define BS_KEY_X</name><line>0x2D</line></macro> <!-- KEY_X -->
+            <macro><name>#define BS_KEY_Y</name><line>0x15</line></macro> <!-- KEY_Y -->
+            <macro><name>#define BS_KEY_Z</name><line>0x2C</line></macro> <!-- KEY_Z -->
+            <macro><name>#define BS_KEY_LEFT_WIN</name><line>0x7D</line></macro> <!-- KEY_LEFTMETA -->
+            <macro><name>#define BS_KEY_RIGHT_WIN</name><line>0x7E</line></macro> <!-- KEY_RIGHTMETA -->
+            <macro><name>#define BS_KEY_APPS</name><line>0x7F</line></macro> <!-- KEY_COMPOSE -->
+
+            <macro><name>#define BS_KEY_SLEEP</name><line>0x8E</line></macro> <!-- KEY_SLEEP -->
+            <macro><name>#define BS_KEY_NUMPAD0</name><line>0x52</line></macro> <!-- KEY_KP0 -->
+            <macro><name>#define BS_KEY_NUMPAD1</name><line>0x4F</line></macro> <!-- KEY_KP1 -->
+            <macro><name>#define BS_KEY_NUMPAD2</name><line>0x50</line></macro> <!-- KEY_KP2 -->
+            <macro><name>#define BS_KEY_NUMPAD3</name><line>0x51</line></macro> <!-- KEY_KP3 -->
+            <macro><name>#define BS_KEY_NUMPAD4</name><line>0x4B</line></macro> <!-- KEY_KP4 -->
+            <macro><name>#define BS_KEY_NUMPAD5</name><line>0x4C</line></macro> <!-- KEY_KP5 -->
+            <macro><name>#define BS_KEY_NUMPAD6</name><line>0x4D</line></macro> <!-- KEY_KP6 -->
+            <macro><name>#define BS_KEY_NUMPAD7</name><line>0x47</line></macro> <!-- KEY_KP7 -->
+            <macro><name>#define BS_KEY_NUMPAD8</name><line>0x48</line></macro> <!-- KEY_KP8 -->
+            <macro><name>#define BS_KEY_NUMPAD9</name><line>0x49</line></macro> <!-- KEY_KP9 -->
+            <macro><name>#define BS_KEY_MULTIPLY</name><line>0x37</line></macro> <!-- KEY_KPASTERISK -->
+            <macro><name>#define BS_KEY_ADD</name><line>0x4E</line></macro> <!-- KEY_KPPLUS -->
+            <macro><name>#define BS_KEY_SEPARATOR</name><line>0x79</line></macro> <!-- KEY_KPCOMMA -->
+            <macro><name>#define BS_KEY_SUBTRACT</name><line>0x4A</line></macro> <!-- KEY_KPMINUS -->
+            <macro><name>#define BS_KEY_DECIMAL</name><line>0x53</line></macro> <!-- KEY_KPDOT -->
+            <macro><name>#define BS_KEY_DIVIDE</name><line>0x62</line></macro> <!-- KEY_KPSLASH -->
+            <macro><name>#define BS_KEY_F1</name><line>0x3B</line></macro> <!-- KEY_F1 -->
+            <macro><name>#define BS_KEY_F2</name><line>0x3C</line></macro> <!-- KEY_F2 -->
+            <macro><name>#define BS_KEY_F3</name><line>0x3D</line></macro> <!-- KEY_F3 -->
+            <macro><name>#define BS_KEY_F4</name><line>0x3E</line></macro> <!-- KEY_F4 -->
+            <macro><name>#define BS_KEY_F5</name><line>0x3F</line></macro> <!-- KEY_F5 -->
+            <macro><name>#define BS_KEY_F6</name><line>0x40</line></macro> <!-- KEY_F6 -->
+            <macro><name>#define BS_KEY_F7</name><line>0x41</line></macro> <!-- KEY_F7 -->
+            <macro><name>#define BS_KEY_F8</name><line>0x42</line></macro> <!-- KEY_F8 -->
+            <macro><name>#define BS_KEY_F9</name><line>0x43</line></macro> <!-- KEY_F9 -->
+            <macro><name>#define BS_KEY_F10</name><line>0x44</line></macro> <!-- KEY_F10 -->
+            <macro><name>#define BS_KEY_F11</name><line>0x57</line></macro> <!-- KEY_F11 -->
+            <macro><name>#define BS_KEY_F12</name><line>0x58</line></macro> <!-- KEY_F12 -->
+            <macro><name>#define BS_KEY_F13</name><line>0xB7</line></macro> <!-- KEY_F13 -->
+            <macro><name>#define BS_KEY_F14</name><line>0xB8</line></macro> <!-- KEY_F14 -->
+            <macro><name>#define BS_KEY_F15</name><line>0xB9</line></macro> <!-- KEY_F15 -->
+            <macro><name>#define BS_KEY_F16</name><line>0xBA</line></macro> <!-- KEY_F16 -->
+            <macro><name>#define BS_KEY_F17</name><line>0xBB</line></macro> <!-- KEY_F17 -->
+            <macro><name>#define BS_KEY_F18</name><line>0xBC</line></macro> <!-- KEY_F18 -->
+            <macro><name>#define BS_KEY_F19</name><line>0xBD</line></macro> <!-- KEY_F19 -->
+            <macro><name>#define BS_KEY_F20</name><line>0xBE</line></macro> <!-- KEY_F20 -->
+            <macro><name>#define BS_KEY_F21</name><line>0xBF</line></macro> <!-- KEY_F21 -->
+            <macro><name>#define BS_KEY_F22</name><line>0xC0</line></macro> <!-- KEY_F22 -->
+            <macro><name>#define BS_KEY_F23</name><line>0xC1</line></macro> <!-- KEY_F23 -->
+            <macro><name>#define BS_KEY_F24</name><line>0xC2</line></macro> <!-- KEY_F24 -->
+
+            <!-- <macro><name>#define BS_KEY_NAVIGATION_VIEW</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_NAVIGATION_MENU</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_NAVIGATION_UP</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_NAVIGATION_DOWN</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_NAVIGATION_LEFT</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_NAVIGATION_RIGHT</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_NAVIGATION_ACCEPT</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_NAVIGATION_CANCEL</name><line></line></macro> -->
+            <macro><name>#define BS_KEY_NUMLOCK</name><line>0x45</line></macro> <!-- KEY_NUMLOCK -->
+            <macro><name>#define BS_KEY_SCROLLLOCK</name><line>0x46</line></macro> <!-- KEY_SCROLLLOCK -->
+            <macro><name>#define BS_KEY_NUMPAD_EQUAL</name><line>0x75</line></macro> <!-- KEY_KPEQUAL -->
+            <!-- <macro><name>#define BS_KEY_FJ_JISHO</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_FJ_MASSHOU</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_FJ_TOUROKU</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_FJ_LOYA</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_FJ_ROYA</name><line></line></macro> -->
+            <macro><name>#define BS_KEY_RIGHT_SHIFT</name><line>0x36</line></macro> <!-- KEY_RIGHTSHIFT -->
+            <macro><name>#define BS_KEY_LEFT_CTRL</name><line>0x1D</line></macro> <!-- KEY_LEFTCTRL -->
+            <macro><name>#define BS_KEY_RIGHT_CTRL</name><line>0x61</line></macro> <!-- KEY_RIGHTCTRL -->
+            <macro><name>#define BS_KEY_LEFT_MENU</name><line>0x38</line></macro> <!-- KEY_LEFTALT -->
+            <macro><name>#define BS_KEY_RIGHT_MENU</name><line>0x64</line></macro> <!-- KEY_RIGHTALT -->
+            <macro><name>#define BS_KEY_BROWSER_BACK</name><line>0x9E</line></macro> <!-- KEY_BACK -->
+            <macro><name>#define BS_KEY_BROWSER_FORWARD</name><line>0x9F</line></macro> <!-- KEY_FORWARD -->
+            <macro><name>#define BS_KEY_BROWSER_REFRESH</name><line>0xAD</line></macro> <!-- KEY_REFRESH -->
+            <macro><name>#define BS_KEY_BROWSER_STOP</name><line>0x80</line></macro> <!-- KEY_STOP -->
+            <macro><name>#define BS_KEY_BROWSER_SEARCH</name><line>0xD9</line></macro> <!-- KEY_SEARCH -->
+            <macro><name>#define BS_KEY_BROWSER_FAVORITES</name><line>0x9C</line></macro> <!-- KEY_BOOKMARKS -->
+            <macro><name>#define BS_KEY_BROWSER_HOME</name><line>0xAC</line></macro> <!-- KEY_HOMEPAGE -->
+            <macro><name>#define BS_KEY_VOLUME_MUTE</name><line>0x71</line></macro> <!-- KEY_MUTE -->
+            <macro><name>#define BS_KEY_VOLUME_DOWN</name><line>0x72</line></macro> <!-- KEY_VOLUMEDOWN -->
+            <macro><name>#define BS_KEY_VOLUME_UP</name><line>0x73</line></macro> <!-- KEY_VOLUMEUP -->
+            <macro><name>#define BS_KEY_NEXT_TRACK</name><line>0xA3</line></macro> <!-- KEY_NEXTSONG -->
+            <macro><name>#define BS_KEY_PREV_TRACK</name><line>0xA5</line></macro> <!-- KEY_PREVIOUSSONG -->
+            <macro><name>#define BS_KEY_STOP</name><line>0xA6</line></macro> <!-- KEY_STOPCD -->
+            <macro><name>#define BS_KEY_PLAY_PAUSE</name><line>0xA4</line></macro> <!-- KEY_PLAYPAUSE -->
+            <macro><name>#define BS_KEY_LAUNCH_MAIL</name><line>0x9B</line></macro> <!-- KEY_MAIL -->
+            <macro><name>#define BS_KEY_LAUNCH_MEDIA_SELECT</name><line>0xE2</line></macro> <!-- KEY_MEDIA -->
+            <macro><name>#define BS_KEY_LAUNCH_APP1</name><line>0x94</line></macro> <!-- KEY_PROG1 -->
+            <macro><name>#define BS_KEY_LAUNCH_APP2</name><line>0x95</line></macro> <!-- KEY_PROG2 -->
+            <macro><name>#define BS_KEY_OEM_1</name><line>0x27</line></macro> <!-- KEY_SEMICOLON -->
+            <macro><name>#define BS_KEY_OEM_PLUS</name><line>0x0D</line></macro> <!-- KEY_EQUAL -->
+            <macro><name>#define BS_KEY_OEM_COMMA</name><line>0x33</line></macro> <!-- KEY_COMMA -->
+            <macro><name>#define BS_KEY_OEM_MINUS</name><line>0x0C</line></macro> <!-- KEY_MINUS -->
+            <macro><name>#define BS_KEY_OEM_PERIOD</name><line>0x34</line></macro> <!-- KEY_DOT -->
+            <macro><name>#define BS_KEY_OEM_2</name><line>0x35</line></macro> <!-- KEY_SLASH -->
+            <macro><name>#define BS_KEY_OEM_3</name><line>0x29</line></macro> <!-- KEY_GRAVE -->
+            <macro><name>#define BS_KEY_GAMEPAD_A</name><line>0x130</line></macro> <!-- BTN_SOUTH -->
+            <macro><name>#define BS_KEY_GAMEPAD_B</name><line>0x131</line></macro> <!-- BTN_EAST -->
+            <macro><name>#define BS_KEY_GAMEPAD_X</name><line>0x133</line></macro> <!-- BTN_NORTH -->
+            <macro><name>#define BS_KEY_GAMEPAD_Y</name><line>0x134</line></macro> <!-- BTN_WEST -->
+            <macro><name>#define BS_KEY_GAMEPAD_RIGHT_SHOULDER</name><line>0x137</line></macro> <!-- BTN_TR -->
+            <macro><name>#define BS_KEY_GAMEPAD_LEFT_SHOULDER</name><line>0x136</line></macro> <!-- BTN_TL -->
+            <macro><name>#define BS_KEY_GAMEPAD_LEFT_TRIGGER</name><line>0x138</line></macro> <!-- BTN_TL2 -->
+            <macro><name>#define BS_KEY_GAMEPAD_RIGHT_TRIGGER</name><line>0x139</line></macro> <!-- BTN_TR2 -->
+            <macro><name>#define BS_KEY_GAMEPAD_DPAD_UP</name><line>0x220</line></macro> <!-- BTN_DPAD_UP -->
+            <macro><name>#define BS_KEY_GAMEPAD_DPAD_DOWN</name><line>0x221</line></macro> <!-- BTN_DPAD_DOWN -->
+            <macro><name>#define BS_KEY_GAMEPAD_DPAD_LEFT</name><line>0x222</line></macro> <!-- BTN_DPAD_LEFT -->
+            <macro><name>#define BS_KEY_GAMEPAD_DPAD_RIGHT</name><line>0x223</line></macro> <!-- BTN_DPAD_RIGHT -->
+            <macro><name>#define BS_KEY_GAMEPAD_MENU</name><line>0x13B</line></macro> <!-- BTN_START -->
+            <macro><name>#define BS_KEY_GAMEPAD_VIEW</name><line>0x13A</line></macro> <!-- BTN_SELECT -->
+            <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_BUTTON</name><line>0x13D</line></macro> <!-- BTN_THUMBL -->
+            <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_BUTTON</name><line>0x13E</line></macro> <!-- BTN_THUMBR -->
+            <!-- <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_UP</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_DOWN</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_RIGHT</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_LEFT</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_UP</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_DOWN</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_RIGHT</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_LEFT</name><line></line></macro> -->
+            <macro><name>#define BS_KEY_OEM_4</name><line>0x1A</line></macro> <!-- KEY_LEFTBRACE -->
+            <macro><name>#define BS_KEY_OEM_5</name><line>0x2B</line></macro> <!-- KEY_BACKSLASH -->
+            <macro><name>#define BS_KEY_OEM_6</name><line>0x1B</line></macro> <!-- KEY_RIGHTBRACE -->
+            <macro><name>#define BS_KEY_OEM_7</name><line>0x28</line></macro> <!-- KEY_APOSTROPHE -->
+            <!-- <macro><name>#define BS_KEY_OEM_8</name><line></line></macro> -->
+            <macro><name>#define BS_KEY_OEM_102</name><line>0x56</line></macro> <!-- KEY_102ND -->
+            <!-- <macro><name>#define BS_KEY_PROCESSKEY</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_PACKET</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_ATTN</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_CRSEL</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_EXSEL</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_EREOF</name><line></line></macro> -->
+            <macro><name>#define BS_KEY_PLAY</name><line>0xCF</line></macro> <!-- KEY_PLAY -->
+            <macro><name>#define BS_KEY_ZOOM</name><line>0x174</line></macro> <!-- KEY_ZOOM -->
+            <!-- <macro><name>#define BS_KEY_NONAME</name><line></line></macro> -->
+            <!-- <macro><name>#define BS_KEY_PA1</name><line></line></macro> -->
+            <macro><name>#define BS_KEY_OEM_CLEAR</name><line>0x163</line></macro> <!-- KEY_CLEAR -->
 
 		<endif/>
 
@@ -1906,6 +2127,8 @@
             <field><type>bs_PhysicalDevice*</type><name>physical_device</name></field>
             <field><type>bs_QueueFamily*</type><name>queue_family</name></field>
 
+            <field><type>bs_List</type><name>popup_windows</name></field>
+			
 			<ifdef cond="__linux__"/>
 				<structure instance="wl">
 					<field><type>void*</type><name>pointer</name></field>
@@ -1946,38 +2169,46 @@
             <field><type>bs_List</type><name>surface_formats</name></field>
             <field><type>const char</type><name>name</name><size>BS_MAX_PHYSICAL_DEVICE_NAME_SIZE</size></field>
         </structure>
+		<structure name="bs_ContextListener">
+			<field><type>bs_ContextTickFunction</type><name>tick</name></field>
+			<field><type>bs_ContextInputFunction</type><name>input</name></field>
+			<field><type>bs_ContextLeaveFunction</type><name>leave</name></field>
+			<field><type>bs_ContextEnterFunction</type><name>enter</name></field>
+			<field><type>bs_ContextResizeFunction</type><name>resize</name></field>
+		</structure>
          <structure name="bs_Context">
             <field><type>bs_Header</type><name>head</name></field>
             <field><type>const char*</type><name>title</name></field>
-            <field><type>bs_Timer</type><name>timer</name></field>
             <field><type>bs_ivec2</type><name>dimensions</name></field>
-            <field><type>bs_Callback</type><name>destroy</name></field>
-            <field><type>bs_ContextTickFunction</type><name>tick</name></field>
             <field><type>bs_vec2</type><name>cursor</name></field>
             <field><type>bs_vec2</type><name>border_size</name></field>
             <field><type>bs_WindowType</type><name>window_type</name></field>
-
             <field><type>bs_CursorIcon</type><name>cursor_icon</name></field>
-			<field><type>bs_ResizeContextFunction</type><name>resize</name></field>
 
-			<field><type>struct VkSurfaceKHR_T*</type><name>surface</name></field>
             <field><type>bs_SurfaceFormat</type><name>surface_format</name></field>
             <field><type>bs_PresentMode</type><name>present_mode</name></field>
 
-            <field><type>void*</type><name>user_data</name></field>
             <field><type>int</type><name>id</name></field>
             <field><type>int</type><name>frames_in_flight</name></field>
             <field><type>int</type><name>frame</name></field>
             <field><type>int</type><name>image_index</name></field>
+            <field><type>bool</type><name>hovering</name></field>
             <field><type>bool</type><name>hidden</name></field>
             <field><type>bool</type><name>active</name></field>
             <field><type>bool</type><name>resized</name></field>
             <field><type>bool</type><name>image_acquired</name></field>
             <field><type>bs_Object*</type><name>swapchain_image</name></field>
-            <field><type>struct VkSwapchainKHR_T*</type><name>swapchain</name></field>
 
+            <field><type>bs_Timer</type><name>timer</name></field>
             <field><type>bs_IO</type><name>io</name></field>
+            <field><type>bs_ContextListener</type><name>listener</name></field>
 
+            <structure type="union">
+                <structure instance="popup">
+                    <field><type>bs_Object*</type><name>queue_obj</name></field>
+                </structure>
+            </structure>
+			 
 	 		<ifdef cond="_WIN32"/>
 			 <field><type>void*</type><name>hwnd</name></field>
 		 	<endif/>
@@ -2000,6 +2231,10 @@
 			 <field><type>void*</type><name>viewport</name></field>
 			 <field><type>void*</type><name>buffer</name></field>
 			<endif/>
+			 
+			<field><type>struct VkSwapchainKHR_T*</type><name>swapchain</name></field>
+			<field><type>struct VkSurfaceKHR_T*</type><name>surface</name></field>
+
             <structure instance="_[]">
 				<field><type>struct VkSemaphore_T*</type><name>semaphore</name></field>
             </structure>
@@ -3015,6 +3250,10 @@
             <return>bs_Result</return>
             <param><type>bs_Queue*</type><name>queue</name></param>
         </function>
+		<function name="bs_imageSwap">
+            <return>int</return>
+            <param><type>bs_Image*</type><name>image</name></param>
+        </function>
         <function name="bs_image" section="bs_images.h">
             <return>bs_Result</return>
             <param><type>bs_Object*</type><name>object</name></param>
@@ -3860,6 +4099,10 @@
 			<param><type>bs_Header*</type><name>head</name></param>
 			<param><type>size_t</type><name>size</name></param>
 		</function>
+		<function name="bs_swapsCount">
+			<return>int</return>
+			<param><type>bs_U32</type><name>flags</name></param>
+		</function>
 		<function name="bs_object">
 			<return>bs_Object*</return>
 			<param><type>bs_U32</type><name>source_id</name></param>
@@ -4150,18 +4393,27 @@
             <param><type>int</type><name>x</name></param>
             <param><type>int</type><name>y</name></param>
         </function>
+		<function name="bs_openPopupWindow">
+            <return>bs_Context*</return>
+            <param><type>bs_ContextListener</type><name>listener</name></param>
+			<param><type>bs_I32</type><name>x</name></param>
+            <param><type>bs_I32</type><name>y</name></param>
+            <param><type>bs_I32</type><name>width</name></param>
+            <param><type>bs_I32</type><name>height</name></param>
+            <param><type>const char*</type><name>title</name></param>
+        </function>
 		<function name="bs_window">
             <return>bs_Result</return>
             <param><type>bs_Context*</type><name>context</name></param>
 			<param nullable="true"><type>bs_Context*</type><name>parent</name></param>
-            <param nullable="true"><type>bs_ContextTickFunction</type><name>tick</name></param>
+            <param><type>bs_ContextListener</type><name>listener</name></param>
             <param><type>bs_U32</type><name>width</name></param>
             <param><type>bs_U32</type><name>height</name></param>
             <param><type>const char*</type><name>title</name></param>
             <param><type>bs_WindowType</type><name>type</name></param>
         </function>
 		<function name="bs_swapchain">
-            <return>void</return>
+            <return>bs_Result</return>
             <param><type>bs_Context*</type><name>context</name></param>
         </function>
 		<function name="bs_showWindow">

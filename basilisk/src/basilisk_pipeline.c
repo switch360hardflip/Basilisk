@@ -106,10 +106,24 @@ void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_col
     bs_acquire();
 
     if (bs_resetQueue(queue) == BS_RESULT_OK) {
-        bs_SubpassFunction callbacks[] = {
-            basilisk_hiResSubpass0,
-        };
-        bs_runPass(queue, renderer, callbacks, sizeof(callbacks) / sizeof(*callbacks));
+        if (renderer->render_pass) {
+            bs_SubpassFunction callbacks[] = {
+                basilisk_hiResSubpass0,
+            };
+            bs_runPass(queue, renderer, callbacks, sizeof(callbacks) / sizeof(*callbacks));
+        }
+        else {
+            bs_Output* output = bs_fetchUnit(&renderer->outputs, 0);
+            bs_transition(queue, output->image, 0, BS_IMAGE_LAYOUT_UNDEFINED, BS_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            bs_stallGPU();
+
+            bs_RendererScope scope = bs_beginRender(queue, renderer);
+            basilisk_hiResSubpass0(&scope);
+
+            bs_endRender(queue, renderer);
+            bs_transition(queue, output->image, 0, BS_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, BS_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+            bs_stallGPU();
+        }
 
         bs_WaitSemaphore wait_semaphores[] = {
             bs_acquisitionSemaphore(),
@@ -128,7 +142,7 @@ void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_col
 }
 
 bs_Object* basilisk_createHiResRenderer(bs_Context* context, int id) {
-    bs_Object* hi_res = BS_RENDERER(BASILISK_RENDERERS, id, BS_OBJECT_HAS_SWAPS_BIT);
+    bs_Object* hi_res = BS_RENDERER(BASILISK_RENDERERS, id, BS_OBJECT_SWAPCHAIN_IMAGE_BIT);
     if (bs_renderer(hi_res, 0) == BS_RESULT_OK) {
         bs_autoResizeRenderer(hi_res->renderer, context);
 

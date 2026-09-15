@@ -899,6 +899,12 @@ BSAPI bs_Result _preval_bs_poll(bs_Queue* queue) {
     return next.bs_poll(queue);
 }
 
+BSAPI int _preval_bs_imageSwap(bs_Image* image) {
+    BS_VALIDATE(image != NULL, 0,);
+    BS_VALIDATE(image->head.type == BS_OBJECT_IMAGE, 0,);
+    return next.bs_imageSwap(image);
+}
+
 BSAPI bs_Result _preval_bs_image(bs_Object* object, bs_ivec2 dim, int num_indices, bs_Format format, bs_U32 flags) {
     BS_VALIDATE(object != NULL, BS_RESULT_VALIDATION_ERROR,);
     return next.bs_image(object, dim, num_indices, format, flags);
@@ -2117,6 +2123,10 @@ BSAPI void _preval_bs_resetObject(bs_Header* head, size_t size) {
     next.bs_resetObject(head, size);
 }
 
+BSAPI int _preval_bs_swapsCount(bs_U32 flags) {
+    return next.bs_swapsCount(flags);
+}
+
 BSAPI bs_Object* _preval_bs_object(bs_U32 source_id, bs_U32 id, size_t size, size_t flexible_size, int flexible_count, bs_U32 flags, bs_ObjectType object_type) {
     return next.bs_object(source_id, id, size, flexible_size, flexible_count, flags, object_type);
 }
@@ -2432,15 +2442,20 @@ BSAPI void _preval_bs_moveWindow(bs_Context* context, int x, int y) {
     next.bs_moveWindow(context, x, y);
 }
 
-BSAPI bs_Result _preval_bs_window(bs_Context* context, bs_Context* parent, bs_ContextTickFunction tick, bs_U32 width, bs_U32 height, const char* title, bs_WindowType type) {
-    BS_VALIDATE(context != NULL, BS_RESULT_VALIDATION_ERROR,);
-    BS_VALIDATE(title != NULL, BS_RESULT_VALIDATION_ERROR,);
-    return next.bs_window(context, parent, tick, width, height, title, type);
+BSAPI bs_Context* _preval_bs_openPopupWindow(bs_ContextListener listener, bs_I32 x, bs_I32 y, bs_I32 width, bs_I32 height, const char* title) {
+    BS_VALIDATE(title != NULL, NULL,);
+    return next.bs_openPopupWindow(listener, x, y, width, height, title);
 }
 
-BSAPI void _preval_bs_swapchain(bs_Context* context) {
-    BS_VALIDATE(context != NULL, ,);
-    next.bs_swapchain(context);
+BSAPI bs_Result _preval_bs_window(bs_Context* context, bs_Context* parent, bs_ContextListener listener, bs_U32 width, bs_U32 height, const char* title, bs_WindowType type) {
+    BS_VALIDATE(context != NULL, BS_RESULT_VALIDATION_ERROR,);
+    BS_VALIDATE(title != NULL, BS_RESULT_VALIDATION_ERROR,);
+    return next.bs_window(context, parent, listener, width, height, title, type);
+}
+
+BSAPI bs_Result _preval_bs_swapchain(bs_Context* context) {
+    BS_VALIDATE(context != NULL, BS_RESULT_VALIDATION_ERROR,);
+    return next.bs_swapchain(context);
 }
 
 BSAPI void _preval_bs_showWindow(bs_Context* context) {
@@ -2873,6 +2888,7 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_stallQueue = _preval_bs_stallQueue;
     functions.bs_stall = _preval_bs_stall;
     functions.bs_poll = _preval_bs_poll;
+    functions.bs_imageSwap = _preval_bs_imageSwap;
     functions.bs_image = _preval_bs_image;
     functions.bs_transition = _preval_bs_transition;
     functions.bs_peekPng = _preval_bs_peekPng;
@@ -3101,6 +3117,7 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_queryMaterial = _preval_bs_queryMaterial;
     functions.bs_idName = _preval_bs_idName;
     functions.bs_resetObject = _preval_bs_resetObject;
+    functions.bs_swapsCount = _preval_bs_swapsCount;
     functions.bs_object = _preval_bs_object;
     functions.bs_packages = _preval_bs_packages;
     functions.bs_objectSources = _preval_bs_objectSources;
@@ -3163,6 +3180,7 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_scroll = _preval_bs_scroll;
     functions.bs_resizeWindow = _preval_bs_resizeWindow;
     functions.bs_moveWindow = _preval_bs_moveWindow;
+    functions.bs_openPopupWindow = _preval_bs_openPopupWindow;
     functions.bs_window = _preval_bs_window;
     functions.bs_swapchain = _preval_bs_swapchain;
     functions.bs_showWindow = _preval_bs_showWindow;

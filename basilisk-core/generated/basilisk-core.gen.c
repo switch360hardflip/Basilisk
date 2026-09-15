@@ -1780,6 +1780,12 @@ bs_Result bs_poll(
     return next.bs_poll(queue);
 }
 
+int bs_imageSwap(
+    bs_Image* image)
+{
+    return next.bs_imageSwap(image);
+}
+
 bs_Result bs_image(
     bs_Object* object, 
     bs_ivec2 dim, 
@@ -3693,6 +3699,12 @@ void bs_resetObject(
     next.bs_resetObject(head, size);
 }
 
+int bs_swapsCount(
+    bs_U32 flags)
+{
+    return next.bs_swapsCount(flags);
+}
+
 bs_Object* bs_object(
     bs_U32 source_id, 
     bs_U32 id, 
@@ -4164,22 +4176,33 @@ void bs_moveWindow(
     next.bs_moveWindow(context, x, y);
 }
 
+bs_Context* bs_openPopupWindow(
+    bs_ContextListener listener, 
+    bs_I32 x, 
+    bs_I32 y, 
+    bs_I32 width, 
+    bs_I32 height, 
+    const char* title)
+{
+    return next.bs_openPopupWindow(listener, x, y, width, height, title);
+}
+
 bs_Result bs_window(
     bs_Context* context, 
     bs_Context* parent, 
-    bs_ContextTickFunction tick, 
+    bs_ContextListener listener, 
     bs_U32 width, 
     bs_U32 height, 
     const char* title, 
     bs_WindowType type)
 {
-    return next.bs_window(context, parent, tick, width, height, title, type);
+    return next.bs_window(context, parent, listener, width, height, title, type);
 }
 
-void bs_swapchain(
+bs_Result bs_swapchain(
     bs_Context* context)
 {
-    next.bs_swapchain(context);
+    return next.bs_swapchain(context);
 }
 
 void bs_showWindow(

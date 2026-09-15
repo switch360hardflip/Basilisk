@@ -187,6 +187,7 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_stallQueue = (PFN_bs_stallQueue)bs_getProcAddress(module, "_preval_bs_stallQueue");
     functions.bs_stall = (PFN_bs_stall)bs_getProcAddress(module, "_preval_bs_stall");
     functions.bs_poll = (PFN_bs_poll)bs_getProcAddress(module, "_preval_bs_poll");
+    functions.bs_imageSwap = (PFN_bs_imageSwap)bs_getProcAddress(module, "_preval_bs_imageSwap");
     functions.bs_image = (PFN_bs_image)bs_getProcAddress(module, "_preval_bs_image");
     functions.bs_transition = (PFN_bs_transition)bs_getProcAddress(module, "_preval_bs_transition");
     functions.bs_peekPngN = (PFN_bs_peekPngN)bs_getProcAddress(module, "_preval_bs_peekPngN");
@@ -365,6 +366,7 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_queryMaterial = (PFN_bs_queryMaterial)bs_getProcAddress(module, "_preval_bs_queryMaterial");
     functions.bs_idName = (PFN_bs_idName)bs_getProcAddress(module, "_preval_bs_idName");
     functions.bs_resetObject = (PFN_bs_resetObject)bs_getProcAddress(module, "_preval_bs_resetObject");
+    functions.bs_swapsCount = (PFN_bs_swapsCount)bs_getProcAddress(module, "_preval_bs_swapsCount");
     functions.bs_object = (PFN_bs_object)bs_getProcAddress(module, "_preval_bs_object");
     functions.bs_packages = (PFN_bs_packages)bs_getProcAddress(module, "_preval_bs_packages");
     functions.bs_objectSources = (PFN_bs_objectSources)bs_getProcAddress(module, "_preval_bs_objectSources");
@@ -423,6 +425,7 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_scroll = (PFN_bs_scroll)bs_getProcAddress(module, "_preval_bs_scroll");
     functions.bs_resizeWindow = (PFN_bs_resizeWindow)bs_getProcAddress(module, "_preval_bs_resizeWindow");
     functions.bs_moveWindow = (PFN_bs_moveWindow)bs_getProcAddress(module, "_preval_bs_moveWindow");
+    functions.bs_openPopupWindow = (PFN_bs_openPopupWindow)bs_getProcAddress(module, "_preval_bs_openPopupWindow");
     functions.bs_window = (PFN_bs_window)bs_getProcAddress(module, "_preval_bs_window");
     functions.bs_swapchain = (PFN_bs_swapchain)bs_getProcAddress(module, "_preval_bs_swapchain");
     functions.bs_showWindow = (PFN_bs_showWindow)bs_getProcAddress(module, "_preval_bs_showWindow");

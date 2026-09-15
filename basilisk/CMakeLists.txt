@@ -59,17 +59,12 @@ add_dependencies(${PROJECT_NAME}
 )
 
 target_link_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/build/basilisk/Debug #todo release
     ${CMAKE_SOURCE_DIR}/external/
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/Debug #todo release
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/glslang/OSDependent/Unix
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV/Debug
-    ${CMAKE_SOURCE_DIR}/external/glslang/build/SPIRV
-    ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build/Debug
-    ${CMAKE_SOURCE_DIR}/external/SPIRV-Cross/build
     ${CMAKE_SOURCE_DIR}/external/freetype/objs
     ${CMAKE_SOURCE_DIR}/external/freetype/objs/.libs
 )
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     basilisk-core
     basilisk-gfx
@@ -90,7 +85,6 @@ endif()
 
 if (WIN32 AND ${IS_DEBUG_BUILD})
     target_link_libraries(${PROJECT_NAME} PRIVATE
-        OSDependentd
         GenericCodeGend
         glslangd
         glslang-default-resource-limitsd

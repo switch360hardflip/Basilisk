@@ -143,6 +143,7 @@ typedef struct bs_Config bs_Config;
 typedef struct bs_QueueFamily bs_QueueFamily;
 typedef struct bs_SurfaceFormat bs_SurfaceFormat;
 typedef struct bs_PhysicalDevice bs_PhysicalDevice;
+typedef struct bs_ContextListener bs_ContextListener;
 typedef struct bs_Context bs_Context;
 typedef struct bs_Scope bs_Scope;
 typedef struct bs_Args bs_Args;
@@ -731,44 +732,38 @@ typedef enum bs_VkObjectType bs_VkObjectType;
 #define BS_SWAP_SIZE(type)                                           \
     (sizeof(*((type*)NULL)->_))
 
-#define BS_SWAPS_COUNT(flags)                                        \
-    ((flags & BS_OBJECT_HAS_SWAPS_BIT) ? (bs_scope()->context ? bs_scope()->context->frames_in_flight : bs_instance()->max_frames_in_flight) : 1)
-
-#define BS_SWAPCHAIN_IMAGES_COUNT(flags)                             \
-    ((flags & BS_OBJECT_HAS_SWAPS_BIT) ? (bs_scope()->context ? bs_scope()->context->swapchain_image->head->swaps_count : bs_instance()->max_swapchain_images_count) : 1)
-
 #define BS_OBJECT(type, source_id, id, swaps_count, flags, object_type) \
         bs_object(source_id, id, sizeof(type), BS_SWAP_SIZE(type), swaps_count, flags, object_type)
 
 #define BS_CONTEXT(source_id, id, flags)                             \
-    BS_OBJECT(bs_Context, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_CONTEXT)
+    BS_OBJECT(bs_Context, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_CONTEXT)
 
 #define BS_IMAGE(source_id, id, flags)                               \
-    BS_OBJECT(bs_Image, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_IMAGE)
+    BS_OBJECT(bs_Image, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_IMAGE)
 
 #define BS_SAMPLER(source_id, id, flags)                             \
-    BS_OBJECT(bs_Sampler, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_SAMPLER)
+    BS_OBJECT(bs_Sampler, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_SAMPLER)
 
 #define BS_RENDERER(source_id, id, flags)                            \
-    BS_OBJECT(bs_Renderer, source_id, id, BS_SWAPCHAIN_IMAGES_COUNT(flags), flags, BS_OBJECT_RENDERER)
+    BS_OBJECT(bs_Renderer, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_RENDERER)
 
 #define BS_BATCH(source_id, id, flags)                               \
-    BS_OBJECT(bs_Batch, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_BATCH)
+    BS_OBJECT(bs_Batch, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_BATCH)
 
 #define BS_QUEUE(source_id, id, flags)                               \
-    BS_OBJECT(bs_Queue, source_id, id, BS_SWAPCHAIN_IMAGES_COUNT(flags), flags, BS_OBJECT_QUEUE)
+    BS_OBJECT(bs_Queue, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_QUEUE)
 
 #define BS_BUFFER(source_id, id, flags)                              \
-    BS_OBJECT(bs_Buffer, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_BUFFER)
+    BS_OBJECT(bs_Buffer, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_BUFFER)
 
 #define BS_PIPELINE(source_id, id, flags)                            \
-    BS_OBJECT(bs_Pipeline, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_PIPELINE)
+    BS_OBJECT(bs_Pipeline, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_PIPELINE)
 
 #define BS_RAY_TRACER(source_id, id, flags)                          \
-    BS_OBJECT(bs_RayTracer, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_RAY_TRACER)
+    BS_OBJECT(bs_RayTracer, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_RAY_TRACER)
 
 #define BS_ATLAS(source_id, id, flags)                               \
-    BS_OBJECT(bs_Atlas, source_id, id, BS_SWAPS_COUNT(flags), flags, BS_OBJECT_ATLAS)
+    BS_OBJECT(bs_Atlas, source_id, id, bs_swapsCount(flags), flags, BS_OBJECT_ATLAS)
 
 #define BS_NUM_STRIKES_RULE                                          \
     (1)
@@ -839,6 +834,7 @@ typedef enum bs_VkObjectType bs_VkObjectType;
 #define BS_WRITE_BIT(array, index, value)                            \
         do { if (value) BS_SET_BIT(array, index); else BS_CLEAR_BIT(array, index); } while (0)
 
+#ifdef _WIN32
 #define BS_LEFT_MOUSE_BUTTON                                         \
     0x01
 
@@ -1469,17 +1465,541 @@ typedef enum bs_VkObjectType bs_VkObjectType;
 #define BS_KEY_OEM_CLEAR                                             \
     0xFE
 
+#endif
+#ifdef __linux__
+#define BS_LEFT_MOUSE_BUTTON                                         \
+    0x110
+
+#define BS_RIGHT_MOUSE_BUTTON                                        \
+    0x111
+
+#define BS_MIDDLE_MOUSE_BUTTON                                       \
+    0x112
+
+#define BS_THUMB_FORWARD                                             \
+    0x113
+
+#define BS_THUMB_BACK                                                \
+    0x114
+
+#define BS_KEY_BACKSPACE                                             \
+    0x0E
+
+#define BS_KEY_TAB                                                   \
+    0x0F
+
+#define BS_KEY_CLEAR                                                 \
+    0x163
+
+#define BS_KEY_ENTER                                                 \
+    0x1C
+
+#define BS_KEY_LEFT_SHIFT                                            \
+    0x2A
+
+#define BS_KEY_LEFT_CONTROL                                          \
+    0x1D
+
+#define BS_KEY_ALT                                                   \
+    0x38
+
+#define BS_KEY_PAUSE                                                 \
+    0x77
+
+#define BS_KEY_CAPSLOCK                                              \
+    0x3A
+
+#define BS_KEY_KANA                                                  \
+    0x5D
+
+#define BS_KEY_HANGEUL                                               \
+    0x7A
+
+#define BS_KEY_HANGUL                                                \
+    0x7A
+
+#define BS_KEY_HANJA                                                 \
+    0x7B
+
+#define BS_KEY_ESCAPE                                                \
+    0x01
+
+#define BS_KEY_CONVERT                                               \
+    0x5C
+
+#define BS_KEY_NONCONVERT                                            \
+    0x5E
+
+#define BS_KEY_SPACE                                                 \
+    0x39
+
+#define BS_KEY_PAGEUP                                                \
+    0x68
+
+#define BS_KEY_PAGEDOWN                                              \
+    0x6D
+
+#define BS_KEY_END                                                   \
+    0x6B
+
+#define BS_KEY_HOME                                                  \
+    0x66
+
+#define BS_KEY_LEFT                                                  \
+    0x69
+
+#define BS_KEY_UP                                                    \
+    0x67
+
+#define BS_KEY_RIGHT                                                 \
+    0x6A
+
+#define BS_KEY_DOWN                                                  \
+    0x6C
+
+#define BS_KEY_SELECT                                                \
+    0x161
+
+#define BS_KEY_PRINT                                                 \
+    0xD2
+
+#define BS_KEY_PRINT_SCREEN                                          \
+    0x63
+
+#define BS_KEY_INSERT                                                \
+    0x6E
+
+#define BS_KEY_DELETE                                                \
+    0x6F
+
+#define BS_KEY_HELP                                                  \
+    0x8A
+
+#define BS_KEY_0                                                     \
+    0x0B
+
+#define BS_KEY_1                                                     \
+    0x02
+
+#define BS_KEY_2                                                     \
+    0x03
+
+#define BS_KEY_3                                                     \
+    0x04
+
+#define BS_KEY_4                                                     \
+    0x05
+
+#define BS_KEY_5                                                     \
+    0x06
+
+#define BS_KEY_6                                                     \
+    0x07
+
+#define BS_KEY_7                                                     \
+    0x08
+
+#define BS_KEY_8                                                     \
+    0x09
+
+#define BS_KEY_9                                                     \
+    0x0A
+
+#define BS_KEY_A                                                     \
+    0x1E
+
+#define BS_KEY_B                                                     \
+    0x30
+
+#define BS_KEY_C                                                     \
+    0x2E
+
+#define BS_KEY_D                                                     \
+    0x20
+
+#define BS_KEY_E                                                     \
+    0x12
+
+#define BS_KEY_F                                                     \
+    0x21
+
+#define BS_KEY_G                                                     \
+    0x22
+
+#define BS_KEY_H                                                     \
+    0x23
+
+#define BS_KEY_I                                                     \
+    0x17
+
+#define BS_KEY_J                                                     \
+    0x24
+
+#define BS_KEY_K                                                     \
+    0x25
+
+#define BS_KEY_L                                                     \
+    0x26
+
+#define BS_KEY_M                                                     \
+    0x32
+
+#define BS_KEY_N                                                     \
+    0x31
+
+#define BS_KEY_O                                                     \
+    0x18
+
+#define BS_KEY_P                                                     \
+    0x19
+
+#define BS_KEY_Q                                                     \
+    0x10
+
+#define BS_KEY_R                                                     \
+    0x13
+
+#define BS_KEY_S                                                     \
+    0x1F
+
+#define BS_KEY_T                                                     \
+    0x14
+
+#define BS_KEY_U                                                     \
+    0x16
+
+#define BS_KEY_V                                                     \
+    0x2F
+
+#define BS_KEY_W                                                     \
+    0x11
+
+#define BS_KEY_X                                                     \
+    0x2D
+
+#define BS_KEY_Y                                                     \
+    0x15
+
+#define BS_KEY_Z                                                     \
+    0x2C
+
+#define BS_KEY_LEFT_WIN                                              \
+    0x7D
+
+#define BS_KEY_RIGHT_WIN                                             \
+    0x7E
+
+#define BS_KEY_APPS                                                  \
+    0x7F
+
+#define BS_KEY_SLEEP                                                 \
+    0x8E
+
+#define BS_KEY_NUMPAD0                                               \
+    0x52
+
+#define BS_KEY_NUMPAD1                                               \
+    0x4F
+
+#define BS_KEY_NUMPAD2                                               \
+    0x50
+
+#define BS_KEY_NUMPAD3                                               \
+    0x51
+
+#define BS_KEY_NUMPAD4                                               \
+    0x4B
+
+#define BS_KEY_NUMPAD5                                               \
+    0x4C
+
+#define BS_KEY_NUMPAD6                                               \
+    0x4D
+
+#define BS_KEY_NUMPAD7                                               \
+    0x47
+
+#define BS_KEY_NUMPAD8                                               \
+    0x48
+
+#define BS_KEY_NUMPAD9                                               \
+    0x49
+
+#define BS_KEY_MULTIPLY                                              \
+    0x37
+
+#define BS_KEY_ADD                                                   \
+    0x4E
+
+#define BS_KEY_SEPARATOR                                             \
+    0x79
+
+#define BS_KEY_SUBTRACT                                              \
+    0x4A
+
+#define BS_KEY_DECIMAL                                               \
+    0x53
+
+#define BS_KEY_DIVIDE                                                \
+    0x62
+
+#define BS_KEY_F1                                                    \
+    0x3B
+
+#define BS_KEY_F2                                                    \
+    0x3C
+
+#define BS_KEY_F3                                                    \
+    0x3D
+
+#define BS_KEY_F4                                                    \
+    0x3E
+
+#define BS_KEY_F5                                                    \
+    0x3F
+
+#define BS_KEY_F6                                                    \
+    0x40
+
+#define BS_KEY_F7                                                    \
+    0x41
+
+#define BS_KEY_F8                                                    \
+    0x42
+
+#define BS_KEY_F9                                                    \
+    0x43
+
+#define BS_KEY_F10                                                   \
+    0x44
+
+#define BS_KEY_F11                                                   \
+    0x57
+
+#define BS_KEY_F12                                                   \
+    0x58
+
+#define BS_KEY_F13                                                   \
+    0xB7
+
+#define BS_KEY_F14                                                   \
+    0xB8
+
+#define BS_KEY_F15                                                   \
+    0xB9
+
+#define BS_KEY_F16                                                   \
+    0xBA
+
+#define BS_KEY_F17                                                   \
+    0xBB
+
+#define BS_KEY_F18                                                   \
+    0xBC
+
+#define BS_KEY_F19                                                   \
+    0xBD
+
+#define BS_KEY_F20                                                   \
+    0xBE
+
+#define BS_KEY_F21                                                   \
+    0xBF
+
+#define BS_KEY_F22                                                   \
+    0xC0
+
+#define BS_KEY_F23                                                   \
+    0xC1
+
+#define BS_KEY_F24                                                   \
+    0xC2
+
+#define BS_KEY_NUMLOCK                                               \
+    0x45
+
+#define BS_KEY_SCROLLLOCK                                            \
+    0x46
+
+#define BS_KEY_NUMPAD_EQUAL                                          \
+    0x75
+
+#define BS_KEY_RIGHT_SHIFT                                           \
+    0x36
+
+#define BS_KEY_LEFT_CTRL                                             \
+    0x1D
+
+#define BS_KEY_RIGHT_CTRL                                            \
+    0x61
+
+#define BS_KEY_LEFT_MENU                                             \
+    0x38
+
+#define BS_KEY_RIGHT_MENU                                            \
+    0x64
+
+#define BS_KEY_BROWSER_BACK                                          \
+    0x9E
+
+#define BS_KEY_BROWSER_FORWARD                                       \
+    0x9F
+
+#define BS_KEY_BROWSER_REFRESH                                       \
+    0xAD
+
+#define BS_KEY_BROWSER_STOP                                          \
+    0x80
+
+#define BS_KEY_BROWSER_SEARCH                                        \
+    0xD9
+
+#define BS_KEY_BROWSER_FAVORITES                                     \
+    0x9C
+
+#define BS_KEY_BROWSER_HOME                                          \
+    0xAC
+
+#define BS_KEY_VOLUME_MUTE                                           \
+    0x71
+
+#define BS_KEY_VOLUME_DOWN                                           \
+    0x72
+
+#define BS_KEY_VOLUME_UP                                             \
+    0x73
+
+#define BS_KEY_NEXT_TRACK                                            \
+    0xA3
+
+#define BS_KEY_PREV_TRACK                                            \
+    0xA5
+
+#define BS_KEY_STOP                                                  \
+    0xA6
+
+#define BS_KEY_PLAY_PAUSE                                            \
+    0xA4
+
+#define BS_KEY_LAUNCH_MAIL                                           \
+    0x9B
+
+#define BS_KEY_LAUNCH_MEDIA_SELECT                                   \
+    0xE2
+
+#define BS_KEY_LAUNCH_APP1                                           \
+    0x94
+
+#define BS_KEY_LAUNCH_APP2                                           \
+    0x95
+
+#define BS_KEY_OEM_1                                                 \
+    0x27
+
+#define BS_KEY_OEM_PLUS                                              \
+    0x0D
+
+#define BS_KEY_OEM_COMMA                                             \
+    0x33
+
+#define BS_KEY_OEM_MINUS                                             \
+    0x0C
+
+#define BS_KEY_OEM_PERIOD                                            \
+    0x34
+
+#define BS_KEY_OEM_2                                                 \
+    0x35
+
+#define BS_KEY_OEM_3                                                 \
+    0x29
+
+#define BS_KEY_GAMEPAD_A                                             \
+    0x130
+
+#define BS_KEY_GAMEPAD_B                                             \
+    0x131
+
+#define BS_KEY_GAMEPAD_X                                             \
+    0x133
+
+#define BS_KEY_GAMEPAD_Y                                             \
+    0x134
+
+#define BS_KEY_GAMEPAD_RIGHT_SHOULDER                                \
+    0x137
+
+#define BS_KEY_GAMEPAD_LEFT_SHOULDER                                 \
+    0x136
+
+#define BS_KEY_GAMEPAD_LEFT_TRIGGER                                  \
+    0x138
+
+#define BS_KEY_GAMEPAD_RIGHT_TRIGGER                                 \
+    0x139
+
+#define BS_KEY_GAMEPAD_DPAD_UP                                       \
+    0x220
+
+#define BS_KEY_GAMEPAD_DPAD_DOWN                                     \
+    0x221
+
+#define BS_KEY_GAMEPAD_DPAD_LEFT                                     \
+    0x222
+
+#define BS_KEY_GAMEPAD_DPAD_RIGHT                                    \
+    0x223
+
+#define BS_KEY_GAMEPAD_MENU                                          \
+    0x13B
+
+#define BS_KEY_GAMEPAD_VIEW                                          \
+    0x13A
+
+#define BS_KEY_GAMEPAD_LEFT_THUMBSTICK_BUTTON                        \
+    0x13D
+
+#define BS_KEY_GAMEPAD_RIGHT_THUMBSTICK_BUTTON                       \
+    0x13E
+
+#define BS_KEY_OEM_4                                                 \
+    0x1A
+
+#define BS_KEY_OEM_5                                                 \
+    0x2B
+
+#define BS_KEY_OEM_6                                                 \
+    0x1B
+
+#define BS_KEY_OEM_7                                                 \
+    0x28
+
+#define BS_KEY_OEM_102                                               \
+    0x56
+
+#define BS_KEY_PLAY                                                  \
+    0xCF
+
+#define BS_KEY_ZOOM                                                  \
+    0x174
+
+#define BS_KEY_OEM_CLEAR                                             \
+    0x163
+
+#endif
 typedef void (* bs_VoidFunction)();
 typedef int (* bs_ThreadFunction)(void*);
 typedef bs_Result (* bs_ForeachDocumentFunction)(bs_FileInfo, void*);
 typedef void (* bs_MessageFunction)(const bs_LogQueueItem*);
 typedef void (* bs_NameObjectFunction)(bs_Object*, const char*);
 typedef void (* bs_ValidationErrorFunction)();
-typedef void (* bs_ConfigureWindowFunction)(bs_Context*);
 typedef bs_NonClientArea (* bs_NonClientAreaTickFunction)(bs_Context*, bs_ivec2);
-typedef void (* bs_ResizeContextFunction)(bs_Context*);
+typedef void (* bs_ContextResizeFunction)(bs_Context*);
 typedef void (* bs_SubpassFunction)(bs_RendererScope*);
-typedef void (* bs_ContextTickFunction)(bs_Context* context);
+typedef void (* bs_ContextTickFunction)(bs_Context* context, void* params);
+typedef void (* bs_ContextInputFunction)(bs_Context* context, void* params);
+typedef void (* bs_ContextEnterFunction)(bs_Context* context, void* params);
+typedef void (* bs_ContextLeaveFunction)(bs_Context* context, void* params);
 typedef long long bs_I64;
 typedef int bs_I32;
 typedef short bs_I16;
@@ -1569,7 +2089,7 @@ enum bs_NonClientArea {
 enum bs_WindowType {
     BS_WINDOW_DEFAULT = 0,
     BS_WINDOW_NO_TITLE_BAR = 1,
-    BS_WINDOW_MENU = 2,
+    BS_WINDOW_POPUP = 2,
 };
 
 enum bs_ImageFilter {
@@ -1807,11 +2327,12 @@ enum bs_ColliderType {
 
 enum bs_ObjectFlag {
     BS_OBJECT_SHOULD_LOAD = (1 << 0),
-    BS_OBJECT_HAS_SWAPS_BIT = (1 << 1),
-    BS_OBJECT_FORCE_DESTROY = (1 << 2),
-    BS_OBJECT_ALREADY_EXISTS = (1 << 3),
-    BS_OBJECT_WAS_CREATED = (1 << 4),
-    BS_OBJECT_WAS_ALTERED = (1 << 5),
+    BS_OBJECT_IN_FLIGHT_BIT = (1 << 1),
+    BS_OBJECT_SWAPCHAIN_IMAGE_BIT = (1 << 2),
+    BS_OBJECT_FORCE_DESTROY = (1 << 3),
+    BS_OBJECT_ALREADY_EXISTS = (1 << 4),
+    BS_OBJECT_WAS_CREATED = (1 << 5),
+    BS_OBJECT_WAS_ALTERED = (1 << 6),
 };
 
 enum bs_ResourceType {
@@ -1831,7 +2352,8 @@ enum bs_ResourceType {
 };
 
 enum bs_ImageBit {
-    BS_IMAGE_SWAPS_BIT = 1 << 0,
+    BS_IMAGE_IN_FLIGHT_BIT = 1 << 0,
+    BS_IMAGE_SWAPCHAIN_IMAGE_BIT = 1 << 1,
     BS_IMAGE_SHADER_ACCESSIBLE_BIT = 1 << 4,
     BS_IMAGE_ATTACHMENT_BIT = 1 << 5,
     BS_IMAGE_INPUT_ATTACHMENT_BIT = 1 << 6,
@@ -3224,6 +3746,7 @@ struct bs_Instance {
     int max_frames_in_flight;
     bs_PhysicalDevice* physical_device;
     bs_QueueFamily* queue_family;
+    bs_List popup_windows;
 #ifdef __linux__
     struct {
         void* pointer;
@@ -3269,33 +3792,42 @@ struct bs_PhysicalDevice {
     const char name[BS_MAX_PHYSICAL_DEVICE_NAME_SIZE];
 };
 
+struct bs_ContextListener {
+    bs_ContextTickFunction tick;
+    bs_ContextInputFunction input;
+    bs_ContextLeaveFunction leave;
+    bs_ContextEnterFunction enter;
+    bs_ContextResizeFunction resize;
+};
+
 struct bs_Context {
     bs_Header head;
     const char* title;
-    bs_Timer timer;
     bs_ivec2 dimensions;
-    bs_Callback destroy;
-    bs_ContextTickFunction tick;
     bs_vec2 cursor;
     bs_vec2 border_size;
     bs_WindowType window_type;
     bs_CursorIcon cursor_icon;
-    bs_ResizeContextFunction resize;
-    struct VkSurfaceKHR_T* surface;
     bs_SurfaceFormat surface_format;
     bs_PresentMode present_mode;
-    void* user_data;
     int id;
     int frames_in_flight;
     int frame;
     int image_index;
+    bool hovering;
     bool hidden;
     bool active;
     bool resized;
     bool image_acquired;
     bs_Object* swapchain_image;
-    struct VkSwapchainKHR_T* swapchain;
+    bs_Timer timer;
     bs_IO io;
+    bs_ContextListener listener;
+    union {
+        struct {
+            bs_Object* queue_obj;
+        }popup;
+    };
 #ifdef _WIN32
     void* hwnd;
 #endif
@@ -3316,6 +3848,8 @@ struct bs_Context {
     void* viewport;
     void* buffer;
 #endif
+    struct VkSwapchainKHR_T* swapchain;
+    struct VkSurfaceKHR_T* surface;
     struct {
         struct VkSemaphore_T* semaphore;
     }_[];
@@ -5859,6 +6393,14 @@ bs_stall(
 BSAPI bs_Result
 bs_poll(
     bs_Queue* queue);
+
+ /**
+  @param image
+  @return int
+  */
+BSAPI int
+bs_imageSwap(
+    bs_Image* image);
 
  /**
   @param object
@@ -8501,6 +9043,14 @@ bs_resetObject(
     size_t size);
 
  /**
+  @param flags
+  @return int
+  */
+BSAPI int
+bs_swapsCount(
+    bs_U32 flags);
+
+ /**
   @param source_id
   @param id
   @param size
@@ -9171,9 +9721,27 @@ bs_moveWindow(
     int y);
 
  /**
+  @param listener
+  @param x
+  @param y
+  @param width
+  @param height
+  @param title
+  @return bs_Context*
+  */
+BSAPI bs_Context*
+bs_openPopupWindow(
+    bs_ContextListener listener,
+    bs_I32 x,
+    bs_I32 y,
+    bs_I32 width,
+    bs_I32 height,
+    const char* title);
+
+ /**
   @param context
   @param parent
-  @param tick
+  @param listener
   @param width
   @param height
   @param title
@@ -9184,7 +9752,7 @@ BSAPI bs_Result
 bs_window(
     bs_Context* context,
     bs_Context* parent,
-    bs_ContextTickFunction tick,
+    bs_ContextListener listener,
     bs_U32 width,
     bs_U32 height,
     const char* title,
@@ -9192,9 +9760,9 @@ bs_window(
 
  /**
   @param context
-  @return void
+  @return bs_Result
   */
-BSAPI void
+BSAPI bs_Result
 bs_swapchain(
     bs_Context* context);
 

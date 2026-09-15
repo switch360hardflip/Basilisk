@@ -106,14 +106,6 @@ BS_GENERATE_ENUM(BASILISK_FONT_IDS);
 #define BASILISK_ATLASES basilisk.sources[BS_OBJECT_ATLAS]
 #define BASILISK_FONTS basilisk.sources[BS_OBJECT_FONT]
 
-bs_Object* basilisk_createHiResRenderer(bs_Context* context, int id);
-void basilisk_createRenderers();
-
-void basilisk_instantiateContextMenuUI();
-void basilisk_instantiateTitleBarUI();
-void basilisk_instantiateBaseUI();
-bs_NonClientArea onClientAreaTick(bs_Context* context, bs_ivec2 pt);
-
 typedef enum {
     CONTEXT_MENU_UNDEFINED,
 
@@ -123,14 +115,60 @@ typedef enum {
     CONTEXT_MENU_COUNT
 } ContextMenuType;
 
-bs_Context* contextFromMenuType(ContextMenuType type);
-void showContextMenuUI(ContextMenuType type, bs_vec3 position);
-void hideContextMenuUI(bs_Context* context);
-void toggleContextMenuUI(ContextMenuType type, bs_vec3 position);
+typedef struct {
+    const char* left_text;
+    const char* right_text;
+    ContextMenuType hover_menu_type;
+} ContextMenuElement;
 
-void onContextMenuTick();
+
+static ContextMenuElement _context_menu_open_recent_elements_[] = {
+    {
+        .left_text = "Testing...",
+    },
+    {
+        .left_text = "Abc123",
+    },
+};
+
+static ContextMenuElement _context_menu_file_elements_[] = {
+    {
+        .left_text = "New...",
+        .right_text = "Ctrl+N",
+    },
+    {
+        .left_text = "Open...",
+    },
+    {
+        .left_text = "Open Recent",
+        .hover_menu_type = CONTEXT_MENU_OPEN_RECENT,
+    },
+    {
+        .left_text = "Save",
+        .right_text = "Ctrl+S",
+    },
+    {
+        .left_text = "Save As...",
+        .right_text = "Shift+Ctrl+S",
+    },
+    {
+        .left_text = "Exit",
+        .right_text = "Alt+F4",
+    }
+};
+
+
+bs_Object* basilisk_createHiResRenderer(bs_Context* context, int id);
+void basilisk_createRenderers();
+
+void basilisk_instantiateContextMenuUI();
+void basilisk_instantiateTitleBarUI();
+void basilisk_instantiateBaseUI();
+bs_NonClientArea onClientAreaTick(bs_Context* context, bs_ivec2 pt);
+
+void onContextMenuTick(bs_Context* context, void* params);
+void openContextMenu(bs_ivec2 position, ContextMenuElement context_menu_file_elements[], int context_menu_file_elements_count);
 void onTitleBarTick();
-void iniContextMenus();
 
 void basilisk_renderDither(bs_RendererScope* scope, bs_Queue* queue);
 void basilisk_renderUIStencil(bs_RendererScope* scope, bs_Queue* queue);

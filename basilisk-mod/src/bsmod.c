@@ -475,7 +475,7 @@ BSMODAPI void _bsmod_onIni() {
         bs_pushBatch(queue, quad_instance_batch->batch, BS_U32_MAX, BS_U32_MAX);
     }
 
-    bs_queue(BS_QUEUE(BSMOD_QUEUES, BSMOD_QUEUE_GRAPHICS, BS_OBJECT_HAS_SWAPS_BIT), 0, BS_QUEUE_GRAPHICS_BIT);
+    bs_queue(BS_QUEUE(BSMOD_QUEUES, BSMOD_QUEUE_GRAPHICS, BS_OBJECT_SWAPCHAIN_IMAGE_BIT), 0, BS_QUEUE_GRAPHICS_BIT);
     bs_queue(BS_QUEUE(BSMOD_QUEUES, BSMOD_QUEUE_GRAPHICS_RASTERIZATION, 0), 1, BS_QUEUE_GRAPHICS_BIT | BS_QUEUE_DONT_SIGNAL);
 
     _bsmod_loadMsdfResources();
@@ -568,7 +568,7 @@ BSMODAPI void _bsmod_onLoad() {
 
     //_bsmod_subtypes[BSMOD_SUBTYPE_SPHERE_HIGH_QUALITY] = bsgfx_subtype(BSGFX_INSTANCE_TYPE_MESH, BSGFX_BATCH_MESH_INSTANCED, BSGFX_SUBTYPE_HAS_SHADOWS, sphere_high_quality_range);
 
-    bs_Object* renderer_object = BS_RENDERER(BSMOD_RENDERERS, BSMOD_RENDERER, BS_OBJECT_HAS_SWAPS_BIT);
+    bs_Object* renderer_object = BS_RENDERER(BSMOD_RENDERERS, BSMOD_RENDERER, BS_OBJECT_SWAPCHAIN_IMAGE_BIT);
     result = bs_renderer(renderer_object, 0);
 
     bs_ivec2 resolution = bs_resolution(context);
@@ -614,7 +614,8 @@ BSMODAPI void _bsmod_onLoad() {
         bs_framebuffer(renderer_object->renderer, resolution);
     }
 
-    bs_Object* renderer_3d = BS_RENDERER(BSMOD_RENDERERS, BSMOD_RENDERER_3D, BS_OBJECT_HAS_SWAPS_BIT);
+    /*
+    bs_Object* renderer_3d = BS_RENDERER(BSMOD_RENDERERS, BSMOD_RENDERER_3D, BS_OBJECT_SWAPCHAIN_IMAGE_BIT);
     result = bs_renderer(renderer_3d, 0);
     if (result == BS_RESULT_OK) {
         bs_Object* depth = BS_IMAGE(BSMOD_IMAGES, BSMOD_IMAGE_DEPTH_3D, 0);
@@ -650,6 +651,7 @@ BSMODAPI void _bsmod_onLoad() {
         bs_framebuffer(renderer_3d->renderer, resolution);
     }
 
+    */
     bs_Object* ui = BS_ATLAS(BSMOD_ATLASES, BSMOD_ATLAS_UI, 0);
     bs_Object* material_icons = BS_ATLAS(BSMOD_ATLASES, BSMOD_ATLAS_MATERIAL_ICONS, 0);
     bs_Object* primitive_icons = BS_ATLAS(BSMOD_ATLASES, BSMOD_ATLAS_PRIMITIVE_ICONS, 0);

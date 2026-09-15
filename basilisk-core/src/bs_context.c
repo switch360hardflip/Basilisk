@@ -133,350 +133,6 @@ BSAPI void _bs_queryProcedures(bs_Procedure* procedures, int count, void* dll_ha
 
 
   /*==============================================================================
-   * Physical Device
-   *============================================================================*/
-
-static inline const char* _bs_physicalDeviceTypeName(VkPhysicalDeviceType type) {
-    switch (type) {
-    case VK_PHYSICAL_DEVICE_TYPE_OTHER: return "Other";
-    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: return "Integrated";
-    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: return "Discrete";
-    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: return "Virtual";
-    case VK_PHYSICAL_DEVICE_TYPE_CPU: return "CPU";
-    default: return "Unknown";
-    }
-}
-
-static void _bs_logPhysicalDeviceInfo(bs_PhysicalDevice* physical_device) {
-    _bs_logF("Device \"%s\":\n", physical_device->name);
-    _bs_logF("    API version: %d.%d.%d\n",
-        VK_API_VERSION_MAJOR(physical_device->api_version),
-        VK_API_VERSION_MINOR(physical_device->api_version),
-        VK_API_VERSION_PATCH(physical_device->api_version)
-    );
-    _bs_logF("    Type: %s\n", _bs_physicalDeviceTypeName(physical_device->type));
-
-    for (int i = 0; i < physical_device->queue_families.count; i++) {
-        bs_QueueFamily* family = _bs_fetchUnit(&physical_device->queue_families, i);
-        _bs_logF("    Family %d queues count: %d ", i, family->queue_count);
-        _bs_logF("Graphics %s, Compute %s, Transfer %s, Sparse binding %s\n",
-            (family->queue_flags & VK_QUEUE_GRAPHICS_BIT) ? "[X]" : "[ ]",
-            (family->queue_flags & VK_QUEUE_COMPUTE_BIT) ? "[X]" : "[ ]",
-            (family->queue_flags & VK_QUEUE_TRANSFER_BIT) ? "[X]" : "[ ]",
-            (family->queue_flags & VK_QUEUE_SPARSE_BINDING_BIT) ? "[X]" : "[ ]"
-        );
-    }
-
-    for (int i = 0; i < physical_device->surface_formats.count; i++) {
-        bs_SurfaceFormat* surface_format = _bs_fetchUnit(&physical_device->surface_formats, i);
-
-        _bs_logF("    Format %s color space %s\n",
-            bs_serializeFormat(surface_format->format),
-            bs_serializeColorSpace(surface_format->color_space)
-        );
-    }
-}
-
-static void _bs_readQueueFamilies(bs_PhysicalDevice* physical_device, VkSurfaceKHR surface) {
-    VkResult result;
-
-    bs_U32 families_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device->vk_device, &families_count, NULL);
-    VkQueueFamilyProperties* queue_families = bs_alloca(families_count * sizeof(VkQueueFamilyProperties));
-
-    physical_device->queue_families = _bs_list(sizeof(VkQueueFamilyProperties), 0);
-    bs_ensureSize(&physical_device->queue_families, families_count);
-
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device->vk_device, &families_count, queue_families);
-
-    int actual_count = 0;
-    for (bs_U32 i = 0; i < families_count; i++) {
-        bs_QueueFamily* queue_family = _bs_pushBack(&physical_device->queue_families, NULL);
-
-        VkBool32 supports_present = false;
-        if (surface != VK_NULL_HANDLE) {
-            result = vkGetPhysicalDeviceSurfaceSupportKHR(physical_device->vk_device, i, surface, &supports_present);
-            if (result != VK_SUCCESS) {
-                BS_CRITICAL_VULKAN_ERROR("vkGetPhysicalDeviceSurfaceSupportKHR", result, "");
-                continue;
-            }
-        }
-
-        queue_family->index = i;
-        queue_family->queue_flags = queue_families[i].queueFlags;
-        queue_family->queue_count = queue_families[i].queueCount;
-        queue_family->supports_present = supports_present;
-
-        if (supports_present)
-            physical_device->supports_present = true;
-    }
-}
-
-static void _bs_readSurfaceFormats(bs_PhysicalDevice* physical_device, VkSurfaceKHR surface) {
-    VkResult result;
-
-    bs_U32 surface_formats_count = 0;
-    result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device->vk_device, surface, &surface_formats_count, NULL);
-    if (result != VK_SUCCESS) {
-        BS_CRITICAL_VULKAN_ERROR("vkGetPhysicalDeviceSurfaceFormatsKHR", result, "");
-        return;
-    }
-
-    if (surface_formats_count == 0)
-        return;
-
-    VkSurfaceFormatKHR* formats = bs_alloca(surface_formats_count * sizeof(VkSurfaceFormatKHR));
-    result = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device->vk_device, surface, &surface_formats_count, formats);
-    if (result != VK_SUCCESS) {
-        BS_CRITICAL_VULKAN_ERROR("vkGetPhysicalDeviceSurfaceFormatsKHR", result, "");
-        return;
-    }
-
-    physical_device->surface_formats = bs_list(sizeof(VkSurfaceFormatKHR), 0);
-    bs_ensureSize(&physical_device->surface_formats, surface_formats_count);
-
-    for (int i = 0; i < surface_formats_count; i++) {
-        bs_SurfaceFormat* surface_format = _bs_pushBack(&physical_device->surface_formats, NULL);
-        surface_format->color_space = (bs_ColorSpace)formats[i].colorSpace;
-        surface_format->format = (bs_Format)formats[i].format;
-    }
-}
-
-// static void _bs_readMemoryTypes(bs_PhysicalDevice* physical_device) {
-//     VkPhysicalDeviceMemoryProperties props;
-//     vkGetPhysicalDeviceMemoryProperties(physical_device->vk_device, &props);
-//
-// }
-
-static void _bs_preparePhysicalDevice(bs_Context* context) {
-    VkResult result;
-
-    bs_U32 num_devices;
-    vkEnumeratePhysicalDevices(_bs_instance_->instance, &num_devices, NULL);
-    if (num_devices == 0) {
-        _bs_criticalN(BS_CONSTANT_STRING("No GPU with Vulkan support was found"));
-        return;
-    }
-
-    VkPhysicalDevice* devices = bs_alloca(num_devices * sizeof(VkPhysicalDevice));
-    vkEnumeratePhysicalDevices(_bs_instance_->instance, &num_devices, devices);
-
-    _bs_ensureSize(&_bs_physical_devices_, num_devices);
-
-    assert(BS_MAX_PHYSICAL_DEVICE_NAME_SIZE == VK_MAX_PHYSICAL_DEVICE_NAME_SIZE);
-
-    VkSurfaceKHR surface = context ? context->surface : VK_NULL_HANDLE;
-
-    int chosen = 0;
-    for(int i = 0; i < num_devices; i++) {
-        bs_PhysicalDevice* physical_device = _bs_pushBack(&_bs_physical_devices_, NULL);
-        VkPhysicalDevice device = devices[i];
-
-        VkPhysicalDeviceProperties props;
-        vkGetPhysicalDeviceProperties(device, &props);
-
-        physical_device->vk_device = device;
-        physical_device->type = props.deviceType;
-        physical_device->api_version = props.apiVersion;
-        memcpy(physical_device->name, props.deviceName, BS_MAX_PHYSICAL_DEVICE_NAME_SIZE);
-
-        _bs_readQueueFamilies(physical_device, surface);
-        _bs_readSurfaceFormats(physical_device, surface);
-
-       // VkSurfaceCapabilitiesKHR capabilities;
-       // vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, _bs_scope_.context->surface, &capabilities);
-
-    }
-
-    for (int i = 0; i < _bs_physical_devices_.count; i++) {
-        bs_PhysicalDevice* physical_device = _bs_fetchUnit(&_bs_physical_devices_, i);
-        _bs_logPhysicalDeviceInfo(physical_device);
-    }
-}
-
-static void _bs_queryPhysicalDevice(VkQueueFlags required_flags, bool supports_present, bs_PhysicalDevice** out_device, bs_QueueFamily** out_queue_family) {
-    *out_device = NULL;
-    *out_queue_family = NULL;
-
-    for (int i = 0; i < _bs_physical_devices_.count; i++) {
-        bs_PhysicalDevice* physical_device = _bs_fetchUnit(&_bs_physical_devices_, i);
-
-        for (int j = 0; j < physical_device->queue_families.count; j++) {
-            bs_QueueFamily* queue_family = _bs_fetchUnit(&physical_device->queue_families, j);
-
-            if (queue_family->queue_flags & required_flags && queue_family->supports_present == supports_present) {
-                *out_queue_family = queue_family;
-                *out_device = physical_device;
-                _bs_infoF("Physical device \"%s\", queue family %d was picked", physical_device->name, j);
-                return;
-            }
-        }
-    }
-
-    _bs_criticalN(BS_CONSTANT_STRING("No GPU with graphics and present support was found"));
-}
-
-static void _bs_prepareLogicalDevice(bs_PhysicalDevice* physical_device) {
-    VkResult vk_result;
-
-    // todo shouldnt this all be in the physical device creation
-   /**
-    Features & Extensions
-    */
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_pipeline_features = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = NULL };
-    VkPhysicalDevice16BitStorageFeatures _16_bit_storage_features = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES, .pNext = NULL };
-    VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_features = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR, .pNext = &_16_bit_storage_features };
-    //VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &dynamic_rendering_features };
-    //VkPhysicalDeviceVulkan11Features features11 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES, .pNext = &as_features };
-    VkPhysicalDeviceVulkan12Features features12 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, .pNext = &dynamic_rendering_features };
-    VkPhysicalDeviceFeatures2 features2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &features12 };
-    VkPhysicalDeviceFeatures* features = &features2.features;
-    vkGetPhysicalDeviceFeatures2(physical_device->vk_device, &features2);
-
-   /**
-    NVIDIA Aftermath
-    */
-
-    VkDeviceDiagnosticsConfigCreateInfoNV aftermath_ci = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_DIAGNOSTICS_CONFIG_CREATE_INFO_NV,
-        .flags =
-            VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV |
-            VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_RESOURCE_TRACKING_BIT_NV |
-            VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV |
-            VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_ERROR_REPORTING_BIT_NV,
-    };
-
-    if (!features->depthClamp) _bs_warnF("Depth clamp is not supported");
-    if (!features->fillModeNonSolid) _bs_warnF("Fill mode non solid is not supported");
-    if (!features->independentBlend) _bs_warnF("Independent blend is not supported");
-    if (!features->shaderInt64) _bs_warnF("64 bit integers are not supported");
-    if (!features->robustBufferAccess) _bs_warnF("Robust buffer access is not supported");
-    _bs_features_.independent_blend = features->independentBlend;
-
-    const char* extensions[] = {
-        "VK_KHR_swapchain",
-        "VK_KHR_dynamic_rendering",
-        //
-        "VK_KHR_shader_non_semantic_info",
-        "VK_KHR_ray_tracing_pipeline",
-        "VK_KHR_acceleration_structure",
-        "VK_KHR_deferred_host_operations",
-        "VK_EXT_descriptor_indexing",
-       // "VK_KHR_get_physical_device_properties2",
-        "VK_KHR_shader_float_controls",
-        "VK_KHR_spirv_1_4",
-#ifndef NDEBUG
-      //  "VK_NV_device_diagnostics_config"
-      //  "VK_NV_ray_tracing_validation",
-#endif
-    };
-    int extensions_count = sizeof(extensions) / sizeof(const char*);
-    bool supported_extensions[sizeof(extensions) / sizeof(const char*)] = { 0 };
-
-    bs_U32 total_extensions_count = 0;
-    vk_result = vkEnumerateDeviceExtensionProperties(physical_device->vk_device, NULL, &total_extensions_count, NULL);
-    if (vk_result != VK_SUCCESS) {
-        BS_WARN_VULKAN_ERROR("vkEnumerateDeviceExtensionProperties", vk_result, "");
-    }
-
-    VkExtensionProperties* props = _bs_calloc(total_extensions_count, sizeof(VkExtensionProperties));
-    vk_result = vkEnumerateDeviceExtensionProperties(physical_device->vk_device, NULL, &total_extensions_count, props);
-    if (vk_result != VK_SUCCESS) {
-        BS_WARN_VULKAN_ERROR("vkEnumerateDeviceExtensionProperties", vk_result, "");
-    }
-
-    for (int i = 0; i < extensions_count; i++) {
-        for (int j = 0; j < total_extensions_count; j++) {
-            if (strcmp(props[j].extensionName, extensions[i]) == 0) {
-                supported_extensions[i] = true;
-                break;
-            }
-        }
-    }
-
-    //_bs_features.ray_tracing =
-    //    as_features.accelerationStructure;
-
-    for (int i = 0; i < extensions_count; i++) {
-        if (!supported_extensions[i]) {
-            if (_bs_features_.ray_tracing && i >= 1 && i <= 8) // todo something about this
-                _bs_features_.ray_tracing = false;
-
-            _bs_warnF("Extension \"%s\" is not supported", extensions[i]);
-        }
-    }
-
-    _bs_free(props);
-
-   /**
-    Properties
-    */
-    VkPhysicalDeviceAccelerationStructurePropertiesKHR accel_struct_properties = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,
-    };
-
-    VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_pipeline_properties = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
-        .pNext = &accel_struct_properties
-    };
-
-    VkPhysicalDeviceProperties2 device_properties = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-       // .pNext = &ray_tracing_pipeline_properties
-    };
-
-    vkGetPhysicalDeviceProperties2(physical_device->vk_device, &device_properties);
-
-    _bs_props_.shader_group_handle_size = ray_tracing_pipeline_properties.shaderGroupHandleSize;
-    _bs_props_.shader_group_base_alignment = ray_tracing_pipeline_properties.shaderGroupBaseAlignment;
-    _bs_props_.min_acceleration_structure_scratch_offset_alignment = accel_struct_properties.minAccelerationStructureScratchOffsetAlignment;
-
-   /**
-    Creation
-    */
-    if (_bs_config_.queues_count == 0)
-        _bs_config_.queues_count = 1;
-
-    if (_bs_config_.queues_count > _bs_instance_->queue_family->queue_count) {
-        bs_warnF("Requested %d queues, but queue family %d only has %d", _bs_config_.queues_count, _bs_instance_->queue_family->index, _bs_instance_->queue_family->queue_count);
-        _bs_config_.queues_count = _bs_instance_->queue_family->queue_count;
-    }
-
-    float* queue_priorities = bs_alloca(_bs_config_.queues_count * sizeof(float));
-    for (int i = 0; i < _bs_config_.queues_count; i++)
-        queue_priorities[i] = 1.0;
-
-    VkDeviceQueueCreateInfo queue_ci = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .queueFamilyIndex = _bs_instance_->queue_family->index,
-        .queueCount = _bs_config_.queues_count,
-        .pQueuePriorities = queue_priorities,
-    };
-
-    VkDeviceCreateInfo ci = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = &features2,
-        .pQueueCreateInfos = &queue_ci,
-        .queueCreateInfoCount = 1,
-      //  .pEnabledFeatures = features,
-        .enabledExtensionCount = extensions_count,
-        .ppEnabledExtensionNames = extensions,
-        //.ppEnabledLayerNames = validation_layers,
-        //.enabledLayerCount = _bs_args_.use_validation_layers ? sizeof(validation_layers) / sizeof(const char*) : 0,
-    };
-
-    vk_result = vkCreateDevice(physical_device->vk_device, &ci, NULL, &_bs_instance_->device);
-    if (vk_result != VK_SUCCESS) {
-        BS_CRITICAL_VULKAN_ERROR("vkCreateDevice", vk_result, "");
-    }
-
-    //_bs_nameHandlef((bs_U64)_bs_instance->_.graphics_queue, VK_OBJECT_TYPE_QUEUE, "graphics queue");
-    //_bs_nameHandlef((bs_U64)_bs_instance->_.compute_queue, VK_OBJECT_TYPE_QUEUE, "compute queue");
-}
-
-
-
-  /*==============================================================================
    * Swapchain
    *============================================================================*/
 
@@ -520,8 +176,10 @@ static void _bs_querySwapchainMode(VkPresentModeKHR candidates[], int candidates
     _bs_criticalN(BS_CONSTANT_STRING("Failed to query swapchain present mode"));
 }
 
-static void _bs_prepareSwapchain() {
-    bs_Context* context = _bs_scope_.context;
+BSAPI bs_Result _bs_swapchain(bs_Context* context) {
+    bs_Context* last_context = _bs_scope_.context;
+    _bs_scope_.context = context;
+
     VkResult result;
 
     const VkPresentModeKHR modes[] = {
@@ -561,12 +219,17 @@ static void _bs_prepareSwapchain() {
         .head = {
             .type = BS_OBJECT_IMAGE
         },
-        .flags = BS_IMAGE_SWAPS_BIT,
+        .flags = BS_IMAGE_SWAPCHAIN_IMAGE_BIT,
         .format = context->surface_format.format,
         .dim = resolution,
     };
 
     context->frames_in_flight = _bs_instance_->max_frames_in_flight;
+
+    // TODO: remove
+    const int max_images_count = 3;
+    if (capabilities.maxImageCount > max_images_count)
+        capabilities.maxImageCount = max_images_count;
 
     bs_U32 images_count = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 && images_count > capabilities.maxImageCount)
@@ -596,7 +259,8 @@ static void _bs_prepareSwapchain() {
     result = vkCreateSwapchainKHR(_bs_instance_->device, &swapchain_ci, NULL, &context->swapchain);
     if (result != VK_SUCCESS) {
         _bs_warnF("Failed to create swapchain for window \"%s\"", context->title);
-        return;
+        _bs_scope_.context = last_context;
+        return bs_convertVulkanResult(result);
     }
 
     bsi_nameHandle((bs_U64)context->swapchain, VK_OBJECT_TYPE_SWAPCHAIN_KHR, context->title);
@@ -608,19 +272,19 @@ static void _bs_prepareSwapchain() {
     vkGetSwapchainImagesKHR(_bs_instance_->device, context->swapchain, &images_count, images);
     _bs_infoF("Swapchain\n  Format: %d\n  Mode: %d\n  Images: %d", swapchain_ci.imageFormat, swapchain_ci.presentMode, images_count);
 
-    if (images_count == 0)
-        return;
-
     if (context->swapchain_image == NULL)
-        context->swapchain_image = BS_OBJECT(bs_Image, -1, 0, images_count, BS_OBJECT_HAS_SWAPS_BIT, BS_OBJECT_IMAGE);
+        context->swapchain_image = BS_OBJECT(bs_Image, -1, 0, images_count, BS_OBJECT_SWAPCHAIN_IMAGE_BIT, BS_OBJECT_IMAGE);
 
+    bs_Header head = context->swapchain_image->image->head;
     memcpy(context->swapchain_image->image, &image, sizeof(image));
+    context->swapchain_image->image->head = head;
 
     /**
      Swapchain image views
      */
     for (int i = 0; i < images_count; i++) {
         context->swapchain_image->image->_[i].vk_image = images[i];
+        bsi_nameHandle(images[i], VK_OBJECT_TYPE_IMAGE, context->title);
 
         VkImageViewCreateInfo image_view_ci = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -635,7 +299,11 @@ static void _bs_prepareSwapchain() {
         result = vkCreateImageView(_bs_instance_->device, &image_view_ci, NULL, &context->swapchain_image->image->_[i].vk_image_view);
         if (result != VK_SUCCESS) {
             _bs_warnF("Failed to create swapchain image view for window \"%s\"", context->title);
+            _bs_scope_.context = last_context;
+            return bs_convertVulkanResult(result);
         }
+
+        bsi_nameHandle(context->swapchain_image->image->_[i].vk_image_view, VK_OBJECT_TYPE_IMAGE_VIEW, context->title);
     }
 
     /**
@@ -649,8 +317,13 @@ static void _bs_prepareSwapchain() {
         result = vkCreateSemaphore(_bs_instance_->device, &semaphore_ci, NULL, &context->_[i].semaphore);
         if (result != VK_SUCCESS) {
             _bs_warnF("Failed to create swapchain semaphore for window \"%s\"", context->title);
+            _bs_scope_.context = last_context;
+            return bs_convertVulkanResult(result);
         }
     }
+
+    _bs_scope_.context = last_context;
+    return BS_RESULT_OK;
 }
 
 
@@ -737,7 +410,7 @@ BSAPI void _bs_showWindow(bs_Context* context) {
         return;
 
     context->hidden = false;
-    if (context->window_type == BS_WINDOW_MENU)
+    if (context->window_type == BS_WINDOW_POPUP)
         ShowWindow(context->hwnd, SW_SHOWNOACTIVATE);
     else
         ShowWindow(context->hwnd, SW_SHOW);
@@ -766,10 +439,6 @@ BSAPI void _bs_advance() {
 }
 
 BSAPI double _bs_deltaTime() {
-//#ifndef NDEBUG
-//	if (_bs_wnd.delta_time == 0.0)
-//		_bs_throwBasiliskF(BSX_GENERAL, "Delta time is 0.0"); // some bug is ruining my life
-//#endif
 	return _bs_instance_->delta_time;
 }
 
@@ -834,7 +503,7 @@ BSAPI bs_ivec2 _bs_windowPosition(bs_Context* context) {
 
 // temp
 #ifdef _WIN32
-const bool separate_message_thread = true;
+const bool separate_message_thread = false;
 #else
 const bool separate_message_thread = false;
 #endif
@@ -860,7 +529,7 @@ static inline int bs_testBit(long A[], unsigned int k) {
 
 #define bs_atomicExchange(object, desired) InterlockedExchange(object, desired)
 
-#elif defined(__linux__)
+#else
 #include <stdatomic.h>
 static inline void bs_setBit(_Atomic bs_U32 A[], unsigned int k) {
     atomic_fetch_or(&A[k / 32U], 1L << (k % 32U));
@@ -968,15 +637,15 @@ static _Thread_local bool _hide_menu_windows_ = false;
 static void _bs_hideMenuWindows(bs_List* contexts) {
     for (int i = 0; i < contexts->count; i++) {
         bs_Context* ctx = *(bs_Context**)_bs_fetchUnit(contexts, i);
-        if (ctx->window_type == BS_WINDOW_MENU) {
-            _bs_hideWindow(ctx);
+        if (ctx->window_type == BS_WINDOW_POPUP) {
+          //  _bs_hideWindow(ctx);
         }
     }
 
     _hide_menu_windows_ = false;
 }
 
-BSAPI void _bs_tickContext(bs_Context* context, bs_ContextTickFunction tick) {
+static void _bs_tickContext(bs_Context* context) {
    // if (bs_getBit(context->io.keys, BS_KEY_ALT) && bs_getBit(context->io.keys, BS_KEY_F4))
    //     _bs_exit();
 
@@ -989,9 +658,8 @@ BSAPI void _bs_tickContext(bs_Context* context, bs_ContextTickFunction tick) {
     #endif
 
     if (separate_message_thread) {
-        for (int i = 0; i < BS_KEY_BYTES_COUNT; i++) {
+        for (int i = 0; i < BS_KEY_BYTES_COUNT; i++)
             context->io.inputs_up_once[i] = bs_atomicExchange(&context->io.input_up_events[i], 0);
-        }
 
         for (int i = 0; i < BS_KEY_BYTES_COUNT; i++) {
             context->io.inputs_down_last[i] = context->io.inputs_down[i];
@@ -1011,19 +679,46 @@ BSAPI void _bs_tickContext(bs_Context* context, bs_ContextTickFunction tick) {
         }
     }
 
-    for (int i = 0; i < BS_KEY_BYTES_COUNT; i++) {
+    for (int i = 0; i < BS_KEY_BYTES_COUNT; i++)
         context->io.inputs_down[i] |= context->io.inputs_down_once[i];
+
+    if (context->listener.tick) {
+        _bs_scope_.context = context;
+        context->listener.tick(context, NULL);
+        _bs_scope_.context = NULL;
     }
-    //context->io.scroll = 0;
 
-    if (tick)
-        tick(context);
-
-    for (int i = 0; i < BS_KEY_BYTES_COUNT; i++) {
+    for (int i = 0; i < BS_KEY_BYTES_COUNT; i++)
         context->io.inputs_down[i] &= ~context->io.inputs_up_once[i];
-    }
 
     _bs_instance_->time_old = _bs_instance_->time;
+}
+
+static bs_List* _bs_getAllContexts() {
+    static _Thread_local bs_List contexts = { .unit_size = sizeof(bs_Context*), .increment = 4 };
+    contexts.count = 0;
+
+    bs_List* object_sources = bs_objectSources();
+
+    for (int i = 0; i < object_sources->count; i++) {
+        bs_ObjectSource* source = bs_fetchUnit(object_sources, i);
+        if (source->type != BS_OBJECT_CONTEXT)
+            continue;
+
+        for (int j = 0; j < source->ids_count; j++) {
+            if (!source->ids[j].object)
+                continue;
+
+            bs_pushBack(&contexts, &source->ids[j].object->context);
+        }
+    }
+
+    for (int i = 0; i < _bs_instance_->popup_windows.count; i++) {
+        bs_Object* obj = *(bs_Object**)bs_fetchUnit(&_bs_instance_->popup_windows, i);
+        bs_pushBack(&contexts, &obj->context);
+    }
+
+    return &contexts;
 }
 
 static void _bs_renderTick(bs_Callback fixed_tick) {
@@ -1065,36 +760,18 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
     #endif
 
    /**
-    Cache contexts
-    Should be improved maybe somehow
-    */
-    bs_List* object_sources = bs_objectSources();
-    static bs_List contexts = { .unit_size = sizeof(bs_Context*), .increment = 4 };
-    contexts.count = 0;
-
-    for (int i = 0; i < object_sources->count; i++) {
-        bs_ObjectSource* source = bs_fetchUnit(object_sources, i);
-        if (source->type != BS_OBJECT_CONTEXT)
-            continue;
-
-        for (int j = 0; j < source->ids_count; j++) {
-            if (!source->ids[j].object)
-                continue;
-
-            bs_pushBack(&contexts, &source->ids[j].object->context);
-        }
-    }
-
-   /**
     Tick all contexts
     */
-    for (int i = 0; i < contexts.count; i++) {
-        bs_Context* ctx = *(bs_Context**)_bs_fetchUnit(&contexts, i);
+    bs_List* contexts = _bs_getAllContexts();
+
+    for (int i = 0; i < contexts->count; i++) {
+        bs_Context* ctx = *(bs_Context**)_bs_fetchUnit(contexts, i);
 
         _bs_scope_.context = ctx;
-        _bs_tickContext(ctx, ctx->tick);
+        _bs_tickContext(ctx);
         _bs_scope_.context = NULL;
     }
+
     _bs_checkTimer(&_bs_instance_->timer);
 
     #ifdef _WIN32
@@ -1120,7 +797,7 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
         SetCapture(context->hwnd);
         bs_setBit(context->io.input_down_events, BS_LEFT_MOUSE_BUTTON);
 
-        if (context->window_type != BS_WINDOW_MENU)
+        if (context->window_type != BS_WINDOW_POPUP)
             _hide_menu_windows_ = true;
         break;
     case WM_LBUTTONUP:
@@ -1131,7 +808,7 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
     case WM_RBUTTONDOWN:
         SetCapture(context->hwnd);
         bs_setBit(context->io.input_down_events, BS_RIGHT_MOUSE_BUTTON);
-        if (context->window_type != BS_WINDOW_MENU)
+        if (context->window_type != BS_WINDOW_POPUP)
             _hide_menu_windows_ = true;
         break;
     case WM_RBUTTONUP:
@@ -1142,7 +819,7 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
     case WM_MBUTTONDOWN:
         SetCapture(context->hwnd);
         bs_setBit(context->io.input_down_events, BS_MIDDLE_MOUSE_BUTTON);
-        if (context->window_type != BS_WINDOW_MENU)
+        if (context->window_type != BS_WINDOW_POPUP)
             _hide_menu_windows_ = true;
         break;
     case WM_MBUTTONUP:
@@ -1185,6 +862,30 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
     case WM_NCMBUTTONUP:
     case WM_NCMBUTTONDBLCLK:
         _hide_menu_windows_ = true;
+    case WM_MOUSEMOVE:
+        TRACKMOUSEEVENT track_mouse_event = {
+            .cbSize = sizeof(TRACKMOUSEEVENT),
+            .dwFlags = TME_LEAVE,
+            .hwndTrack = context->hwnd,
+            .dwHoverTime = HOVER_DEFAULT,
+        };
+
+        TrackMouseEvent(&track_mouse_event);
+
+        if (!context->hovering) {
+            if (context->listener.enter)
+                context->listener.enter(context, NULL);
+
+            context->hovering = true;
+        }
+
+        break;
+    case WM_MOUSELEAVE:
+        if (context->listener.leave)
+            context->listener.leave(context, NULL);
+
+        context->hovering = false;
+
         break;
     }
 
@@ -1201,26 +902,7 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
         bs_createThread((bs_ThreadFunction)_bs_startRenderTick, fixed_tick);
 
     while (_bs_instance_->alive) {
-       /**
-        Cache contexts
-        Should be improved maybe somehow
-        */
-        bs_List* object_sources = bs_objectSources();
-        static bs_List contexts = { .unit_size = sizeof(bs_Context*), .increment = 4 };
-        contexts.count = 0;
-
-        for (int i = 0; i < object_sources->count; i++) {
-            bs_ObjectSource* source = bs_fetchUnit(object_sources, i);
-            if (source->type != BS_OBJECT_CONTEXT)
-                continue;
-
-            for (int j = 0; j < source->ids_count; j++) {
-                if (!source->ids[j].object)
-                    continue;
-
-                bs_pushBack(&contexts, &source->ids[j].object->context);
-            }
-        }
+        bs_List* contexts = _bs_getAllContexts();
 
        /**
         Message loop
@@ -1231,8 +913,8 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
             _bs_scope_.context = NULL;
 
             bs_Context* context = NULL;
-            for (int i = 0; i < contexts.count; i++) {
-                bs_Context* ctx = *(bs_Context**)bs_fetchUnit(&contexts, i);
+            for (int i = 0; i < contexts->count; i++) {
+                bs_Context* ctx = *(bs_Context**)bs_fetchUnit(contexts, i);
 
                 if (ctx->hwnd == msg.hwnd) {
                     context = ctx;
@@ -1247,7 +929,7 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
             }
 
             //if (!separate_message_thread)
-            _bs_handleMessageAtomic(&contexts, context, msg);
+            _bs_handleMessageAtomic(contexts, context, msg);
 
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -1259,7 +941,7 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
         }
         else {
             if (_hide_menu_windows_)
-                _bs_hideMenuWindows(&contexts);
+                _bs_hideMenuWindows(contexts);
         }
 
 #ifdef __linux__
@@ -1313,20 +995,15 @@ static LRESULT _bs_hitTestResize(bs_Context* context, bs_ivec2 pt, LRESULT fallb
 }
 
 LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param) {
-    bs_List* object_sources = bs_objectSources();
+    bs_List* contexts = _bs_getAllContexts();
     bs_Context* context = NULL;
 
-    for (int i = 0; i < object_sources->count; i++) {
-        bs_ObjectSource* source = bs_fetchUnit(object_sources, i);
-        if (source->type != BS_OBJECT_CONTEXT)
-            continue;
+    for (int i = 0; i < contexts->count; i++) {
+        bs_Context* ctx = *(bs_Context**)_bs_fetchUnit(contexts, i);
 
-        for (int j = 0; j < source->ids_count; j++) {
-            if (!source->ids[j].object)
-                continue;
-
-            if (source->ids[j].object->context->hwnd == hwnd)
-                context = source->ids[j].object->context;
+        if (ctx->hwnd == hwnd) {
+            context = ctx;
+            break;
         }
     }
 
@@ -1340,7 +1017,7 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
         return DefWindowProc(hwnd, msg, w_param, l_param);
     case WM_NCHITTEST:
         if (context) {
-            if (context->window_type == BS_WINDOW_MENU)
+            if (context->window_type == BS_WINDOW_POPUP)
                 return HTCLIENT;
             else if (_bs_callbacks_.client_area_tick) {
                 bs_ivec2 pt = {
@@ -1399,7 +1076,7 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             return DefWindowProc(hwnd, msg, w_param, l_param);
     case WM_MOUSEACTIVATE:
 
-        if (context && context->window_type == BS_WINDOW_MENU)
+        if (context && context->window_type == BS_WINDOW_POPUP)
             return MA_NOACTIVATE;
         else
             return MA_ACTIVATE;
@@ -1434,19 +1111,83 @@ BSAPI void _bs_moveWindow(bs_Context* context, int x, int y) {
 
 void _test(bs_Context* context, const char* title);
 
+BSAPI bs_Context* _bs_openPopupWindow(bs_ContextListener listener, bs_I32 x, bs_I32 y, bs_U32 width, bs_U32 height, const char* title) {
+    bs_Context* last_context = _bs_scope_.context;
+    _bs_scope_.context = NULL;
+
+    bs_Result result;
+    bs_Context* context = NULL;
+
+    for (int i = 0; i < _bs_instance_->popup_windows.count; i++) {
+        bs_Object* obj = *(bs_Object**)bs_fetchUnit(&_bs_instance_->popup_windows, i);
+
+        //if (obj->context-> ...)
+    }
+
+    if (!context) {
+        bs_Object* new_ctx = BS_CONTEXT(-1, -1, 0);
+
+        result = _bs_window(new_ctx->context, NULL, listener, width, height, title, BS_WINDOW_POPUP);
+        if (result != BS_RESULT_OK) {
+            _bs_scope_.context = last_context;
+            return NULL;
+        }
+
+        result = _bs_swapchain(new_ctx->context);
+        if (result != BS_RESULT_OK) {
+            _bs_scope_.context = last_context;
+            return NULL;
+        }
+
+        bs_Object* obj = *(bs_Object**)bs_pushBack(&_bs_instance_->popup_windows, &new_ctx);
+        context = obj->context;
+
+        context->popup.queue_obj = BS_QUEUE(-1, -1, BS_OBJECT_SWAPCHAIN_IMAGE_BIT);
+        result = _bs_queue(context->popup.queue_obj, 0, BS_QUEUE_GRAPHICS_BIT);
+        if (result != BS_RESULT_OK) {
+            _bs_scope_.context = last_context;
+            return NULL;
+        }
+    }
+    else {
+        _bs_resizeWindow(context, width, height);
+    }
+
+    _bs_moveWindow(context, x, y);
+    _bs_showWindow(context);
+
+    _bs_scope_.context = last_context;
+    return context;
+}
+
+BSAPI bs_Result _val_bs_window(
+    bs_Context* context,
+    bs_Context* parent,
+    bs_ContextListener listener,
+    bs_U32 width,
+    bs_U32 height,
+    const char* title,
+    bs_WindowType type
+) {
+    BS_VALIDATE(type != BS_WINDOW_POPUP, BS_RESULT_VALIDATION_ERROR, "Popup windows should be created with _bs_openPopupWindow");
+
+    return _bs_window(context, parent, listener, width, height, title, type);
+}
+
 BSAPI bs_Result _bs_window(
     bs_Context* context,
     bs_Context* parent,
-    bs_ContextTickFunction tick,
+    bs_ContextListener listener,
     bs_U32 width,
     bs_U32 height,
     const char* title,
     bs_WindowType type)
 {
+    bs_Context* last_context = _bs_scope_.context;
     _bs_scope_.context = context;
 
     context->hidden = true;
-    context->tick = tick;
+    context->listener = listener;
     context->title = title;
     context->dimensions = (bs_ivec2) { width, height };
     context->window_type = type;
@@ -1483,7 +1224,7 @@ BSAPI bs_Result _bs_window(
 
     if (!RegisterClassEx(&wc)) {
         BS_WARN_WIN32_PATH("RegisterClassEx", title);
-        _bs_scope_.context = NULL;
+        _bs_scope_.context = last_context;
         return _bs_convertWin32Error(GetLastError());
     }
 
@@ -1498,7 +1239,7 @@ BSAPI bs_Result _bs_window(
     else if (type == BS_WINDOW_NO_TITLE_BAR) {
         style = WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
     }
-    else if (type == BS_WINDOW_MENU) {
+    else if (type == BS_WINDOW_POPUP) {
         style = WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
         ex_style = WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
     }
@@ -1513,7 +1254,7 @@ BSAPI bs_Result _bs_window(
 
     if (!context->hwnd) {
         BS_WARN_WIN32_PATH("CreateWindowEx", title);
-        _bs_scope_.context = NULL;
+        _bs_scope_.context = last_context;
         return _bs_convertWin32Error(GetLastError());
     }
 
@@ -1574,35 +1315,17 @@ BSAPI bs_Result _bs_window(
     _bs_updateWindowDPI(context);
     #endif
 
-    _bs_scope_.context = NULL;
+    _bs_scope_.context = last_context;
 
     return BS_RESULT_OK;
  }
-
-BSAPI void _bs_swapchain(bs_Context* context) {
-    _bs_scope_.context = context;
-    _bs_prepareSwapchain();
-    _bs_scope_.context = NULL;
-}
-
-BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
-    _bs_scope_.context = context;
-
-    _bs_preparePhysicalDevice(context);
-    _bs_queryPhysicalDevice(VK_QUEUE_GRAPHICS_BIT, true, &_bs_instance_->physical_device, &_bs_instance_->queue_family);
-    _bs_prepareLogicalDevice(_bs_instance_->physical_device);
-
-    bs_Procedure procedures[] = { BS_FOREACH_PROC(BS_STRING_GEN_2) };
-    _bs_queryProcedures(procedures, sizeof(procedures) / sizeof(*procedures), 0, &_bs_procs_);
-BS_KEY_A
-    _bs_scope_.context = NULL;
-}
 
 
 
   /*==============================================================================
    * Wayland
    *============================================================================*/
+
 #ifdef __linux__
 
  /**

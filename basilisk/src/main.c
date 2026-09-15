@@ -87,7 +87,7 @@ static void onLoadScene() {
 	bs_Object* atlas = BS_ATLAS(-1, -1, 0);
 	bs_loadAtlasN(queue, atlas, basilisk.package_id, 0, BS_CONSTANT_STRING("temp"));
 
-	bs_Object* title_bar_queue = BS_QUEUE(BASILISK_QUEUES, BASILISK_QUEUE_TITLE_BAR, BS_OBJECT_HAS_SWAPS_BIT);
+	bs_Object* title_bar_queue = BS_QUEUE(BASILISK_QUEUES, BASILISK_QUEUE_TITLE_BAR, BS_OBJECT_SWAPCHAIN_IMAGE_BIT);
 	bs_queue(title_bar_queue, 0, 0);
 
 	bsmod_onLoad();
@@ -213,8 +213,6 @@ int main(int argc, char* argv[]) {
 	bsgfx_ini("Basilisk", 1200, 900, BS_WINDOW_NO_TITLE_BAR, argc, argv);
 
 	basilisk.context = bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context;
-
-	iniContextMenus();
 
 	//bs_Object* title_bar_context = BS_CONTEXT(BASILISK_CONTEXTS, BASILISK_CONTEXT_TITLE_BAR, 0);
 	//bs_window(title_bar_context->context, basilisk.context, onTitleBarTick, bs_resolution(basilisk.context).x, 32, "test", 0);
