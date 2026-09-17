@@ -3310,22 +3310,6 @@ BSAPI void _bs_enqueue(bs_Queue* queue, bs_Callback function) {
    * Swapchain / Presentation
    *============================================================================*/
 
-BSAPI bs_Image* _bs_swapchainImage() {
-    return _bs_scope_.context->swapchain_image->image;
-}
-
-static void _bs_destroySwapchain() {
-    bs_Image* swapchain_image = _bs_scope_.context->swapchain_image->image;
-
-    for (int i = 0; i < _bs_scope_.context->frames_in_flight; i++) {
-        vkDestroyImageView(_bs_instance_->device, swapchain_image->_[i].vk_image_view, NULL);
-        swapchain_image->_[i].vk_image_view = 0;
-    }
-
-    vkDestroySwapchainKHR(_bs_instance_->device, _bs_scope_.context->swapchain, NULL);
-    _bs_scope_.context->swapchain = 0;
-}
-
 typedef void(* bs_AutoResizeFunction)(bs_Object*);
 
 /*
@@ -3381,14 +3365,15 @@ static void _bs_resizeSwapchain() {
 
   //  bs_stallGPU();
 
-    _bs_destroySwapchain();
     _bs_swapchain(_bs_scope_.context);
 
     _bs_scope_.context = ctx;
 }
+void _bs_tickContext(bs_Context* context);
 
 void _bs_resizeContext() {
-    bs_logF("Resizing context \"%s\"", _bs_scope_.context->title);
+   // bs_stallGPU();
+  //  bs_logF("Resizing context \"%s\"", _bs_scope_.context->title);
     bs_ivec2 resolution = bs_resolution(_bs_scope_.context);
     _bs_resizeSwapchain();
 
@@ -3402,8 +3387,10 @@ void _bs_resizeContext() {
 
     if (_bs_scope_.context->listener.resize)
         _bs_scope_.context->listener.resize(_bs_scope_.context);
+   //InvalidateRect(_bs_scope_.context->hwnd, NULL, TRUE);
+   //UpdateWindow(_bs_scope_.context->hwnd);
+    _bs_tickContext(_bs_scope_.context);
 }
-
 
 // these functions should probably not be called by user
 BSAPI void _bs_acquire() {
@@ -3418,7 +3405,7 @@ BSAPI void _bs_acquire() {
         &_bs_scope_.context->image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        _bs_resizeContext();
+        _bs_scope_.context->swapchain_ok = false;
         return;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -3506,7 +3493,8 @@ BSAPI void _bs_present(bs_Queue* queue, bs_Queue* wait_queues[], int wait_queues
     VkResult result = vkQueuePresentKHR(queue->queue, &present_i);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
-        _bs_resizeContext();
+        _bs_scope_.context->swapchain_ok = false;
+//        _bs_resizeContext();
     else if (result != VK_SUCCESS)
         _bs_warnN(BS_CONSTANT_STRING("Failed to present swapchain image"));
 

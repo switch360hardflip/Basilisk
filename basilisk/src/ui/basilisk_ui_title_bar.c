@@ -202,7 +202,7 @@ void basilisk_instantiateTitleBarUI() {
     Close button
     */
     position.x -= close_button_width;
-    basilisk_instantiateTitleBarButtonUI(close_caption, close_button_background_material, position, title_bar_size, close_button_width);
+    bs_Range range = basilisk_instantiateTitleBarButtonUI(close_caption, close_button_background_material, position, title_bar_size, close_button_width);
 
    /**
     Maximize button
@@ -271,6 +271,6 @@ void onTitleBarTick() {
     if (has_changes) {
         has_changes = false;
 
-        basilisk_pipeline(queue, renderer, clear_color);
     }
+    basilisk_pipeline(queue, renderer, clear_color);
 }

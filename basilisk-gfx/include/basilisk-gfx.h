@@ -49,8 +49,9 @@ BSGFXAPI extern bsgfx_Procedures _bsgfx_procs_;
 */
 #define BSGFX_EMPTY_LIST(X)
 
-#define BSGFX_CONTEXT_IDS(X)                                           \
+#define BSGFX_CONTEXT_IDS(X)                                         \
     X(BSGFX_CONTEXT_MAIN)                                            \
+    X(BSGFX_CONTEXT_WIN32)                                           \
     X(BSGFX_CONTEXTS_COUNT)
 
 #define BSGFX_IMAGE_IDS(X)                                           \

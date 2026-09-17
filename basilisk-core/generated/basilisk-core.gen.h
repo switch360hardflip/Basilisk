@@ -2108,6 +2108,7 @@ enum bs_WindowType {
     BS_WINDOW_DEFAULT = 0,
     BS_WINDOW_NO_TITLE_BAR = 1,
     BS_WINDOW_POPUP = 2,
+    BS_WINDOW_WIN32 = 3,
 };
 
 enum bs_ImageFilter {
@@ -3839,9 +3840,11 @@ struct bs_Context {
     bs_CursorIcon cursor_icon;
     bs_SurfaceFormat surface_format;
     bs_PresentMode present_mode;
+    bs_U32 dpi;
     int frames_in_flight;
     int frame;
     int image_index;
+    bool swapchain_ok;
     bool hovering;
     bool hidden;
     bool active;
@@ -3856,6 +3859,11 @@ struct bs_Context {
             bs_I32 id;
             bs_Object* queue_obj;
         }popup;
+#ifdef _WIN32
+        struct {
+            void* icons_font;
+        }win32;
+#endif
     };
 #ifdef _WIN32
     void* hwnd;

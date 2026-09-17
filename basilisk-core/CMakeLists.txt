@@ -78,6 +78,7 @@ if (WIN32)
         httpapi
         ws2_32
         dbghelp
+        uxtheme
     )
 endif ()
 

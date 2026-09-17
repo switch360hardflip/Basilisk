@@ -178,6 +178,7 @@
 			<line><name>BS_WINDOW_DEFAULT</name><value>0</value></line>
 			<line><name>BS_WINDOW_NO_TITLE_BAR</name><value>1</value></line>
 			<line><name>BS_WINDOW_POPUP</name><value>2</value></line>
+			<line><name>BS_WINDOW_WIN32</name><value>3</value></line>
 		</enum>
 		<enum name="bs_ImageFilter">
 			<line><name>BS_FILTER_NEAREST</name><value>0</value></line>
@@ -2206,9 +2207,11 @@
             <field><type>bs_SurfaceFormat</type><name>surface_format</name></field>
             <field><type>bs_PresentMode</type><name>present_mode</name></field>
 
+            <field><type>bs_U32</type><name>dpi</name></field>
             <field><type>int</type><name>frames_in_flight</name></field>
             <field><type>int</type><name>frame</name></field>
             <field><type>int</type><name>image_index</name></field>
+            <field><type>bool</type><name>swapchain_ok</name></field>
             <field><type>bool</type><name>hovering</name></field>
             <field><type>bool</type><name>hidden</name></field>
             <field><type>bool</type><name>active</name></field>
@@ -2225,6 +2228,11 @@
                     <field><type>bs_I32</type><name>id</name></field>
                     <field><type>bs_Object*</type><name>queue_obj</name></field>
                 </structure>
+				<ifdef cond="_WIN32"/>
+				    <structure instance="win32">
+                        <field><type>void*</type><name>icons_font</name></field>
+				    </structure>
+				<endif/>
             </structure>
 			 
 	 		<ifdef cond="_WIN32"/>
