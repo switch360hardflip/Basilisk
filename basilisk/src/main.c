@@ -191,6 +191,14 @@ static void onApplicationWindowInput(bs_Context* context, bs_ContextInputParams 
 	//	bs_closeAllPopupWindows();
 }
 
+static void onApplicationResize(bs_Context* context, bs_ivec2 new_size) {
+	bs_Context* child = context->first_child;
+	while (child) {
+		bs_resizeWindow(child, new_size.x, child->dimensions.y);
+		child = child->next;
+	}
+}
+
 int main(int argc, char* argv[]) {
 	bs_enableValidation();
 	bsgfx_enableValidation();
@@ -216,6 +224,7 @@ int main(int argc, char* argv[]) {
 			.tick = onTick,
 			.activate = onApplicationWindowActivate,
 			.input = onApplicationWindowInput,
+			.resize = onApplicationResize
 		}
 	};
 

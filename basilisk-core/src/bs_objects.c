@@ -513,7 +513,7 @@ static bs_Object* _bs_update(bs_U32 source_id, bs_U32 id, int size, int swap_siz
 
 BSAPI int _bs_swapsCount(bs_U32 flags) {
     if (flags & BS_OBJECT_IN_FLIGHT_BIT)
-        return _bs_scope_.context ? _bs_scope_.context->frames_in_flight : _bs_instance_->max_frames_in_flight;
+        return _bs_scope_.context ? _bs_scope_.context->head.swaps_count : _bs_instance_->max_frames_in_flight;
     else if (flags & BS_OBJECT_SWAPCHAIN_IMAGE_BIT)
         return _bs_scope_.context ? _bs_scope_.context->swapchain_image->head->swaps_count : _bs_instance_->max_swapchain_images_count;
     return 1;

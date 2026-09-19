@@ -4160,6 +4160,14 @@ int bs_scroll()
     return next.bs_scroll();
 }
 
+void bs_resizeContext(
+    bs_Context* context, 
+    bs_U32 width, 
+    bs_U32 height)
+{
+    next.bs_resizeContext(context, width, height);
+}
+
 void bs_resizeWindow(
     bs_Context* context, 
     bs_U32 width, 

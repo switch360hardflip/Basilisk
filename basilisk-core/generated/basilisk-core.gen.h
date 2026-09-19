@@ -2007,12 +2007,6 @@ typedef void (* bs_NameObjectFunction)(bs_Object*, const char*);
 typedef void (* bs_ValidationErrorFunction)();
 typedef bs_NonClientArea (* bs_NonClientAreaTickFunction)(bs_Context*, bs_ivec2);
 typedef void (* bs_SubpassFunction)(bs_RendererScope*);
-typedef void (* bs_ContextTickFunction)(bs_Context* context, void* params);
-typedef void (* bs_ContextInputFunction)(bs_Context* context, bs_ContextInputParams params);
-typedef void (* bs_ContextEnterFunction)(bs_Context* context, void* params);
-typedef void (* bs_ContextLeaveFunction)(bs_Context* context, void* params);
-typedef void (* bs_ContextResizeFunction)(bs_Context*);
-typedef void (* bs_ContextActivateFunction)(bs_Context* context, bs_ContextActivateParams params);
 typedef long long bs_I64;
 typedef int bs_I32;
 typedef short bs_I16;
@@ -2045,6 +2039,12 @@ typedef bs_U32 bs_ModelFlags;
 typedef bs_U32 bs_ArmatureFlags;
 typedef bs_U32 bs_AnimationFlags;
 typedef bs_U32 bs_SaveJsonBits;
+typedef void (* bs_ContextTickFunction)(bs_Context* context, void* params);
+typedef void (* bs_ContextInputFunction)(bs_Context* context, bs_ContextInputParams params);
+typedef void (* bs_ContextEnterFunction)(bs_Context* context, void* params);
+typedef void (* bs_ContextLeaveFunction)(bs_Context* context, void* params);
+typedef void (* bs_ContextResizeFunction)(bs_Context*, bs_U32, bs_U32);
+typedef void (* bs_ContextActivateFunction)(bs_Context* context, bs_ContextActivateParams params);
 typedef void (*bs_Callback)();
 typedef BS_VERTEX_DECLARATION_STRUCTURE() bs_VertexDeclaration;
 enum bs_Library {
@@ -3808,6 +3808,8 @@ struct bs_PhysicalDevice {
     int type;
     bs_List queue_families;
     bs_List surface_formats;
+    bs_SurfaceFormat surface_format;
+    bs_PresentMode present_mode;
     const char name[BS_MAX_PHYSICAL_DEVICE_NAME_SIZE];
 };
 
@@ -3838,8 +3840,6 @@ struct bs_Context {
     bs_vec2 border_size;
     bs_WindowType window_type;
     bs_CursorIcon cursor_icon;
-    bs_SurfaceFormat surface_format;
-    bs_PresentMode present_mode;
     bs_U32 dpi;
     int frames_in_flight;
     int frame;
@@ -3854,6 +3854,8 @@ struct bs_Context {
     bs_Timer timer;
     bs_IO io;
     bs_ContextListener listener;
+    bs_Context* first_child;
+    bs_Context* next;
     union {
         struct {
             bs_I32 id;
@@ -9732,6 +9734,18 @@ bs_contextCharUpOnce(
   */
 BSAPI int
 bs_scroll();
+
+ /**
+  @param context
+  @param width
+  @param height
+  @return void
+  */
+BSAPI void
+bs_resizeContext(
+    bs_Context* context,
+    bs_U32 width,
+    bs_U32 height);
 
  /**
   @param context

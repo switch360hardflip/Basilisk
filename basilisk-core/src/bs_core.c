@@ -710,6 +710,46 @@ static void _bs_prepareLogicalDevice(bs_PhysicalDevice* physical_device) {
     //_bs_nameHandlef((bs_U64)_bs_instance->_.compute_queue, VK_OBJECT_TYPE_QUEUE, "compute queue");
 }
 
+static void _bs_querySwapchainFormat(VkFormat candidates[], int candidates_count) {
+
+    for (int i = 0; i < candidates_count; i++) {
+        VkFormat candidate = candidates[i];
+
+        for (int j = 0; j < _bs_instance_->physical_device->surface_formats.count; j++) {
+            bs_SurfaceFormat* surface_format = bs_fetchUnit(&_bs_instance_->physical_device->surface_formats, j);
+
+            if ((bs_Format)candidate == surface_format->format) {
+                _bs_instance_->physical_device->surface_format = *surface_format;
+                return;
+            }
+        }
+    }
+
+    _bs_criticalN(BS_CONSTANT_STRING("Failed to query swapchain surface format"));
+}
+
+static void _bs_querySwapchainMode(VkPresentModeKHR candidates[], int candidates_count) {
+    bs_U32 num_modes = 0;
+    VkPresentModeKHR result = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(_bs_instance_->physical_device->vk_device, _bs_scope_.context->surface, &num_modes, NULL);
+    VkPresentModeKHR* modes = bs_alloca(num_modes * sizeof(VkPresentModeKHR));
+    vkGetPhysicalDeviceSurfacePresentModesKHR(_bs_instance_->physical_device->vk_device, _bs_scope_.context->surface, &num_modes, modes);
+
+    for (int i = 0; i < candidates_count; i++) {
+        VkPresentModeKHR candidate = candidates[i];
+
+        for (int j = 0; j < num_modes; j++) {
+            VkPresentModeKHR mode = modes[j];
+            if (candidate == mode) {
+                _bs_instance_->physical_device->present_mode = (bs_PresentMode)mode;
+                return;
+            }
+        }
+    }
+
+    _bs_criticalN(BS_CONSTANT_STRING("Failed to query swapchain present mode"));
+}
+
 BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
     _bs_scope_.context = context;
 
@@ -719,6 +759,28 @@ BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
 
     bs_Procedure procedures[] = { BS_FOREACH_PROC(BS_STRING_GEN_2) };
     _bs_queryProcedures(procedures, sizeof(procedures) / sizeof(*procedures), 0, &_bs_procs_);
+
+    const VkPresentModeKHR modes[] = {
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_PRESENT_MODE_IMMEDIATE_KHR,
+        VK_PRESENT_MODE_MAILBOX_KHR,
+        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
+
+        VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR,
+        VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR,
+        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
+        VK_PRESENT_MODE_FIFO_LATEST_READY_EXT,
+    };
+
+    const VkFormat formats[] = {
+        VK_FORMAT_R8G8B8A8_SRGB,
+        VK_FORMAT_B8G8R8A8_SRGB,
+        VK_FORMAT_R8G8B8A8_UNORM,
+        VK_FORMAT_B8G8R8A8_UNORM,
+    };
+
+    _bs_querySwapchainMode(modes, sizeof(modes) / sizeof(*modes));
+    _bs_querySwapchainFormat(formats, sizeof(formats) / sizeof(*formats));
 
     _bs_scope_.context = NULL;
 }
@@ -3363,7 +3425,10 @@ static inline void _bs_autoResize(bs_ObjectType type, bs_AutoResizeFunction func
 static void _bs_resizeSwapchain() {
     bs_Context* ctx = _bs_scope_.context;
 
-  //  bs_stallGPU();
+    if (ctx->window_type == BS_WINDOW_WIN32)
+        return;
+
+   bs_stallGPU();
 
     _bs_swapchain(_bs_scope_.context);
 
@@ -3371,13 +3436,14 @@ static void _bs_resizeSwapchain() {
 }
 void _bs_tickContext(bs_Context* context);
 
-void _bs_resizeContext() {
-   // bs_stallGPU();
-  //  bs_logF("Resizing context \"%s\"", _bs_scope_.context->title);
-    bs_ivec2 resolution = bs_resolution(_bs_scope_.context);
-    _bs_resizeSwapchain();
+void _bs_resizeContext(bs_Context* context, bs_U32 width, bs_U32 height) {
+    bs_Context* previous_context = _bs_scope_.context;
+    _bs_scope_.context = context;
+    context->dimensions.x = width;
+    context->dimensions.y = height;
+    bs_logF("Resizing context \"%s\": %d, %d", context->title, width, height);
 
-    resolution = bs_resolution(_bs_scope_.context);
+    _bs_resizeSwapchain();
 
    /**
     Auto resize
@@ -3385,11 +3451,19 @@ void _bs_resizeContext() {
     //_bs_autoResize(BS_OBJECT_IMAGE, _bs_onAutoResizeImage);
     _bs_autoResize(BS_OBJECT_RENDERER, _bs_onAutoResizeRenderer);
 
-    if (_bs_scope_.context->listener.resize)
-        _bs_scope_.context->listener.resize(_bs_scope_.context);
-   //InvalidateRect(_bs_scope_.context->hwnd, NULL, TRUE);
-   //UpdateWindow(_bs_scope_.context->hwnd);
-    _bs_tickContext(_bs_scope_.context);
+    if (context->window_type == BS_WINDOW_WIN32) {
+        InvalidateRect(context->hwnd, NULL, FALSE);
+        UpdateWindow(context->hwnd);
+    }
+    else {
+        _bs_tickContext(context);
+    }
+
+    if (context->listener.resize) {
+        context->listener.resize(context, width, height);
+    }
+
+    _bs_scope_.context = previous_context;
 }
 
 // these functions should probably not be called by user
@@ -3498,6 +3572,6 @@ BSAPI void _bs_present(bs_Queue* queue, bs_Queue* wait_queues[], int wait_queues
     else if (result != VK_SUCCESS)
         _bs_warnN(BS_CONSTANT_STRING("Failed to present swapchain image"));
 
-    _bs_scope_.context->frame = (_bs_scope_.context->frame + 1) % _bs_scope_.context->frames_in_flight;
+    _bs_scope_.context->frame = (_bs_scope_.context->frame + 1) % _bs_scope_.context->head.swaps_count;
     _bs_scope_.context->image_acquired = false;
 }

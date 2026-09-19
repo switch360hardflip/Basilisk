@@ -424,6 +424,7 @@ static inline bs_FunctionTable* _val_bs_getFunctions() {
     functions.bs_contextCharDownOnce = (PFN_bs_contextCharDownOnce)bs_getProcAddress(module, "_val_bs_contextCharDownOnce");
     functions.bs_contextCharUpOnce = (PFN_bs_contextCharUpOnce)bs_getProcAddress(module, "_val_bs_contextCharUpOnce");
     functions.bs_scroll = (PFN_bs_scroll)bs_getProcAddress(module, "_val_bs_scroll");
+    functions.bs_resizeContext = (PFN_bs_resizeContext)bs_getProcAddress(module, "_val_bs_resizeContext");
     functions.bs_resizeWindow = (PFN_bs_resizeWindow)bs_getProcAddress(module, "_val_bs_resizeWindow");
     functions.bs_moveWindow = (PFN_bs_moveWindow)bs_getProcAddress(module, "_val_bs_moveWindow");
     functions.bs_queryPopupWindow = (PFN_bs_queryPopupWindow)bs_getProcAddress(module, "_val_bs_queryPopupWindow");

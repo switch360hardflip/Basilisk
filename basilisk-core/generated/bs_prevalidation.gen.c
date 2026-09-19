@@ -2432,6 +2432,11 @@ BSAPI int _preval_bs_scroll() {
     return next.bs_scroll();
 }
 
+BSAPI void _preval_bs_resizeContext(bs_Context* context, bs_U32 width, bs_U32 height) {
+    BS_VALIDATE(context != NULL, ,);
+    next.bs_resizeContext(context, width, height);
+}
+
 BSAPI void _preval_bs_resizeWindow(bs_Context* context, bs_U32 width, bs_U32 height) {
     BS_VALIDATE(context != NULL, ,);
     next.bs_resizeWindow(context, width, height);
@@ -3191,6 +3196,7 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_contextCharDownOnce = _preval_bs_contextCharDownOnce;
     functions.bs_contextCharUpOnce = _preval_bs_contextCharUpOnce;
     functions.bs_scroll = _preval_bs_scroll;
+    functions.bs_resizeContext = _preval_bs_resizeContext;
     functions.bs_resizeWindow = _preval_bs_resizeWindow;
     functions.bs_moveWindow = _preval_bs_moveWindow;
     functions.bs_queryPopupWindow = _preval_bs_queryPopupWindow;

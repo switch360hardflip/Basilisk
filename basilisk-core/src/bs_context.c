@@ -136,47 +136,6 @@ BSAPI void _bs_queryProcedures(bs_Procedure* procedures, int count, void* dll_ha
    * Swapchain
    *============================================================================*/
 
-static void _bs_querySwapchainFormat(VkFormat candidates[], int candidates_count) {
-
-    for (int i = 0; i < candidates_count; i++) {
-        VkFormat candidate = candidates[i];
-
-        for (int j = 0; j < _bs_instance_->physical_device->surface_formats.count; j++) {
-            bs_SurfaceFormat* surface_format = bs_fetchUnit(&_bs_instance_->physical_device->surface_formats, j);
-
-            if ((bs_Format)candidate == surface_format->format) {
-                _bs_scope_.context->surface_format = *surface_format;
-                return;
-            }
-        }
-    }
-
-    _bs_criticalN(BS_CONSTANT_STRING("Failed to query swapchain surface format"));
-}
-
-static void _bs_querySwapchainMode(VkPresentModeKHR candidates[], int candidates_count) {
-    bs_U32 num_modes = 0;
-    VkPresentModeKHR result = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(_bs_instance_->physical_device->vk_device, _bs_scope_.context->surface, &num_modes, NULL);
-    VkPresentModeKHR* modes = bs_alloca(num_modes * sizeof(VkPresentModeKHR));
-    vkGetPhysicalDeviceSurfacePresentModesKHR(_bs_instance_->physical_device->vk_device, _bs_scope_.context->surface, &num_modes, modes);
-
-    for (int i = 0; i < candidates_count; i++) {
-        VkPresentModeKHR candidate = candidates[i];
-
-        for (int j = 0; j < num_modes; j++) {
-            VkPresentModeKHR mode = modes[j];
-            if (candidate == mode) {
-                _bs_scope_.context->present_mode = (bs_PresentMode)mode;
-                return;
-            }
-        }
-    }
-
-    _bs_criticalN(BS_CONSTANT_STRING("Failed to query swapchain present mode"));
-}
-
-
 BSAPI bs_Image* _bs_swapchainImage() {
     return _bs_scope_.context->swapchain_image->image;
 }
@@ -186,7 +145,7 @@ void _bs_destroySwapchain() {
         return;
     bs_Image* swapchain_image = _bs_scope_.context->swapchain_image->image;
 
-    for (int i = 0; i < _bs_scope_.context->frames_in_flight; i++) {
+    for (int i = 0; i < _bs_scope_.context->head.swaps_count; i++) {
         vkDestroyImageView(_bs_instance_->device, swapchain_image->_[i].vk_image_view, NULL);
         swapchain_image->_[i].vk_image_view = 0;
     }
@@ -202,49 +161,26 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
 
     VkResult result;
 
-    const VkPresentModeKHR modes[] = {
-        VK_PRESENT_MODE_FIFO_KHR,
-        VK_PRESENT_MODE_IMMEDIATE_KHR,
-        VK_PRESENT_MODE_MAILBOX_KHR,
-        VK_PRESENT_MODE_FIFO_RELAXED_KHR,
-
-        VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR,
-        VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_KHR,
-        VK_PRESENT_MODE_FIFO_LATEST_READY_EXT,
-    };
-
-    const VkFormat formats[] = {
-        VK_FORMAT_R8G8B8A8_SRGB,
-        VK_FORMAT_B8G8R8A8_SRGB,
-        VK_FORMAT_R8G8B8A8_UNORM,
-        VK_FORMAT_B8G8R8A8_UNORM,
-    };
-
-    _bs_querySwapchainMode(modes, sizeof(modes) / sizeof(*modes));
-    _bs_querySwapchainFormat(formats, sizeof(formats) / sizeof(*formats));
+    const bool same_family = true; // TODO: this shouldn't always be true
 
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_bs_instance_->physical_device->vk_device, context->surface, &capabilities);
-
-    const bool same_family = true; // TODO: this shouldn't always be true
-
-    context->swapchain_image = context->swapchain_image ? context->swapchain_image : NULL;
 
     bs_ivec2 resolution = {
         bs_clamp(context->dimensions.x, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
         bs_clamp(context->dimensions.y, capabilities.minImageExtent.height, capabilities.maxImageExtent.height),
     };
+
     bs_Image image = {
         .head = {
             .type = BS_OBJECT_IMAGE
         },
         .flags = BS_IMAGE_SWAPCHAIN_IMAGE_BIT,
-        .format = context->surface_format.format,
+        .format = _bs_instance_->physical_device->surface_format.format,
         .dim = resolution,
     };
 
-    context->frames_in_flight = _bs_instance_->max_frames_in_flight;
+    //context->frames_in_flight = _bs_instance_->max_frames_in_flight;
 
     // TODO: remove
     const int max_images_count = 3;
@@ -272,9 +208,9 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .clipped = VK_TRUE,
         .preTransform = capabilities.currentTransform,
-        .presentMode = (VkPresentModeKHR)context->present_mode,
-        .imageFormat = (VkFormat)context->surface_format.format,
-        .imageColorSpace = (VkColorSpaceKHR)context->surface_format.color_space,
+        .presentMode = (VkPresentModeKHR)_bs_instance_->physical_device->present_mode,
+        .imageFormat = (VkFormat)_bs_instance_->physical_device->surface_format.format,
+        .imageColorSpace = (VkColorSpaceKHR)_bs_instance_->physical_device->surface_format.color_space,
     };
 
     VkSwapchainKHR new_swapchain = VK_NULL_HANDLE;
@@ -315,7 +251,7 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = context->swapchain_image->image->_[i].vk_image,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = (VkFormat)context->surface_format.format,
+            .format = (VkFormat)_bs_instance_->physical_device->surface_format.format,
             .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .subresourceRange.levelCount = 1,
             .subresourceRange.layerCount = 1,
@@ -338,16 +274,18 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
 
-    for (int i = 0; i < context->frames_in_flight; i++) {
-        result = vkCreateSemaphore(_bs_instance_->device, &semaphore_ci, NULL, &context->_[i].semaphore);
-        if (result != VK_SUCCESS) {
-            _bs_warnF("Failed to create swapchain semaphore for window \"%s\"", context->title);
-            _bs_scope_.context = last_context;
-            return bs_convertVulkanResult(result);
+    for (int i = 0; i < context->head.swaps_count; i++) {
+        if (!context->_[i].semaphore) {
+            result = vkCreateSemaphore(_bs_instance_->device, &semaphore_ci, NULL, &context->_[i].semaphore);
+            if (result != VK_SUCCESS) {
+                _bs_warnF("Failed to create swapchain semaphore for window \"%s\"", context->title);
+                _bs_scope_.context = last_context;
+                return bs_convertVulkanResult(result);
+            }
         }
+
     }
 
-    _bs_scope_.context->swapchain_ok = true;
     _bs_scope_.context = last_context;
     return BS_RESULT_OK;
 }
@@ -375,8 +313,6 @@ BSAPI void _bs_setCursor(bs_CursorIcon icon) {
 	*/
 }
 
-void _bs_resizeContext();
-
 BSAPI void _bs_resizeWindow(bs_Context* context, bs_U32 width, bs_U32 height) {
 #ifdef _WIN32
     RECT rect;
@@ -389,13 +325,10 @@ BSAPI void _bs_resizeWindow(bs_Context* context, bs_U32 width, bs_U32 height) {
         rect.top,
         width,
         height,
-        SWP_FRAMECHANGED | SWP_NOACTIVATE
+        SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER
     );
 
-    bs_Context* previous_context = _bs_scope_.context;
-    _bs_scope_.context = context;
-    _bs_resizeContext();
-    _bs_scope_.context = previous_context;
+   //_bs_resizeContext(context, width, height);
 #else
     _bs_warnF("_bs_resizeWindow has not been implemented for this OS yet");
 #endif
@@ -693,9 +626,10 @@ void _bs_tickContext(bs_Context* context) {
         context->io.inputs_down[i] |= context->io.inputs_down_once[i];
 
     if (context->listener.tick) {
+        bs_Context* last_context = _bs_scope_.context;
         _bs_scope_.context = context;
         context->listener.tick(context, NULL);
-        _bs_scope_.context = NULL;
+        _bs_scope_.context = last_context;
     }
 
     for (int i = 0; i < BS_KEY_BYTES_COUNT; i++)
@@ -1174,7 +1108,7 @@ static void _bs_drawIcon(bs_Context* context, HDC hdc, RECT* button_rect, WCHAR 
 
     SelectObject(hdc, old_font);
 }
-void _bs_resizeContext();
+
 LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param) {
     bs_List* contexts = _bs_getAllContexts();
     bs_Context* context = NULL;
@@ -1189,16 +1123,16 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
     }
 
     switch (msg) {
+    case WM_ERASEBKGND:
+        return 1;
     case WM_SIZE:
         uint32_t width = l_param & 0xffff;
         uint32_t height = (l_param >> 16) & 0xffff;
 
         if (_bs_instance_->physical_device && context && context->surface && width > 0 && height > 0) {
-            _bs_scope_.context = context;
-            _bs_resizeContext();
-            _bs_scope_.context = NULL;
+            _bs_resizeContext(context, width, height);
         }
-        break;
+        return DefWindowProc(hwnd, msg, w_param, l_param);
 
     case WM_PAINT:
         if (context && context->window_type == BS_WINDOW_WIN32) {
@@ -1207,23 +1141,13 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
 
-            // Paint Background
-            COLORREF bg_color = RGB(200, 250, 230);
-            HBRUSH bg_brush = CreateSolidBrush(bg_color);
-            FillRect(hdc, &ps.rcPaint, bg_brush);
-            DeleteObject(bg_brush);
-
-            // Paint Title Bar
-            HTHEME theme = OpenThemeData(hwnd, L"WINDOW");
-
-            COLORREF title_bar_color = RGB(83, 83, 83);
-            HBRUSH title_bar_brush = CreateSolidBrush(title_bar_color);
-
             RECT title_bar_rect;
             GetClientRect(hwnd, &title_bar_rect);
 
-            // Title Bar Background
-            FillRect(hdc, &title_bar_rect, title_bar_brush);
+            COLORREF bg_color = RGB(83, 83, 83);
+            HBRUSH bg_brush = CreateSolidBrush(bg_color);
+            FillRect(hdc, &ps.rcPaint, bg_brush);
+            DeleteObject(bg_brush);
 
             CustomTitleBarButtonRects button_rects = win32_get_title_bar_button_rects(hwnd, &title_bar_rect);
 
@@ -1231,10 +1155,19 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             _bs_drawIcon(context, hdc, &button_rects.maximize, L'\xE922');
             _bs_drawIcon(context, hdc, &button_rects.close, L'\xE8BB');
 
-            break;
+            DeleteObject(bg_brush);
+            EndPaint(hwnd, &ps);
+            return 0;
         }
-        else
+        else {
+            ValidateRect(hwnd, NULL);
+            return 0;
             return DefWindowProc(hwnd, msg, w_param, l_param);
+
+            return 0;
+
+        }
+        return DefWindowProc(hwnd, msg, w_param, l_param);
     case WM_ACTIVATE:
         if (context && context->listener.activate) {
             context->listener.activate(context, (bs_ContextActivateParams) {
@@ -1457,7 +1390,7 @@ BSAPI bs_Result _bs_window(
     context->window_type = type;
 
     bs_Timer timer = _bs_timer();
-    _bs_setTargetFramerate(120);
+    _bs_setTargetFramerate(24);
 
     #ifdef _WIN32
     const char* class_name = title;
@@ -1480,7 +1413,7 @@ BSAPI bs_Result _bs_window(
         .hInstance = hinstance,
         .hIcon = hicon ? hicon : LoadIcon(NULL, IDI_APPLICATION),
         .hCursor = LoadCursor(NULL, IDC_ARROW),
-		.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
+		//.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
 		.lpszMenuName = NULL,
         .lpszClassName = class_name,
         //.hIconSm = LoadIcon(NULL, IDI_APPLICATION),
@@ -1497,6 +1430,19 @@ BSAPI bs_Result _bs_window(
     HWND parent_hwnd = NULL;
 
     if (parent) {
+        bs_Context* last_node = parent->first_child;
+        bs_Context* node = parent->first_child;
+
+        while (node) {
+            last_node = node;
+            node = node->next;
+        }
+
+        if (last_node)
+            last_node->next = context;
+        else
+            parent->first_child = context;
+
         parent_hwnd = parent->hwnd;
         style = WS_CHILD | WS_VISIBLE;
     }
@@ -1583,6 +1529,7 @@ BSAPI bs_Result _bs_window(
 
     _bs_updateWindowDPI(context);
     #endif
+    context->swapchain_ok = true;
 
     _bs_scope_.context = last_context;
 

@@ -75,13 +75,6 @@
 		<typedef><type>void</type><name>(* bs_ValidationErrorFunction)()</name></typedef>
 		<typedef><type>bs_NonClientArea</type><name>(* bs_NonClientAreaTickFunction)(bs_Context*, bs_ivec2)</name></typedef>
 		<typedef><type>void</type><name>(* bs_SubpassFunction)(bs_RendererScope*)</name></typedef>
-		
-        <typedef><type>void</type><name>(* bs_ContextTickFunction)(bs_Context* context, void* params)</name></typedef>
-        <typedef><type>void</type><name>(* bs_ContextInputFunction)(bs_Context* context, bs_ContextInputParams params)</name></typedef>
-        <typedef><type>void</type><name>(* bs_ContextEnterFunction)(bs_Context* context, void* params)</name></typedef>
-        <typedef><type>void</type><name>(* bs_ContextLeaveFunction)(bs_Context* context, void* params)</name></typedef>
-		<typedef><type>void</type><name>(* bs_ContextResizeFunction)(bs_Context*)</name></typedef>
-        <typedef><type>void</type><name>(* bs_ContextActivateFunction)(bs_Context* context, bs_ContextActivateParams params)</name></typedef>
 
 		<typedef><type>long long</type><name>bs_I64</name></typedef>
 		<typedef><type>int</type><name>bs_I32</name></typedef>
@@ -118,6 +111,14 @@
 		<typedef><type>bs_U32</type><name>bs_ArmatureFlags</name></typedef>
 		<typedef><type>bs_U32</type><name>bs_AnimationFlags</name></typedef>
 		<typedef><type>bs_U32</type><name>bs_SaveJsonBits</name></typedef>
+				
+        <typedef><type>void</type><name>(* bs_ContextTickFunction)(bs_Context* context, void* params)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextInputFunction)(bs_Context* context, bs_ContextInputParams params)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextEnterFunction)(bs_Context* context, void* params)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextLeaveFunction)(bs_Context* context, void* params)</name></typedef>
+		<typedef><type>void</type><name>(* bs_ContextResizeFunction)(bs_Context*, bs_U32, bs_U32)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextActivateFunction)(bs_Context* context, bs_ContextActivateParams params)</name></typedef>
+
 		<typedef><type>void</type><name>(*bs_Callback)()</name></typedef>
 		<typedef><type>BS_VERTEX_DECLARATION_STRUCTURE()</type><name>bs_VertexDeclaration</name></typedef>
 	</typedefs>
@@ -2177,6 +2178,10 @@
             <field><type>int</type><name>type</name></field>
             <field><type>bs_List</type><name>queue_families</name></field>
             <field><type>bs_List</type><name>surface_formats</name></field>
+						
+            <field><type>bs_SurfaceFormat</type><name>surface_format</name></field>
+            <field><type>bs_PresentMode</type><name>present_mode</name></field>
+			
             <field><type>const char</type><name>name</name><size>BS_MAX_PHYSICAL_DEVICE_NAME_SIZE</size></field>
         </structure>
 		<structure name="bs_ContextInputParams">
@@ -2204,9 +2209,6 @@
             <field><type>bs_WindowType</type><name>window_type</name></field>
             <field><type>bs_CursorIcon</type><name>cursor_icon</name></field>
 
-            <field><type>bs_SurfaceFormat</type><name>surface_format</name></field>
-            <field><type>bs_PresentMode</type><name>present_mode</name></field>
-
             <field><type>bs_U32</type><name>dpi</name></field>
             <field><type>int</type><name>frames_in_flight</name></field>
             <field><type>int</type><name>frame</name></field>
@@ -2223,6 +2225,9 @@
             <field><type>bs_IO</type><name>io</name></field>
             <field><type>bs_ContextListener</type><name>listener</name></field>
 
+			 <field><type>bs_Context*</type><name>first_child</name></field>
+			 <field><type>bs_Context*</type><name>next</name></field>
+			 
             <structure type="union">
                 <structure instance="popup">
                     <field><type>bs_I32</type><name>id</name></field>
@@ -2260,7 +2265,7 @@
 			 
 			<field><type>struct VkSwapchainKHR_T*</type><name>swapchain</name></field>
 			<field><type>struct VkSurfaceKHR_T*</type><name>surface</name></field>
-
+			 
             <structure instance="_[]">
 				<field><type>struct VkSemaphore_T*</type><name>semaphore</name></field>
             </structure>
@@ -2279,7 +2284,7 @@
             <field><type>bool</type><name>independent_blend</name></field>
             <field><type>bool</type><name>ray_tracing</name></field>
         </structure>
-        <structure name="bs_Props">
+		<structure name="bs_Props">
             <field><type>bs_U32</type><name>shader_group_handle_size</name></field>
             <field><type>bs_U32</type><name>shader_group_base_alignment</name></field>
             <field><type>bs_U32</type><name>min_acceleration_structure_scratch_offset_alignment</name></field>
@@ -4406,6 +4411,12 @@
 
         <function name="bs_scroll">
             <return>int</return>
+        </function>
+		<function name="bs_resizeContext">
+            <return>void</return>
+            <param><type>bs_Context*</type><name>context</name></param>
+            <param><type>bs_U32</type><name>width</name></param>
+            <param><type>bs_U32</type><name>height</name></param>
         </function>
         <function name="bs_resizeWindow">
             <return>void</return>

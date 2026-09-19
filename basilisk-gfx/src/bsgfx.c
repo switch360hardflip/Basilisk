@@ -148,7 +148,7 @@ BSGFXAPI void _bsgfx_ini(const char* name, bs_U32 width, bs_U32 height, bs_U32 w
     _bsgfx_configure();
     bs_ini();
 
-    bs_Object* context_object = BS_CONTEXT(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN, 0);
+    bs_Object* context_object = BS_CONTEXT(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN, BS_OBJECT_IN_FLIGHT_BIT);
     bs_window(context_object->context, NULL, _bsgfx_callbacks_.context_listener, width, height, name, window_flags);
     bs_showWindow(context_object->context);
     bs_device(context_object->context, NULL);
@@ -157,7 +157,6 @@ BSGFXAPI void _bsgfx_ini(const char* name, bs_U32 width, bs_U32 height, bs_U32 w
     bs_Object* win32_context_object = BS_CONTEXT(BSGFX_CONTEXTS, BSGFX_CONTEXT_WIN32, 0);
     bs_window(win32_context_object->context, context_object->context, (bs_ContextListener) { 0 }, 1200, 32, "test123", BS_WINDOW_WIN32);
     bs_showWindow(win32_context_object->context);
-    bs_swapchain(win32_context_object->context);
 
     bs_iniAudio();
 

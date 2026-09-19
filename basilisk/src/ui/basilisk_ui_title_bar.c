@@ -270,7 +270,6 @@ void onTitleBarTick() {
 
     if (has_changes) {
         has_changes = false;
-
     }
     basilisk_pipeline(queue, renderer, clear_color);
 }
