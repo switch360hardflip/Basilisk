@@ -64,6 +64,9 @@ BSAPI void _bs_writeLogger(
 #ifdef _WIN32
 #define BS_WARN_WIN32_PATH(function, path)                           \
     _bs_writeLogger(BS_LIBRARY_BASILISK, BS_MESSAGE_VALIDATION_ERROR, _bs_convertWin32Error(GetLastError()), GetLastError(), __func__, __FILE__, __LINE__, "%s %s", function, path)
+
+#define BS_WARN_HRESULT(function, hresult)                           \
+    _bs_writeLogger(BS_LIBRARY_BASILISK, BS_MESSAGE_VALIDATION_ERROR, _bs_convertHResult(hresult), hresult, __func__, __FILE__, __LINE__, "%s", function)
 #endif
 
 #define BS_WARN_ERRNO_PATH(function, path)                           \

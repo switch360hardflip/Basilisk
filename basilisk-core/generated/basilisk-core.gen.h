@@ -3766,6 +3766,17 @@ struct bs_Instance {
     bs_PhysicalDevice* physical_device;
     bs_QueueFamily* queue_family;
     bs_List popup_windows;
+#ifdef _WIN32
+    struct IDXGIFactory7* dxgi_factory;
+    struct IDXGIAdapter4* dxgi_adapter;
+    struct ID3D12Device5* dx_device;
+#ifndef NDEBUG
+    struct IDXGIDebug1* dxgi_debug;
+    struct IDXGIInfoQueue* dxgi_debug_queue;
+    struct ID3D12Debug1* dx12_debug;
+    struct ID3D12InfoQueue* dx12_debug_queue;
+#endif
+#endif
 #ifdef __linux__
     struct {
         void* pointer;
@@ -3869,6 +3880,8 @@ struct bs_Context {
     };
 #ifdef _WIN32
     void* hwnd;
+    struct IDXGISwapChain4* dxgi_swapchain;
+    struct ID3D12CommandQueue* dx_command_queue;
 #endif
 #ifdef __linux__
     void* display;
@@ -3914,6 +3927,8 @@ struct bs_Props {
     bs_U32 shader_group_handle_size;
     bs_U32 shader_group_base_alignment;
     bs_U32 min_acceleration_structure_scratch_offset_alignment;
+    bs_U32 device_node_mask;
+    bs_U8 device_luid[8];
 };
 
 struct bs_Callbacks {
@@ -5084,6 +5099,22 @@ bs_convertVulkanResult(
     int code);
 
 #ifdef _WIN32
+ /**
+  @param code
+  @return bs_Result
+  */
+BSAPI bs_Result
+bs_convertHResult(
+    int code);
+
+ /**
+  @param code
+  @return const char*
+  */
+BSAPI const char*
+bs_serializeHResult(
+    int code);
+
  /**
   @param code
   @return bs_Result

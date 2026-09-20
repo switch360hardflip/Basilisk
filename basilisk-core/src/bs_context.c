@@ -26,35 +26,39 @@
 #include <stdlib.h>
 
 #include "basilisk-core.gen.h"
-#ifdef _WIN32
-#include <windows.h>
-#include <windowsx.h>
-#include <winuser.h>
-#include <dwmapi.h>
-#include <uxtheme.h>
-#include <vsstyle.h>
-#include <vssym32.h>
-#include <uiribbon.h>
 
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan.h>
+#ifdef _WIN32
+    #include <windows.h>
+    #include <windowsx.h>
+    #include <winuser.h>
+    #include <dwmapi.h>
+    #include <uxtheme.h>
+    #include <vsstyle.h>
+    #include <vssym32.h>
+    #include <uiribbon.h>
+
+    #include <dxgi1_6.h>
+
+    #ifndef NDEBUG
+        #include <dxgidebug.h>
+        #include <d3d12sdklayers.h>
+    #endif
+
+    #define VK_USE_PLATFORM_WIN32_KHR
+    #include <vulkan.h>
 
 #elif defined(__linux__)
+    #include <wayland-client.h>
+    #include <wayland-cursor.h>
+    #include <xdg-shell.h>
+    #include <xdg-decoration-unstable-v1.h>
+    #include <viewporter.h>
+    #include <single-pixel-buffer-v1.h>
+    #include <unistd.h>
 
-#define VK_USE_PLATFORM_WAYLAND_KHR
-#include <vulkan.h>
-
-#include <wayland-client.h>
-#include <wayland-cursor.h>
-#include <xdg-shell.h>
-#include <xdg-decoration-unstable-v1.h>
-#include <viewporter.h>
-#include <single-pixel-buffer-v1.h>
-#include <unistd.h>
-
+    #define VK_USE_PLATFORM_WAYLAND_KHR
+    #include <vulkan.h>
 #endif
-
-#include <vulkan.h>
 
 #include <time.h>
 #include <assert.h>
@@ -136,6 +140,126 @@ BSAPI void _bs_queryProcedures(bs_Procedure* procedures, int count, void* dll_ha
    * Swapchain
    *============================================================================*/
 
+#ifdef _WIN32
+
+typedef struct {
+    VkSurfaceCapabilitiesKHR capabilities;
+    bs_ivec2 resolution;
+    bs_U32 images_count;
+} bs_SwapchainProperties;
+
+static inline bs_SwapchainProperties _bs_swapchainProperties() {
+    bs_Context* context = _bs_scope_.context;
+    bs_SwapchainProperties props = { 0 };
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_bs_instance_->physical_device->vk_device, context->surface, &props.capabilities);
+
+    props.resolution = BS_IV2(
+        bs_clamp(context->dimensions.x, props.capabilities.minImageExtent.width, props.capabilities.maxImageExtent.width),
+        bs_clamp(context->dimensions.y, props.capabilities.minImageExtent.height, props.capabilities.maxImageExtent.height)
+    );
+    const int max_images_count = 3;
+    if (props.capabilities.maxImageCount > max_images_count)
+        props.capabilities.maxImageCount = max_images_count;
+
+    props.images_count = props.capabilities.minImageCount + 1;
+    if (props.capabilities.maxImageCount > 0 && props.images_count > props.capabilities.maxImageCount)
+        props.images_count = props.capabilities.maxImageCount;
+
+    return props;
+}
+
+static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
+    HRESULT hresult;
+
+    bs_SwapchainProperties props = _bs_swapchainProperties();
+
+   /**
+    Command Queue
+    */
+    const auto node_count = _bs_instance_->dx_device->lpVtbl->GetNodeCount(_bs_instance_->dx_device);
+    const UINT node_mask = node_count <= 1 ? 0 : _bs_props_.device_node_mask;
+    
+    const D3D12_COMMAND_QUEUE_DESC command_queue_desc = {
+        .Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
+        .Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+        .Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+        .NodeMask = node_mask,
+    };
+
+    hresult = _bs_instance_->dx_device->lpVtbl->CreateCommandQueue(
+        _bs_instance_->dx_device, 
+        &command_queue_desc,
+        &IID_ID3D12CommandQueue,
+        &context->dx_command_queue
+    );
+    
+    if (FAILED(hresult)) {
+        BS_WARN_HRESULT("CreateCommandQueue", hresult);
+        return bs_convertHResult(hresult);
+    }
+
+   /**
+    Swapchain
+    */
+    const DXGI_SWAP_CHAIN_DESC1 swapchain_desc = {
+        .Width = props.resolution.x,
+        .Height = props.resolution.y,
+        .Format = DXGI_FORMAT_B8G8R8A8_UNORM,
+        .Stereo = FALSE,
+        .SampleDesc = { 1, 0 },
+        .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+        .BufferCount = props.images_count,
+        .Scaling = DXGI_SCALING_NONE,
+        .SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
+        .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
+        .Flags = 0
+    };
+
+    IDXGISwapChain1* swapchain1;
+    hresult = _bs_instance_->dxgi_factory->lpVtbl->CreateSwapChainForHwnd(
+        _bs_instance_->dxgi_factory,
+        context->dx_command_queue,
+        context->hwnd, 
+        &swapchain_desc,
+        NULL,
+        NULL, 
+        &swapchain1
+    );
+
+    if (FAILED(hresult)) {
+        BS_WARN_HRESULT("CreateSwapChainForHwnd", hresult);
+        return bs_convertHResult(hresult);
+    }
+
+    hresult = swapchain1->lpVtbl->QueryInterface(
+        swapchain1,
+        &IID_IDXGISwapChain4,
+        &context->dxgi_swapchain
+    );
+
+    if (FAILED(hresult)) {
+        BS_WARN_HRESULT("QueryInterface", hresult);
+        return bs_convertHResult(hresult);
+    }
+
+   /**
+    Associate Window
+    */
+    hresult = _bs_instance_->dxgi_factory->lpVtbl->MakeWindowAssociation(
+        _bs_instance_->dxgi_factory,
+        context->hwnd, 
+        DXGI_MWA_NO_ALT_ENTER
+    );
+
+    if (FAILED(hresult)) {
+        BS_WARN_HRESULT("MakeWindowAssociation", hresult);
+        return bs_convertHResult(hresult);
+    }
+}
+
+#endif
+
 BSAPI bs_Image* _bs_swapchainImage() {
     return _bs_scope_.context->swapchain_image->image;
 }
@@ -159,17 +283,33 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
     bs_Context* last_context = _bs_scope_.context;
     _bs_scope_.context = context;
 
+#ifdef _WIN32
+   /**
+    DXGI Swapchain
+    */
+//    if (context->dxgi_swapchain) {
+//        bs_Result dxgi_result = _bs_dxgiSwapchain(context);
+//        _bs_scope_.context = last_context;
+//        return dxgi_result;
+//    } 
+//    else if (!context->swapchain) {
+//        if (_bs_dxgiSwapchain(context) == BS_RESULT_OK) {
+//            _bs_scope_.context = last_context;
+//            return BS_RESULT_OK;
+//        }
+//    }
+#endif
+
+   /**
+    Vulkan Swapchain
+    */
     VkResult result;
 
     const bool same_family = true; // TODO: this shouldn't always be true
 
-    VkSurfaceCapabilitiesKHR capabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_bs_instance_->physical_device->vk_device, context->surface, &capabilities);
+    bs_SwapchainProperties props = _bs_swapchainProperties();
 
-    bs_ivec2 resolution = {
-        bs_clamp(context->dimensions.x, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
-        bs_clamp(context->dimensions.y, capabilities.minImageExtent.height, capabilities.maxImageExtent.height),
-    };
+    printf("swapchain %d, %d\n", props.capabilities.minImageExtent.width, props.capabilities.maxImageExtent.width);
 
     bs_Image image = {
         .head = {
@@ -177,29 +317,20 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
         },
         .flags = BS_IMAGE_SWAPCHAIN_IMAGE_BIT,
         .format = _bs_instance_->physical_device->surface_format.format,
-        .dim = resolution,
+        .dim = props.resolution,
     };
 
     //context->frames_in_flight = _bs_instance_->max_frames_in_flight;
 
-    // TODO: remove
-    const int max_images_count = 3;
-    if (capabilities.maxImageCount > max_images_count)
-        capabilities.maxImageCount = max_images_count;
-
-    bs_U32 images_count = capabilities.minImageCount + 1;
-    if (capabilities.maxImageCount > 0 && images_count > capabilities.maxImageCount)
-        images_count = capabilities.maxImageCount;
-
-    _bs_instance_->max_swapchain_images_count = BS_MAX(_bs_instance_->max_swapchain_images_count, images_count);
+    _bs_instance_->max_swapchain_images_count = BS_MAX(_bs_instance_->max_swapchain_images_count, props.images_count);
 
     VkSwapchainCreateInfoKHR swapchain_ci = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = context->surface,
         .imageArrayLayers = 1,
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .minImageCount = images_count,
-        .imageExtent = { resolution.x, resolution.y },
+        .minImageCount = props.images_count,
+        .imageExtent = { props.resolution.x, props.resolution.y },
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         .imageSharingMode = same_family ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT,
     //    .queueFamilyIndexCount = same_family ? 0 : 2, // TODO: why is this 2
@@ -207,7 +338,7 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
         .oldSwapchain = context->swapchain ? context->swapchain : 0,
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .clipped = VK_TRUE,
-        .preTransform = capabilities.currentTransform,
+        .preTransform = props.capabilities.currentTransform,
         .presentMode = (VkPresentModeKHR)_bs_instance_->physical_device->present_mode,
         .imageFormat = (VkFormat)_bs_instance_->physical_device->surface_format.format,
         .imageColorSpace = (VkColorSpaceKHR)_bs_instance_->physical_device->surface_format.color_space,
@@ -226,24 +357,24 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
 
     bsi_nameHandle((bs_U64)context->swapchain, VK_OBJECT_TYPE_SWAPCHAIN_KHR, context->title);
 
-    /**
-     Swapchain images
-     */
+   /**
+    Swapchain images
+    */
     VkImage images[3];
-    vkGetSwapchainImagesKHR(_bs_instance_->device, context->swapchain, &images_count, images);
+    vkGetSwapchainImagesKHR(_bs_instance_->device, context->swapchain, &props.images_count, images);
    // _bs_infoF("Swapchain\n  Format: %d\n  Mode: %d\n  Images: %d", swapchain_ci.imageFormat, swapchain_ci.presentMode, images_count);
 
     if (context->swapchain_image == NULL)
-        context->swapchain_image = BS_OBJECT(bs_Image, -1, 0, images_count, BS_OBJECT_SWAPCHAIN_IMAGE_BIT, BS_OBJECT_IMAGE);
+        context->swapchain_image = BS_OBJECT(bs_Image, -1, 0, props.images_count, BS_OBJECT_SWAPCHAIN_IMAGE_BIT, BS_OBJECT_IMAGE);
 
     bs_Header head = context->swapchain_image->image->head;
     memcpy(context->swapchain_image->image, &image, sizeof(image));
     context->swapchain_image->image->head = head;
 
-    /**
-     Swapchain image views
-     */
-    for (int i = 0; i < images_count; i++) {
+   /**
+    Swapchain image views
+    */
+    for (int i = 0; i < props.images_count; i++) {
         context->swapchain_image->image->_[i].vk_image = images[i];
         bsi_nameHandle(images[i], VK_OBJECT_TYPE_IMAGE, context->title);
 
@@ -267,9 +398,9 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
         bsi_nameHandle(context->swapchain_image->image->_[i].vk_image_view, VK_OBJECT_TYPE_IMAGE_VIEW, context->title);
     }
 
-    /**
-     Swapchain semaphores
-     */
+   /**
+    Swapchain semaphores
+    */
     VkSemaphoreCreateInfo semaphore_ci = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
@@ -463,6 +594,8 @@ BSAPI bs_ivec2 _bs_windowPosition(bs_Context* context) {
 // temp
 #ifdef _WIN32
 const bool separate_message_thread = false;
+
+
 #else
 const bool separate_message_thread = false;
 #endif
@@ -718,12 +851,11 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
     Tick all contexts
     */
     bs_List* contexts = _bs_getAllContexts();
-
     for (int i = 0; i < contexts->count; i++) {
         bs_Context* ctx = *(bs_Context**)_bs_fetchUnit(contexts, i);
 
         _bs_scope_.context = ctx;
-        if (ctx->swapchain_ok)
+       // if (ctx->swapchain_ok)
             _bs_tickContext(ctx);
         _bs_scope_.context = NULL;
     }
@@ -731,10 +863,10 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
     _bs_checkTimer(&_bs_instance_->timer);
 
     #ifdef _WIN32
-    while ((_bs_instance_->timer.seconds - frame_start) < _bs_instance_->target_frame_time) {
-        Sleep(0);
-        _bs_checkTimer(&_bs_instance_->timer);
-    }
+    //while ((_bs_instance_->timer.seconds - frame_start) < _bs_instance_->target_frame_time) {
+    //    Sleep(0);
+    //    _bs_checkTimer(&_bs_instance_->timer);
+    //}
     #endif
 }
 
@@ -909,14 +1041,8 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
                 }
             }
 
-            if (!context) {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-                continue;
-            }
-
-            //if (!separate_message_thread)
-            _bs_handleMessageAtomic(contexts, context, msg);
+            if (context)
+                _bs_handleMessageAtomic(contexts, context, msg);
 
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -1123,6 +1249,8 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
     }
 
     switch (msg) {
+    case WM_SIZING:
+        return 1;
     case WM_ERASEBKGND:
         return 1;
     case WM_SIZE:
@@ -1130,6 +1258,7 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
         uint32_t height = (l_param >> 16) & 0xffff;
 
         if (_bs_instance_->physical_device && context && context->surface && width > 0 && height > 0) {
+            printf("WM_SIZE %d, %d\n", width, height);
             _bs_resizeContext(context, width, height);
         }
         return DefWindowProc(hwnd, msg, w_param, l_param);
@@ -1155,12 +1284,28 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             _bs_drawIcon(context, hdc, &button_rects.maximize, L'\xE922');
             _bs_drawIcon(context, hdc, &button_rects.close, L'\xE8BB');
 
-            DeleteObject(bg_brush);
             EndPaint(hwnd, &ps);
             return 0;
         }
         else {
-            ValidateRect(hwnd, NULL);
+
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+
+            RECT title_bar_rect;
+            GetClientRect(hwnd, &title_bar_rect);
+
+            COLORREF bg_color = RGB(0, 255, 0);
+            HBRUSH bg_brush = CreateSolidBrush(bg_color);
+            FillRect(hdc, &title_bar_rect, bg_brush);
+            DeleteObject(bg_brush);
+
+            CustomTitleBarButtonRects button_rects = win32_get_title_bar_button_rects(hwnd, &title_bar_rect);
+
+
+            EndPaint(hwnd, &ps);
+
+            //ValidateRect(hwnd, NULL);
             return 0;
             return DefWindowProc(hwnd, msg, w_param, l_param);
 
@@ -1499,7 +1644,6 @@ BSAPI bs_Result _bs_window(
 #ifdef __linux__
     _test(context, title);
 #endif
-
     _bs_createSurface();
 
     #ifdef _WIN32

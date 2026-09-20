@@ -151,7 +151,7 @@ void basilisk_instantiateTitleBarUI() {
     // title icon
     //position = bsgfx_seekTopLeftUI(title_bar_size);
     position = BS_V3(0, resolution.y - title_bar_size.y, 0);
-
+    position.y -= 64;
    /**
     Background
     */
@@ -271,5 +271,6 @@ void onTitleBarTick() {
     if (has_changes) {
         has_changes = false;
     }
+
     basilisk_pipeline(queue, renderer, clear_color);
 }

@@ -172,6 +172,14 @@ BSAPI bs_Result _preval_bs_convertVulkanResult(int code) {
 }
 
 #ifdef _WIN32
+BSAPI bs_Result _preval_bs_convertHResult(int code) {
+    return next.bs_convertHResult(code);
+}
+
+BSAPI const char* _preval_bs_serializeHResult(int code) {
+    return next.bs_serializeHResult(code);
+}
+
 BSAPI bs_Result _preval_bs_convertWin32Error(int code) {
     return next.bs_convertWin32Error(code);
 }
@@ -2792,6 +2800,8 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_convertYyjsonResult = _preval_bs_convertYyjsonResult;
     functions.bs_convertVulkanResult = _preval_bs_convertVulkanResult;
 #ifdef _WIN32
+    functions.bs_convertHResult = _preval_bs_convertHResult;
+    functions.bs_serializeHResult = _preval_bs_serializeHResult;
     functions.bs_convertWin32Error = _preval_bs_convertWin32Error;
     functions.bs_serializeWin32Error = _preval_bs_serializeWin32Error;
 #endif

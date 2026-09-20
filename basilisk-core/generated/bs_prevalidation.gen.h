@@ -77,6 +77,8 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_convertYyjsonResult = (PFN_bs_convertYyjsonResult)bs_getProcAddress(module, "_preval_bs_convertYyjsonResult");
     functions.bs_convertVulkanResult = (PFN_bs_convertVulkanResult)bs_getProcAddress(module, "_preval_bs_convertVulkanResult");
 #ifdef _WIN32
+    functions.bs_convertHResult = (PFN_bs_convertHResult)bs_getProcAddress(module, "_preval_bs_convertHResult");
+    functions.bs_serializeHResult = (PFN_bs_serializeHResult)bs_getProcAddress(module, "_preval_bs_serializeHResult");
     functions.bs_convertWin32Error = (PFN_bs_convertWin32Error)bs_getProcAddress(module, "_preval_bs_convertWin32Error");
     functions.bs_serializeWin32Error = (PFN_bs_serializeWin32Error)bs_getProcAddress(module, "_preval_bs_serializeWin32Error");
 #endif

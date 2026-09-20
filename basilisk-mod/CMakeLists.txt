@@ -75,6 +75,7 @@ endif()
 if (${IS_DEBUG_BUILD})
     target_link_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_SOURCE_DIR}/external/
+        ${CMAKE_SOURCE_DIR}/build/basilisk/Debug
         ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang/Debug
         ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang
         ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang/OSDependent/Unix

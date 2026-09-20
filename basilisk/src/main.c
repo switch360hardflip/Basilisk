@@ -104,12 +104,12 @@ static void onTick(bs_Context* context) {
 	// todo move outside of tick
 	static bool ticked = false;
 	if (!ticked) {
-		basilisk_instantiateTitleBarUI();
-		bsgfx_tickInstanceTypes();
-		//bsgfx_resetInstanceTypes();
+		
 		ticked = true;
 	}
-
+	bsgfx_resetInstanceTypes();
+	basilisk_instantiateTitleBarUI();
+	bsgfx_tickInstanceTypes();
 	onTitleBarTick();
 
 }

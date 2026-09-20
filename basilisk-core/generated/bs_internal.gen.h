@@ -65,6 +65,8 @@ typedef bs_vec3(* PFN_bs_rgbToHsv)(const bs_vec3* rgb);
 typedef bs_Result(* PFN_bs_convertYyjsonResult)(int code);
 typedef bs_Result(* PFN_bs_convertVulkanResult)(int code);
 #ifdef _WIN32
+typedef bs_Result(* PFN_bs_convertHResult)(int code);
+typedef const char*(* PFN_bs_serializeHResult)(int code);
 typedef bs_Result(* PFN_bs_convertWin32Error)(int code);
 typedef const char*(* PFN_bs_serializeWin32Error)(int code);
 #endif
@@ -603,6 +605,8 @@ typedef struct {
     PFN_bs_convertYyjsonResult bs_convertYyjsonResult;
     PFN_bs_convertVulkanResult bs_convertVulkanResult;
 #ifdef _WIN32
+    PFN_bs_convertHResult bs_convertHResult;
+    PFN_bs_serializeHResult bs_serializeHResult;
     PFN_bs_convertWin32Error bs_convertWin32Error;
     PFN_bs_serializeWin32Error bs_serializeWin32Error;
 #endif
@@ -1141,6 +1145,8 @@ BSAPI bs_vec3 _bs_rgbToHsv(const bs_vec3* rgb);
 BSAPI bs_Result _bs_convertYyjsonResult(int code);
 BSAPI bs_Result _bs_convertVulkanResult(int code);
 #ifdef _WIN32
+BSAPI bs_Result _bs_convertHResult(int code);
+BSAPI const char* _bs_serializeHResult(int code);
 BSAPI bs_Result _bs_convertWin32Error(int code);
 BSAPI const char* _bs_serializeWin32Error(int code);
 #endif
@@ -1681,6 +1687,8 @@ static inline bs_FunctionTable* _bs_getFunctions() {
     functions.bs_convertYyjsonResult = _bs_convertYyjsonResult;
     functions.bs_convertVulkanResult = _bs_convertVulkanResult;
 #ifdef _WIN32
+    functions.bs_convertHResult = _bs_convertHResult;
+    functions.bs_serializeHResult = _bs_serializeHResult;
     functions.bs_convertWin32Error = _bs_convertWin32Error;
     functions.bs_serializeWin32Error = _bs_serializeWin32Error;
 #endif

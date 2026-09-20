@@ -868,6 +868,18 @@ bs_Result bs_convertVulkanResult(
 }
 
 #ifdef _WIN32
+bs_Result bs_convertHResult(
+    int code)
+{
+    return next.bs_convertHResult(code);
+}
+
+const char* bs_serializeHResult(
+    int code)
+{
+    return next.bs_serializeHResult(code);
+}
+
 bs_Result bs_convertWin32Error(
     int code)
 {

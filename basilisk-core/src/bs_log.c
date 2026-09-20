@@ -344,4 +344,11 @@ BSAPI bs_Result _bs_convertHResult(int code) {
     return BS_RESULT_GENERAL_ERROR;
 }
 
+BSAPI const char* _bs_serializeHResult(int code) {
+    switch (code) {
+    }
+
+    return "Unknown";
+}
+
 #endif

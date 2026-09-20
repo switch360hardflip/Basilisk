@@ -2118,7 +2118,7 @@
             <field><type>bool</type><name>paused</name></field>
             <field><type>bool</type><name>advance</name></field>
 
-			<field><type>bs_String*</type><name>executable</name></field>
+            <field><type>bs_String*</type><name>executable</name></field>
             <field><type>bs_String*</type><name>cwd</name></field>
             <field><type>bs_String*</type><name>appdata</name></field>
             <field><type>bs_String*</type><name>log</name></field>
@@ -2139,14 +2139,27 @@
             <field><type>bs_QueueFamily*</type><name>queue_family</name></field>
 
             <field><type>bs_List</type><name>popup_windows</name></field>
-			
-			<ifdef cond="__linux__"/>
-				<structure instance="wl">
-					<field><type>void*</type><name>pointer</name></field>
-					<field><type>void*</type><name>cursor_surface</name></field>
-					<field><type>void*</type><name>cursor_image</name></field>
-				</structure>structure>
-			<endif/>
+
+            <ifdef cond="_WIN32"/>
+                <field><type>struct IDXGIFactory7*</type><name>dxgi_factory</name></field>
+                <field><type>struct IDXGIAdapter4*</type><name>dxgi_adapter</name></field>
+                <field><type>struct ID3D12Device5*</type><name>dx_device</name></field>
+
+                <ifndef cond="NDEBUG"/>
+                    <field><type>struct IDXGIDebug1*</type><name>dxgi_debug</name></field>
+                    <field><type>struct IDXGIInfoQueue*</type><name>dxgi_debug_queue</name></field>
+                    <field><type>struct ID3D12Debug1*</type><name>dx12_debug</name></field>
+                    <field><type>struct ID3D12InfoQueue*</type><name>dx12_debug_queue</name></field>
+                <endif/>
+        <endif/>
+
+            <ifdef cond="__linux__"/>
+                <structure instance="wl">
+                    <field><type>void*</type><name>pointer</name></field>
+                    <field><type>void*</type><name>cursor_surface</name></field>
+                    <field><type>void*</type><name>cursor_image</name></field>
+                </structure>
+            <endif/>
 
             <field><type>struct VkDescriptorSet_T*</type><name>sets</name><size>BS_MAX_NUM_BIND_SETS</size></field>
             <field><type>struct VkDescriptorSetLayout_T*</type><name>layouts</name><size>BS_MAX_NUM_BIND_SETS</size></field>
@@ -2242,6 +2255,8 @@
 			 
 	 		<ifdef cond="_WIN32"/>
 			 <field><type>void*</type><name>hwnd</name></field>
+			 <field><type>struct IDXGISwapChain4*</type><name>dxgi_swapchain</name></field>
+			 <field><type>struct ID3D12CommandQueue*</type><name>dx_command_queue</name></field>
 		 	<endif/>
 
 			<ifdef cond="__linux__"/>
@@ -2288,6 +2303,8 @@
             <field><type>bs_U32</type><name>shader_group_handle_size</name></field>
             <field><type>bs_U32</type><name>shader_group_base_alignment</name></field>
             <field><type>bs_U32</type><name>min_acceleration_structure_scratch_offset_alignment</name></field>
+            <field><type>bs_U32</type><name>device_node_mask</name></field>
+            <field><type>bs_U8</type><name>device_luid</name><size>8</size></field>
         </structure>
 
 		<structure name="bs_Callbacks">
@@ -2765,6 +2782,15 @@
             <param><type>int</type><name>code</name></param>
         </function>
         <ifdef cond="_WIN32"/>
+        <function name="bs_convertHResult">
+            <return>bs_Result</return>
+            <param><type>int</type><name>code</name></param>
+        </function>
+        <function name="bs_serializeHResult">
+            <return>const char*</return>
+            <param><type>int</type><name>code</name></param>
+        </function>
+
         <function name="bs_convertWin32Error">
             <return>bs_Result</return>
             <param><type>int</type><name>code</name></param>

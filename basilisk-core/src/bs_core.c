@@ -25,12 +25,21 @@
 
 #include "basilisk-core.gen.h"
 #ifdef _WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
+    #define INITGUID
+    #include <dxgi1_6.h>
+
+    #ifndef NDEBUG
+        #include <dxgidebug.h>
+        #include <d3d12sdklayers.h>
+    #endif
+
+    #define VK_USE_PLATFORM_WIN32_KHR
+    #include <vulkan.h>
 #elif defined(__linux__)
-#define VK_USE_PLATFORM_WAYLAND_KHR
+    #define VK_USE_PLATFORM_WAYLAND_KHR
+    #include <vulkan.h>
 #endif
 
-#include <vulkan.h>
 #include <vulkan/vulkan_core.h>
 
 #include <basilisk-core.h>
@@ -656,12 +665,21 @@ static void _bs_prepareLogicalDevice(bs_PhysicalDevice* physical_device) {
         .pNext = &accel_struct_properties
     };
 
+    VkPhysicalDeviceIDPropertiesKHR pdid_props = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES_KHR, };
     VkPhysicalDeviceProperties2 device_properties = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
-       // .pNext = &ray_tracing_pipeline_properties
+        .pNext = &pdid_props
     };
 
     vkGetPhysicalDeviceProperties2(physical_device->vk_device, &device_properties);
+
+    if (!pdid_props.deviceLUIDValid) {
+        bs_warnF("Invalid device LUID"); // idk what this means
+    }
+
+    assert(sizeof(_bs_props_.device_luid) == sizeof(pdid_props.deviceLUID));
+    memcpy(_bs_props_.device_luid, pdid_props.deviceLUID, sizeof(pdid_props.deviceLUID));
+    _bs_props_.device_node_mask = pdid_props.deviceNodeMask;
 
     _bs_props_.shader_group_handle_size = ray_tracing_pipeline_properties.shaderGroupHandleSize;
     _bs_props_.shader_group_base_alignment = ray_tracing_pipeline_properties.shaderGroupBaseAlignment;
@@ -750,6 +768,97 @@ static void _bs_querySwapchainMode(VkPresentModeKHR candidates[], int candidates
     _bs_criticalN(BS_CONSTANT_STRING("Failed to query swapchain present mode"));
 }
 
+#ifdef _WIN32
+
+static void _bs_createDXGIDevice() {
+    HRESULT hresult;
+
+#ifdef NDEBUG
+    UINT factory_flags = 0;
+#else
+    const UINT factory_flags = DXGI_CREATE_FACTORY_DEBUG;
+#endif
+
+    hresult = CreateDXGIFactory2(
+        factory_flags,
+        &IID_IDXGIFactory7,
+        &_bs_instance_->dxgi_factory
+    );
+    if (FAILED(hresult)) {
+        BS_WARN_HRESULT("CreateDXGIFactory2", hresult);
+        return;
+    }
+
+#ifndef NDEBUG
+
+    hresult = DXGIGetDebugInterface1(0, &IID_IDXGIDebug1, &_bs_instance_->dxgi_debug);
+    if (FAILED(hresult)) {
+        BS_WARN_HRESULT("DXGIGetDebugInterface1", hresult);
+        return;
+    }
+
+    hresult = DXGIGetDebugInterface1(0, &IID_IDXGIInfoQueue, &_bs_instance_->dxgi_debug_queue);
+    if (FAILED(hresult)) {
+        BS_WARN_HRESULT("DXGIGetDebugInterface1", hresult);
+        return;
+    }
+
+    _bs_instance_->dxgi_debug->lpVtbl->EnableLeakTrackingForThread(_bs_instance_->dxgi_debug);
+
+    DXGI_INFO_QUEUE_MESSAGE_SEVERITY dxgi_denied_severities[] = {DXGI_INFO_QUEUE_MESSAGE_SEVERITY_MESSAGE, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_INFO};
+    DXGI_INFO_QUEUE_FILTER dxgiFilter = { 
+        .DenyList = {
+            .NumSeverities = sizeof(dxgi_denied_severities) / sizeof(*dxgi_denied_severities),
+            .pSeverityList = dxgi_denied_severities,
+        }
+    };
+
+    _bs_instance_->dxgi_debug_queue->lpVtbl->PushRetrievalFilter(
+        _bs_instance_->dxgi_debug_queue, 
+        DXGI_DEBUG_ALL, 
+        &dxgiFilter
+    );
+
+    hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->PushStorageFilter(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_ALL, &dxgiFilter);
+
+    // TODO("For some reason DXGI_DEBUG_ALL returns E_INAVALIDARG.");
+    hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->SetMessageCountLimit(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_DXGI, (bs_U64)(-1));
+    hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->SetBreakOnSeverity(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+    hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->SetBreakOnSeverity(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, TRUE);
+    hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->SetBreakOnSeverity(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, TRUE);
+
+    //TODO("DX12 Debug actually makes the window unresponsive");
+    hresult = D3D12GetDebugInterface(&IID_ID3D12Debug1, &_bs_instance_->dx12_debug);
+    _bs_instance_->dx12_debug->lpVtbl->EnableDebugLayer(_bs_instance_->dx12_debug);
+    _bs_instance_->dx12_debug->lpVtbl->SetEnableGPUBasedValidation(_bs_instance_->dx12_debug, TRUE);
+#endif
+
+    hresult = _bs_instance_->dxgi_factory->lpVtbl->EnumAdapterByLuid(
+        _bs_instance_->dxgi_factory,
+        *(LUID*)_bs_props_.device_luid, 
+        &IID_IDXGIAdapter4,
+        &_bs_instance_->dxgi_adapter
+    );
+
+    if (FAILED(hresult)) {
+        BS_WARN_HRESULT("EnumAdapterByLuid", hresult);
+        return;
+    }
+
+    hresult = D3D12CreateDevice(
+        _bs_instance_->dxgi_adapter,
+        D3D_FEATURE_LEVEL_11_1,
+        &IID_ID3D12Device5,
+        &_bs_instance_->dx_device
+    );
+
+    if (FAILED(hresult)) {
+        BS_WARN_HRESULT("D3D12CreateDevice", hresult);
+        return;
+    }
+}
+#endif
+
 BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
     _bs_scope_.context = context;
 
@@ -781,6 +890,10 @@ BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
 
     _bs_querySwapchainMode(modes, sizeof(modes) / sizeof(*modes));
     _bs_querySwapchainFormat(formats, sizeof(formats) / sizeof(*formats));
+
+#ifdef _WIN32
+    _bs_createDXGIDevice();
+#endif
 
     _bs_scope_.context = NULL;
 }
@@ -822,6 +935,7 @@ static void _bs_clearAttachment(bs_Queue* queue, bs_U32 index, bs_ivec2 dim, VkI
             },
         },
     };
+    printf("clearing %d, %d\n", dim.x, dim.y);
 
     vkCmdClearAttachments(commands, 1, &clear_attachment, 1, &rectangle);
 }
@@ -3428,7 +3542,7 @@ static void _bs_resizeSwapchain() {
     if (ctx->window_type == BS_WINDOW_WIN32)
         return;
 
-   bs_stallGPU();
+  // bs_stallGPU();
 
     _bs_swapchain(_bs_scope_.context);
 
@@ -3456,6 +3570,7 @@ void _bs_resizeContext(bs_Context* context, bs_U32 width, bs_U32 height) {
         UpdateWindow(context->hwnd);
     }
     else {
+        context->swapchain_ok = true;
         _bs_tickContext(context);
     }
 
@@ -3470,6 +3585,7 @@ void _bs_resizeContext(bs_Context* context, bs_U32 width, bs_U32 height) {
 BSAPI void _bs_acquire() {
     if (_bs_scope_.context->image_acquired) return;
 
+    printf("acquiring\n");
     VkResult result = vkAcquireNextImageKHR(
         _bs_instance_->device,
         _bs_scope_.context->swapchain,
@@ -3480,6 +3596,7 @@ BSAPI void _bs_acquire() {
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         _bs_scope_.context->swapchain_ok = false;
+        printf("acquiring outofdate\n");
         return;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -3564,12 +3681,15 @@ BSAPI void _bs_present(bs_Queue* queue, bs_Queue* wait_queues[], int wait_queues
         .pImageIndices = &_bs_scope_.context->image_index,
     };
 
+    printf("presenting\n");
     VkResult result = vkQueuePresentKHR(queue->queue, &present_i);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+        printf("presenting outofdate\n");
         _bs_scope_.context->swapchain_ok = false;
+    }
 //        _bs_resizeContext();
-    else if (result != VK_SUCCESS)
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         _bs_warnN(BS_CONSTANT_STRING("Failed to present swapchain image"));
 
     _bs_scope_.context->frame = (_bs_scope_.context->frame + 1) % _bs_scope_.context->head.swaps_count;

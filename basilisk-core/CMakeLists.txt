@@ -79,6 +79,8 @@ if (WIN32)
         ws2_32
         dbghelp
         uxtheme
+        dxgi
+        d3d12
     )
 endif ()
 

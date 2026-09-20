@@ -103,7 +103,12 @@ static void basilisk_hiResSubpass0(bs_RendererScope* scope) {
 void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_color) {
     _clear_color_ = clear_color;
 
-    bs_acquire();
+    if (bs_scope()->context->swapchain_ok) {
+        bs_acquire();
+    }
+    if (!bs_scope()->context->swapchain_ok) {
+        return;
+    }
 
     if (bs_resetQueue(queue) == BS_RESULT_OK) {
         if (renderer->render_pass) {
@@ -115,14 +120,12 @@ void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_col
         else {
             bs_Output* output = bs_fetchUnit(&renderer->outputs, 0);
             bs_transition(queue, output->image, 0, BS_IMAGE_LAYOUT_UNDEFINED, BS_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            bs_stallGPU();
 
             bs_RendererScope scope = bs_beginRender(queue, renderer);
             basilisk_hiResSubpass0(&scope);
 
             bs_endRender(queue, renderer);
             bs_transition(queue, output->image, 0, BS_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, BS_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-            bs_stallGPU();
         }
 
         bs_WaitSemaphore wait_semaphores[] = {
