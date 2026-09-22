@@ -29,6 +29,10 @@
 #include <bs_internal.gen.h>
 #include <errno.h>
 
+#ifdef _WIN32
+    #include <vulkan_win32.h>
+#endif
+
 #define BS_FOREACH_PROC(X) \
     X(PFN_vkCmdInsertDebugUtilsLabelEXT, vkCmdInsertDebugUtilsLabelEXT) \
     X(PFN_vkCmdBeginDebugUtilsLabelEXT, vkCmdBeginDebugUtilsLabelEXT) \
@@ -43,6 +47,7 @@
     X(PFN_vkGetRayTracingShaderGroupHandlesKHR, vkGetRayTracingShaderGroupHandlesKHR) \
     X(PFN_vkDestroyAccelerationStructureKHR, vkDestroyAccelerationStructureKHR) \
     X(PFN_vkCreateRayTracingPipelinesKHR, vkCreateRayTracingPipelinesKHR) \
+    X(PFN_vkGetMemoryWin32HandlePropertiesKHR, vkGetMemoryWin32HandlePropertiesKHR) \
 
 #define BS_STRUCT_GEN(TYPE, FUNC, ...) TYPE FUNC;
 

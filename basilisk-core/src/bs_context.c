@@ -140,6 +140,25 @@ BSAPI void _bs_queryProcedures(bs_Procedure* procedures, int count, void* dll_ha
    * Swapchain
    *============================================================================*/
 
+BSAPI bs_Image* _bs_swapchainImage() {
+    return _bs_scope_.context->swapchain_image->image;
+}
+
+void _bs_destroySwapchain() {
+    if (!_bs_scope_.context->swapchain_image)
+        return;
+    bs_Image* swapchain_image = _bs_scope_.context->swapchain_image->image;
+
+    for (int i = 0; i < _bs_scope_.context->head.swaps_count; i++) {
+        vkDestroyImageView(_bs_instance_->device, swapchain_image->_[i].vk_image_view, NULL);
+        swapchain_image->_[i].vk_image_view = 0;
+    }
+
+    vkDestroySwapchainKHR(_bs_instance_->device, _bs_scope_.context->swapchain, NULL);
+    _bs_scope_.context->swapchain = 0;
+}
+
+
 #ifdef _WIN32
 
 typedef struct {
@@ -169,115 +188,384 @@ static inline bs_SwapchainProperties _bs_swapchainProperties() {
     return props;
 }
 
+
+  /*==============================================================================
+   * DXGI Swapchain
+   *============================================================================*/
+
 static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
     HRESULT hresult;
-
+    VkResult vk_result;
+    bs_Result result;
     bs_SwapchainProperties props = _bs_swapchainProperties();
 
-   /**
-    Command Queue
-    */
-    const auto node_count = _bs_instance_->dx_device->lpVtbl->GetNodeCount(_bs_instance_->dx_device);
-    const UINT node_mask = node_count <= 1 ? 0 : _bs_props_.device_node_mask;
+    if (context->dxgi_swapchain) {
+        for (int i = 0; i < context->swapchain_image->head->swaps_count; i++) {
+            bs_ImageSwaps* swap = context->swapchain_image->image->_ + i;
+            vkFreeMemory(_bs_instance_->device, swap->dx_memory, NULL);
+            CloseHandle(swap->dx_shared_handle);
+            vkDestroyImage(_bs_instance_->device, swap->vk_image, NULL);
+            swap->dx_image->lpVtbl->Release(swap->dx_image);
+        }
+        _bs_destroySwapchain();
+
+        hresult = context->dxgi_swapchain->lpVtbl->ResizeBuffers(
+            context->dxgi_swapchain,
+            context->swapchain_image->head->swaps_count,
+            props.resolution.x,
+            props.resolution.y,
+            DXGI_FORMAT_R8G8B8A8_UNORM, // TODO
+            0
+        );
+
+        if (FAILED(hresult)) {
+            BS_WARN_HRESULT("ResizeBuffers", hresult);
+           // return BS_RESULT_OK; // TODO
+          //  return bs_convertHResult(hresult);
+        }
+    }
+
+    _bs_instance_->max_swapchain_images_count = BS_MAX(_bs_instance_->max_swapchain_images_count, props.images_count);
+
+    if (!context->dxgi_swapchain) {
+        context->present_queue = BS_QUEUE(-1, -1, BS_OBJECT_SWAPCHAIN_IMAGE_BIT);
+        result = bs_queue(context->present_queue, 0, BS_QUEUE_GRAPHICS_BIT);
+        if (result != BS_RESULT_OK)
+            return result;
+
+
+       /**
+        Command Queue
+        */
+        const auto node_count = _bs_instance_->dx_device->lpVtbl->GetNodeCount(_bs_instance_->dx_device);
+        const UINT node_mask = node_count <= 1 ? 0 : _bs_props_.device_node_mask;
     
-    const D3D12_COMMAND_QUEUE_DESC command_queue_desc = {
-        .Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
-        .Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-        .Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
-        .NodeMask = node_mask,
+        const D3D12_COMMAND_QUEUE_DESC command_queue_desc = {
+            .Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
+            .Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+            .Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+            .NodeMask = node_mask,
+        };
+
+        hresult = _bs_instance_->dx_device->lpVtbl->CreateCommandQueue(
+            _bs_instance_->dx_device, 
+            &command_queue_desc,
+            &IID_ID3D12CommandQueue,
+            &context->dx_command_queue
+        );
+    
+        if (FAILED(hresult)) {
+            BS_WARN_HRESULT("CreateCommandQueue", hresult);
+            return bs_convertHResult(hresult);
+        }
+
+       /**
+        Swapchain
+        */
+        const DXGI_SWAP_CHAIN_DESC1 swapchain_desc = {
+            .Width = props.resolution.x,
+            .Height = props.resolution.y,
+            .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+            .Stereo = FALSE,
+            .SampleDesc = { 1, 0 },
+            .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+            .BufferCount = props.images_count,
+            .Scaling = DXGI_SCALING_STRETCH,
+            .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+            .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
+            .Flags = 0
+        };
+
+        IDXGISwapChain1* swapchain1;
+        hresult = _bs_instance_->dxgi_factory->lpVtbl->CreateSwapChainForHwnd(
+            _bs_instance_->dxgi_factory,
+            context->dx_command_queue,
+            context->hwnd, 
+            &swapchain_desc,
+            NULL,
+            NULL, 
+            &swapchain1
+        );
+
+        if (FAILED(hresult)) {
+            BS_WARN_HRESULT("CreateSwapChainForHwnd", hresult);
+            return bs_convertHResult(hresult);
+        }
+
+        hresult = swapchain1->lpVtbl->QueryInterface(
+            swapchain1,
+            &IID_IDXGISwapChain4,
+            &context->dxgi_swapchain
+        );
+
+        if (FAILED(hresult)) {
+            BS_WARN_HRESULT("QueryInterface", hresult);
+            return bs_convertHResult(hresult);
+        }
+
+       /**
+        Associate Window
+        */
+        hresult = _bs_instance_->dxgi_factory->lpVtbl->MakeWindowAssociation(
+            _bs_instance_->dxgi_factory,
+            context->hwnd, 
+            DXGI_MWA_NO_ALT_ENTER
+        );
+
+        if (FAILED(hresult)) {
+            BS_WARN_HRESULT("MakeWindowAssociation", hresult);
+            return bs_convertHResult(hresult);
+        }
+    }
+    
+   /**
+    Swapchain Images
+    */
+    if (context->swapchain_image == NULL)
+        context->swapchain_image = BS_OBJECT(bs_Image, -1, 0, props.images_count, BS_OBJECT_SWAPCHAIN_IMAGE_BIT, BS_OBJECT_IMAGE);
+
+    *context->swapchain_image->image = (bs_Image){
+        .head = context->swapchain_image->image->head,
+        .flags = BS_IMAGE_SWAPCHAIN_IMAGE_BIT,
+        .format = _bs_instance_->physical_device->surface_format.format,
+        .dim = props.resolution,
     };
 
-    hresult = _bs_instance_->dx_device->lpVtbl->CreateCommandQueue(
-        _bs_instance_->dx_device, 
-        &command_queue_desc,
-        &IID_ID3D12CommandQueue,
-        &context->dx_command_queue
-    );
-    
-    if (FAILED(hresult)) {
-        BS_WARN_HRESULT("CreateCommandQueue", hresult);
-        return bs_convertHResult(hresult);
+    for (int i = 0; i < props.images_count; i++) {
+        hresult = context->dxgi_swapchain->lpVtbl->GetBuffer(
+            context->dxgi_swapchain, 
+            i, 
+            &IID_ID3D12Resource, 
+            &context->swapchain_image->image->_[i].dx_image
+        );
     }
 
-   /**
-    Swapchain
-    */
-    const DXGI_SWAP_CHAIN_DESC1 swapchain_desc = {
-        .Width = props.resolution.x,
-        .Height = props.resolution.y,
-        .Format = DXGI_FORMAT_B8G8R8A8_UNORM,
-        .Stereo = FALSE,
-        .SampleDesc = { 1, 0 },
-        .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-        .BufferCount = props.images_count,
-        .Scaling = DXGI_SCALING_NONE,
-        .SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
-        .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
-        .Flags = 0
-    };
+    for (int i = 0; i < props.images_count; i++) {
+        bs_ImageSwaps* swap = context->swapchain_image->image->_ + i;
 
-    IDXGISwapChain1* swapchain1;
-    hresult = _bs_instance_->dxgi_factory->lpVtbl->CreateSwapChainForHwnd(
-        _bs_instance_->dxgi_factory,
-        context->dx_command_queue,
-        context->hwnd, 
-        &swapchain_desc,
-        NULL,
-        NULL, 
-        &swapchain1
-    );
+        D3D12_RESOURCE_DESC dx_image_desc;
+        swap->dx_image->lpVtbl->GetDesc(swap->dx_image, &dx_image_desc);
 
-    if (FAILED(hresult)) {
-        BS_WARN_HRESULT("CreateSwapChainForHwnd", hresult);
-        return bs_convertHResult(hresult);
+        D3D12_HEAP_PROPERTIES dx_image_heap;
+        D3D12_HEAP_FLAGS dx_image_heap_flags;
+        hresult = swap->dx_image->lpVtbl->GetHeapProperties(swap->dx_image, &dx_image_heap, &dx_image_heap_flags);
+        if (FAILED(hresult)) {
+            BS_WARN_HRESULT("GetHeapProperties", hresult);
+            return bs_convertHResult(hresult);
+        }
+
+        if (dx_image_desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
+            bs_warnF("Unexpected DXGI image dimensionality: (D3D12_RESOURCE_DIMENSION)%d\n", dx_image_desc.Dimension);
+            return BS_RESULT_INVALID_TYPE;
+        }
+
+        if (dx_image_desc.DepthOrArraySize != 1) {
+            bs_warnF("Unexpected DXGI image array count: %d\n", dx_image_desc.DepthOrArraySize);
+            return BS_RESULT_INVALID_TYPE;
+        }
+
+        if (dx_image_desc.MipLevels != 1) {
+            bs_warnF("Unexpected DXGI image mip level count: %d\n", dx_image_desc.MipLevels);
+            return BS_RESULT_INVALID_TYPE;
+        }
+
+        if (dx_image_desc.Format != DXGI_FORMAT_R8G8B8A8_UNORM) { // TODO
+            bs_warnF("Unexpected DXGI image format: %d\n", dx_image_desc.Format);
+            return BS_RESULT_INVALID_TYPE;
+        }
+
+        if (dx_image_desc.SampleDesc.Count != 1) {
+            bs_warnF("Unexpected DXGI image sample count: %d\n", dx_image_desc.SampleDesc.Count);
+            return BS_RESULT_INVALID_TYPE;
+        }
+
+        VkExternalMemoryImageCreateInfoKHR external_memory_image_ci = {
+            .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO_KHR,
+            .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT_KHR,
+        };
+
+        // TODO("We shouldn't depend on this specific format")
+        VkFormat ext_img_format = VK_FORMAT_R8G8B8A8_UNORM;
+
+        assert(dx_image_desc.Width <= UINT32_MAX);
+
+        const VkImageCreateInfo image_ci = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .pNext = &external_memory_image_ci,
+            .flags = 0,
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = ext_img_format,
+            .extent = {
+                .width = dx_image_desc.Width,
+                .height = dx_image_desc.Height,
+                .depth = 1,
+            },
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .queueFamilyIndexCount = 0,
+            .pQueueFamilyIndices = NULL,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        };
+
+        vk_result = vkCreateImage(
+            _bs_instance_->device,
+            &image_ci,
+            NULL,
+            &context->swapchain_image->image->_[i].vk_image
+        );
+        if (vk_result != VK_SUCCESS) {
+            _bs_warnF("Failed to create swapchain image for window \"%s\" (%d)", context->title, vk_result);
+            return bs_convertVulkanResult(vk_result);
+        }
+
+        bsi_nameHandle((bs_U64)context->swapchain_image->image->_[i].vk_image, VK_OBJECT_TYPE_IMAGE, context->title);
+
+        /**
+         */
+         //TODO("Not sure why I added this optional value. Was this a workaround?")
+        wchar_t* shared_handle_name = L"Local\\SomeBullshitNameIDontNeedAnyway0";
+        int shared_handle_name_len = lstrlenW(shared_handle_name);
+
+        shared_handle_name[shared_handle_name_len - 1] = '0' + i;
+
+        //TODO("I am pretty sure DX Swapchain is not considered SHARED, but it seems to work anyway.")
+
+        hresult = _bs_instance_->dx_device->lpVtbl->CreateSharedHandle(
+            _bs_instance_->dx_device,
+            swap->dx_image,
+            NULL,
+            GENERIC_ALL,
+            shared_handle_name,
+            &swap->dx_shared_handle
+        );
+        if (FAILED(hresult)) {
+            BS_WARN_HRESULT("CreateSharedHandle", hresult);
+            return bs_convertHResult(hresult);
+        }
+
+        VkMemoryWin32HandlePropertiesKHR win32_mem_props = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_WIN32_HANDLE_PROPERTIES_KHR,
+            .memoryTypeBits = 0xcdcdcdcd
+        };
+        vk_result = _bs_procs_.vkGetMemoryWin32HandlePropertiesKHR(
+            _bs_instance_->device, 
+            VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT, 
+            swap->dx_shared_handle,
+            &win32_mem_props
+        );
+        if (vk_result != VK_SUCCESS) {
+            BS_WARN_HRESULT("vkGetMemoryWin32HandlePropertiesKHR", hresult);
+            return bs_convertVulkanResult(vk_result);
+        }
+
+        VkMemoryRequirements mem_req;
+        vkGetImageMemoryRequirements(_bs_instance_->device, context->swapchain_image->image->_[i].vk_image, &mem_req);
+
+        // TODO("Workaround for AMD driver.");
+        if (win32_mem_props.memoryTypeBits == 0xcdcdcdcd)
+            win32_mem_props.memoryTypeBits = mem_req.memoryTypeBits;
+        else
+            win32_mem_props.memoryTypeBits &= mem_req.memoryTypeBits; // assumably must satisfy both
+
+        VkPhysicalDeviceMemoryProperties mem_props;
+        vkGetPhysicalDeviceMemoryProperties(_bs_instance_->physical_device->vk_device, &mem_props);
+
+        int mem_type_index = -1;
+        for (uint32_t im = 0; im < mem_props.memoryTypeCount; im++) {
+            const uint32_t current_bit = 0x1 << im;
+            if (win32_mem_props.memoryTypeBits & current_bit) {
+                if (mem_props.memoryTypes[im].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                    mem_type_index = im;
+                    break;
+                }
+            }
+        }
+
+        if (mem_type_index < 0) {
+            bs_warnF("Failed to query device local import memory");
+            return BS_RESULT_FAILED_TO_QUERY;
+        }
+
+        // DX12 Resource has to be dedicated per Vk spec
+        const VkMemoryDedicatedAllocateInfoKHR memory_dedicated_alloc_i = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
+            .image = context->swapchain_image->image->_[i].vk_image,
+        };
+
+        const VkImportMemoryWin32HandleInfoKHR import_memory_win32_handle = {
+            .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR,
+            .pNext = &memory_dedicated_alloc_i,
+            .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT_KHR,
+            .handle = swap->dx_shared_handle,
+        };
+
+        const VkMemoryAllocateInfo mem_alloc_i = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .pNext = &import_memory_win32_handle,
+            .allocationSize = mem_req.size,
+            .memoryTypeIndex = mem_type_index,
+        };
+
+        vk_result = vkAllocateMemory(
+            _bs_instance_->device, 
+            &mem_alloc_i,
+            NULL, 
+            &swap->dx_memory
+        ); 
+        if (vk_result != VK_SUCCESS) {
+            BS_WARN_VULKAN_ERROR("vkAllocateMemory", vk_result, "");
+            return bs_convertVulkanResult(vk_result);
+        }
+
+        vk_result = vkBindImageMemory(
+            _bs_instance_->device, 
+            context->swapchain_image->image->_[i].vk_image,
+            swap->dx_memory,
+            0
+        ); 
+        if (vk_result != VK_SUCCESS) {
+            BS_WARN_VULKAN_ERROR("vkBindImageMemory", vk_result, "");
+            return bs_convertVulkanResult(vk_result);
+        }
+
+        VkImageViewCreateInfo image_view_ci = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = context->swapchain_image->image->_[i].vk_image,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = (VkFormat)_bs_instance_->physical_device->surface_format.format,
+            .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .subresourceRange.levelCount = 1,
+            .subresourceRange.layerCount = 1,
+        };
+
+        vk_result = vkCreateImageView(
+            _bs_instance_->device, 
+            &image_view_ci, 
+            NULL, 
+            &context->swapchain_image->image->_[i].vk_image_view
+        );
+        if (vk_result != VK_SUCCESS) {
+            _bs_warnF("Failed to create swapchain image view for window \"%s\" (%d)", context->title, vk_result);
+            return bs_convertVulkanResult(vk_result);
+        }
+
+        bsi_nameHandle(context->swapchain_image->image->_[i].vk_image_view, VK_OBJECT_TYPE_IMAGE_VIEW, context->title);
     }
 
-    hresult = swapchain1->lpVtbl->QueryInterface(
-        swapchain1,
-        &IID_IDXGISwapChain4,
-        &context->dxgi_swapchain
-    );
-
-    if (FAILED(hresult)) {
-        BS_WARN_HRESULT("QueryInterface", hresult);
-        return bs_convertHResult(hresult);
-    }
-
-   /**
-    Associate Window
-    */
-    hresult = _bs_instance_->dxgi_factory->lpVtbl->MakeWindowAssociation(
-        _bs_instance_->dxgi_factory,
-        context->hwnd, 
-        DXGI_MWA_NO_ALT_ENTER
-    );
-
-    if (FAILED(hresult)) {
-        BS_WARN_HRESULT("MakeWindowAssociation", hresult);
-        return bs_convertHResult(hresult);
-    }
+    return BS_RESULT_OK;
 }
 
 #endif
 
-BSAPI bs_Image* _bs_swapchainImage() {
-    return _bs_scope_.context->swapchain_image->image;
-}
 
-void _bs_destroySwapchain() {
-    if (!_bs_scope_.context->swapchain_image)
-        return;
-    bs_Image* swapchain_image = _bs_scope_.context->swapchain_image->image;
 
-    for (int i = 0; i < _bs_scope_.context->head.swaps_count; i++) {
-        vkDestroyImageView(_bs_instance_->device, swapchain_image->_[i].vk_image_view, NULL);
-        swapchain_image->_[i].vk_image_view = 0;
-    }
-
-    vkDestroySwapchainKHR(_bs_instance_->device, _bs_scope_.context->swapchain, NULL);
-    _bs_scope_.context->swapchain = 0;
-}
-
+  /*==============================================================================
+   * Vulkan Swapchain
+   *============================================================================*/
 
 BSAPI bs_Result _bs_swapchain(bs_Context* context) {
     bs_Context* last_context = _bs_scope_.context;
@@ -287,17 +575,21 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
    /**
     DXGI Swapchain
     */
-//    if (context->dxgi_swapchain) {
-//        bs_Result dxgi_result = _bs_dxgiSwapchain(context);
-//        _bs_scope_.context = last_context;
-//        return dxgi_result;
-//    } 
-//    else if (!context->swapchain) {
-//        if (_bs_dxgiSwapchain(context) == BS_RESULT_OK) {
-//            _bs_scope_.context = last_context;
-//            return BS_RESULT_OK;
-//        }
-//    }
+    if (!_bs_args_.force_vulkan_swapchain) {
+        if (context->dxgi_swapchain) {
+            bs_Result dxgi_result = _bs_dxgiSwapchain(context);
+            _bs_scope_.context = last_context;
+            return dxgi_result;
+        }
+        else if (!context->swapchain) {
+            if (_bs_dxgiSwapchain(context) == BS_RESULT_OK) {
+                _bs_scope_.context = last_context;
+                goto end;
+            }
+
+            bs_logF("Failed to create DXGI swapchain, defaulting to Vulkan...");
+        }
+    }
 #endif
 
    /**
@@ -398,6 +690,7 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
         bsi_nameHandle(context->swapchain_image->image->_[i].vk_image_view, VK_OBJECT_TYPE_IMAGE_VIEW, context->title);
     }
 
+    end:
    /**
     Swapchain semaphores
     */
@@ -1257,8 +1550,9 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
         uint32_t width = l_param & 0xffff;
         uint32_t height = (l_param >> 16) & 0xffff;
 
+
         if (_bs_instance_->physical_device && context && context->surface && width > 0 && height > 0) {
-            printf("WM_SIZE %d, %d\n", width, height);
+
             _bs_resizeContext(context, width, height);
         }
         return DefWindowProc(hwnd, msg, w_param, l_param);
@@ -1304,8 +1598,6 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
 
 
             EndPaint(hwnd, &ps);
-
-            //ValidateRect(hwnd, NULL);
             return 0;
             return DefWindowProc(hwnd, msg, w_param, l_param);
 

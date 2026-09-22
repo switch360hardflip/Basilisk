@@ -141,14 +141,18 @@ BSGFXAPI void _bsgfx_ini(const char* name, bs_U32 width, bs_U32 height, bs_U32 w
     bs_parseArgs(argc, argv);
 
 #ifndef NDEBUG
-	char* args[] = { "--use-validation-layers", "--track-changes"};
+	char* args[] = { 
+        "--use-validation-layers",
+        "--track-changes", 
+      //  "--force-vulkan-swapchain"
+    };
     bs_parseArgs(sizeof(args) / sizeof(char*), args);
 #endif
 
     _bsgfx_configure();
     bs_ini();
 
-    bs_Object* context_object = BS_CONTEXT(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN, BS_OBJECT_IN_FLIGHT_BIT);
+    bs_Object* context_object = BS_CONTEXT(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN, 0);
     bs_window(context_object->context, NULL, _bsgfx_callbacks_.context_listener, width, height, name, window_flags);
     bs_showWindow(context_object->context);
     bs_device(context_object->context, NULL);

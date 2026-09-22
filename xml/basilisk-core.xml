@@ -2221,7 +2221,7 @@
             <field><type>bs_vec2</type><name>border_size</name></field>
             <field><type>bs_WindowType</type><name>window_type</name></field>
             <field><type>bs_CursorIcon</type><name>cursor_icon</name></field>
-
+			 
             <field><type>bs_U32</type><name>dpi</name></field>
             <field><type>int</type><name>frames_in_flight</name></field>
             <field><type>int</type><name>frame</name></field>
@@ -2233,6 +2233,7 @@
             <field><type>bool</type><name>resized</name></field>
             <field><type>bool</type><name>image_acquired</name></field>
             <field><type>bs_Object*</type><name>swapchain_image</name></field>
+            <field><type>bs_Object*</type><name>present_queue</name></field>
 
             <field><type>bs_Timer</type><name>timer</name></field>
             <field><type>bs_IO</type><name>io</name></field>
@@ -2254,9 +2255,9 @@
             </structure>
 			 
 	 		<ifdef cond="_WIN32"/>
-			 <field><type>void*</type><name>hwnd</name></field>
-			 <field><type>struct IDXGISwapChain4*</type><name>dxgi_swapchain</name></field>
-			 <field><type>struct ID3D12CommandQueue*</type><name>dx_command_queue</name></field>
+			<field><type>void*</type><name>hwnd</name></field>
+			<field><type>struct IDXGISwapChain4*</type><name>dxgi_swapchain</name></field>
+			<field><type>struct ID3D12CommandQueue*</type><name>dx_command_queue</name></field>
 		 	<endif/>
 
 			<ifdef cond="__linux__"/>
@@ -2294,6 +2295,7 @@
 
         <structure name="bs_Args">
             <field><type>bool</type><name>use_validation_layers</name></field>
+            <field><type>bool</type><name>force_vulkan_swapchain</name></field>
         </structure>
         <structure name="bs_Features">
             <field><type>bool</type><name>independent_blend</name></field>

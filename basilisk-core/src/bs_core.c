@@ -141,7 +141,10 @@ BSAPI void _bs_endComment(bs_Queue* queue) {
 
 BSAPI void _bs_parseArgs(int argc, char* argv[]) {
     for (int i = 0; i < argc; i++) {
-        if (strcmp(argv[i], "--use-validation-layers") == 0) _bs_args_.use_validation_layers = true;
+        if (strcmp(argv[i], "--use-validation-layers") == 0) 
+            _bs_args_.use_validation_layers = true;
+        else if (strcmp(argv[i], "--force-vulkan-swapchain") == 0)
+            _bs_args_.force_vulkan_swapchain = true;
     }
 }
 
@@ -610,6 +613,7 @@ static void _bs_prepareLogicalDevice(bs_PhysicalDevice* physical_device) {
        // "VK_KHR_get_physical_device_properties2",
         "VK_KHR_shader_float_controls",
         "VK_KHR_spirv_1_4",
+        "VK_KHR_external_memory_win32",
 #ifndef NDEBUG
       //  "VK_NV_device_diagnostics_config"
       //  "VK_NV_ray_tracing_validation",
@@ -789,6 +793,7 @@ static void _bs_createDXGIDevice() {
         return;
     }
 
+    /*
 #ifndef NDEBUG
 
     hresult = DXGIGetDebugInterface1(0, &IID_IDXGIDebug1, &_bs_instance_->dxgi_debug);
@@ -832,6 +837,7 @@ static void _bs_createDXGIDevice() {
     _bs_instance_->dx12_debug->lpVtbl->EnableDebugLayer(_bs_instance_->dx12_debug);
     _bs_instance_->dx12_debug->lpVtbl->SetEnableGPUBasedValidation(_bs_instance_->dx12_debug, TRUE);
 #endif
+    */
 
     hresult = _bs_instance_->dxgi_factory->lpVtbl->EnumAdapterByLuid(
         _bs_instance_->dxgi_factory,
@@ -882,9 +888,9 @@ BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
     };
 
     const VkFormat formats[] = {
+        VK_FORMAT_R8G8B8A8_UNORM,
         VK_FORMAT_R8G8B8A8_SRGB,
         VK_FORMAT_B8G8R8A8_SRGB,
-        VK_FORMAT_R8G8B8A8_UNORM,
         VK_FORMAT_B8G8R8A8_UNORM,
     };
 
@@ -892,7 +898,8 @@ BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
     _bs_querySwapchainFormat(formats, sizeof(formats) / sizeof(*formats));
 
 #ifdef _WIN32
-    _bs_createDXGIDevice();
+    if (!_bs_args_.force_vulkan_swapchain)
+        _bs_createDXGIDevice();
 #endif
 
     _bs_scope_.context = NULL;
@@ -935,7 +942,6 @@ static void _bs_clearAttachment(bs_Queue* queue, bs_U32 index, bs_ivec2 dim, VkI
             },
         },
     };
-    printf("clearing %d, %d\n", dim.x, dim.y);
 
     vkCmdClearAttachments(commands, 1, &clear_attachment, 1, &rectangle);
 }
@@ -3581,22 +3587,114 @@ void _bs_resizeContext(bs_Context* context, bs_U32 width, bs_U32 height) {
     _bs_scope_.context = previous_context;
 }
 
+#ifdef _WIN32
+static uint32_t _bs_acquireDXGI() {
+    bs_Context* context = _bs_scope_.context;
+
+    // TODO("Present assumably blocks, so no sync necessary. Do better sync with DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT?");
+    const VkSubmitInfo submit = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount = 0, 
+        .pWaitSemaphores = NULL, 
+        .pWaitDstStageMask = NULL,
+        .commandBufferCount = 0, 
+        .pCommandBuffers = NULL,
+        .signalSemaphoreCount = 1, 
+        .pSignalSemaphores = &context->_[context->frame].semaphore
+    };
+
+    VkResult result = vkQueueSubmit(context->present_queue->queue->queue, 1, &submit, VK_NULL_HANDLE);
+    if (result != VK_SUCCESS) {
+        BS_WARN_VULKAN_ERROR("vkQueueSubmit", result, "");
+        return bs_convertVulkanResult(result);
+    }
+
+    bs_U32 next_image = context->dxgi_swapchain->lpVtbl->GetCurrentBackBufferIndex(context->dxgi_swapchain);
+    return next_image;
+}
+
+BSAPI void _bs_presentDXGI(bs_Queue* queue, bs_Queue* wait_queues[], int wait_queues_count) {
+    VkResult vk_result;
+
+    VkSemaphore* wait_semaphores = NULL;
+
+    if (wait_queues_count > 0) {
+        wait_semaphores = bs_alloca(wait_queues_count * sizeof(VkSemaphore));
+
+        for (int i = 0; i < wait_queues_count; i++) {
+            bs_Queue* wait_queue = wait_queues[i];
+
+            int swap = _bs_queueSwap(wait_queue);
+            wait_semaphores[i] = wait_queue->_[swap].semaphore;
+        }
+    }
+
+    bs_Context* context = _bs_scope_.context;
+
+   // assert(swapchainImageIndex == context->dxgi_swapchain->lpVtbl->GetCurrentBackBufferIndex(context->dxgi_swapchain));
+
+    const VkFenceCreateInfo fci = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = 0
+    };
+
+    VkFence fence;
+    VkResult errorCode = vkCreateFence(_bs_instance_->device, &fci, NULL, &fence);
+
+    const VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    const VkSubmitInfo submit = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount = wait_queues_count,
+        .pWaitSemaphores = wait_semaphores,
+        .pWaitDstStageMask = &waitStage,
+        .commandBufferCount = 0,
+        .pCommandBuffers = NULL,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores = NULL,
+    };
+
+    vk_result = vkQueueSubmit(context->present_queue->queue->queue, 1, &submit, fence);
+    //RESULT_HANDLER(errorCode, "vkQueueSubmit");
+
+    vk_result = vkWaitForFences(_bs_instance_->device, 1, &fence, VK_TRUE, UINT64_MAX);
+    //RESULT_HANDLER(errorCode, "vkWaitForFences");
+
+    vkDestroyFence(_bs_instance_->device, fence, NULL);
+
+    const UINT vsyncs = 1;
+    const UINT presentFlags = 0; // assumably
+    const DXGI_PRESENT_PARAMETERS presentParams = { 0 };
+  //  TODO("Should handle alternative return codes");
+  //  TODO("There are some artifacts, which suggest *something* has gone horribly wrong...")
+
+    context->dxgi_swapchain->lpVtbl->Present1(context->dxgi_swapchain, vsyncs, presentFlags, &presentParams);
+
+    _bs_scope_.context->frame = (_bs_scope_.context->frame + 1) % _bs_scope_.context->head.swaps_count;
+    _bs_scope_.context->image_acquired = false;
+}
+
+#endif
+
 // these functions should probably not be called by user
 BSAPI void _bs_acquire() {
-    if (_bs_scope_.context->image_acquired) return;
+    bs_Context* context = _bs_scope_.context;
+    if (context->image_acquired) return;
 
-    printf("acquiring\n");
+    if (context->dxgi_swapchain) {
+        context->image_index = _bs_acquireDXGI();
+        return;
+    }
+
     VkResult result = vkAcquireNextImageKHR(
         _bs_instance_->device,
-        _bs_scope_.context->swapchain,
+        context->swapchain,
         BS_U64_MAX,
-        _bs_scope_.context->_[_bs_scope_.context->frame].semaphore,
+        context->_[context->frame].semaphore,
         VK_NULL_HANDLE,
-        &_bs_scope_.context->image_index);
+        &context->image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        _bs_scope_.context->swapchain_ok = false;
-        printf("acquiring outofdate\n");
+        context->swapchain_ok = false;
         return;
     }
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -3659,6 +3757,12 @@ BSAPI void _val_bs_present(bs_Queue* queue, bs_Queue* wait_queues[], int wait_qu
 }
 
 BSAPI void _bs_present(bs_Queue* queue, bs_Queue* wait_queues[], int wait_queues_count) {
+    bs_Context* context = _bs_scope_.context;
+    if (context->dxgi_swapchain) {
+        _bs_presentDXGI(queue, wait_queues, wait_queues_count);
+        return;
+    }
+
     VkSemaphore* wait_semaphores = NULL;
 
     if (wait_queues_count > 0) {
@@ -3677,21 +3781,19 @@ BSAPI void _bs_present(bs_Queue* queue, bs_Queue* wait_queues[], int wait_queues
         .waitSemaphoreCount = wait_queues_count,
         .pWaitSemaphores = wait_semaphores,
         .swapchainCount = 1,
-        .pSwapchains = &_bs_scope_.context->swapchain,
-        .pImageIndices = &_bs_scope_.context->image_index,
+        .pSwapchains = &context->swapchain,
+        .pImageIndices = &context->image_index,
     };
 
-    printf("presenting\n");
     VkResult result = vkQueuePresentKHR(queue->queue, &present_i);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        printf("presenting outofdate\n");
-        _bs_scope_.context->swapchain_ok = false;
+        context->swapchain_ok = false;
     }
 //        _bs_resizeContext();
     else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         _bs_warnN(BS_CONSTANT_STRING("Failed to present swapchain image"));
 
-    _bs_scope_.context->frame = (_bs_scope_.context->frame + 1) % _bs_scope_.context->head.swaps_count;
-    _bs_scope_.context->image_acquired = false;
+    context->frame = (context->frame + 1) % context->head.swaps_count;
+    context->image_acquired = false;
 }

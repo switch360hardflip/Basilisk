@@ -3159,7 +3159,17 @@ struct bs_ImageIndex {
 struct bs_ImageSwaps {
     struct VkImage_T* vk_image;
     struct VkImageView_T* vk_image_view;
-    struct VkDeviceMemory_T* vk_memory;
+    union {
+        struct {
+            struct VkDeviceMemory_T* vk_memory;
+        };
+
+        struct {
+            struct ID3D12Resource* dx_image;
+            void* dx_shared_handle;
+            struct VkDeviceMemory_T* dx_memory;
+        };
+    };
 };
 
 struct bs_Image {
@@ -3862,6 +3872,7 @@ struct bs_Context {
     bool resized;
     bool image_acquired;
     bs_Object* swapchain_image;
+    bs_Object* present_queue;
     bs_Timer timer;
     bs_IO io;
     bs_ContextListener listener;
@@ -3916,6 +3927,7 @@ struct bs_Scope {
 
 struct bs_Args {
     bool use_validation_layers;
+    bool force_vulkan_swapchain;
 };
 
 struct bs_Features {
