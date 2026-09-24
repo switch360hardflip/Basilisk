@@ -203,7 +203,14 @@ void basilisk_instantiateTitleBarUI() {
     */
     position.x -= close_button_width;
     bs_Range range = basilisk_instantiateTitleBarButtonUI(close_caption, close_button_background_material, position, title_bar_size, close_button_width);
+    bs_vec3 p2 = position;
+    p2.y -= 100;
+    p2.x = 0;
+    const int w2 = bs_resolution(bs_scope()->context).x - 4;
+    printf("renderwidth %d\n", w2);
 
+    range = basilisk_instantiateTitleBarButtonUI(close_caption, close_button_background_material, p2, title_bar_size, w2);
+    
    /**
     Maximize button
     */
@@ -255,7 +262,7 @@ void onTitleBarTick() {
     //bs_Renderer* renderer = bs_fetch(BASILISK_RENDERERS, BASILISK_RENDERER_TITLE_BAR)->renderer;
     //bs_Queue* queue = bs_fetch(BASILISK_QUEUES, BASILISK_QUEUE_TITLE_BAR)->queue;
 
-    bs_RGBA clear_color = BS_RGBA(75, 75, 75, 255);
+    bs_RGBA clear_color = BS_RGBA(150, 75, 200, 255);
 
     bsgfx_Material* transparent_material = $transparent_color();
     bsgfx_Material* default_button_background_material = $default_button_background_color();

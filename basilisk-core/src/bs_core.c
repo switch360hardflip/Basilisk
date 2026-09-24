@@ -54,6 +54,7 @@
 #include <assert.h>
 #include <math.h>
 #include <threads.h>
+#include <dwmapi.h>
 
 bs_Args _bs_args_ = { 0 };
 bs_Features _bs_features_ = { 0 };
@@ -834,11 +835,14 @@ static void _bs_createDXGIDevice() {
 
     //TODO("DX12 Debug actually makes the window unresponsive");
     hresult = D3D12GetDebugInterface(&IID_ID3D12Debug1, &_bs_instance_->dx12_debug);
+    if (FAILED(hresult)) {
+        BS_WARN_HRESULT("DXGIGetDebugInterface1", hresult);
+        return;
+    }
     _bs_instance_->dx12_debug->lpVtbl->EnableDebugLayer(_bs_instance_->dx12_debug);
     _bs_instance_->dx12_debug->lpVtbl->SetEnableGPUBasedValidation(_bs_instance_->dx12_debug, TRUE);
 #endif
     */
-
     hresult = _bs_instance_->dxgi_factory->lpVtbl->EnumAdapterByLuid(
         _bs_instance_->dxgi_factory,
         *(LUID*)_bs_props_.device_luid, 
@@ -3559,6 +3563,11 @@ void _bs_tickContext(bs_Context* context);
 void _bs_resizeContext(bs_Context* context, bs_U32 width, bs_U32 height) {
     bs_Context* previous_context = _bs_scope_.context;
     _bs_scope_.context = context;
+
+    if (context->dimensions.x == width && context->dimensions.y == height) {
+        return;
+    }
+
     context->dimensions.x = width;
     context->dimensions.y = height;
     bs_logF("Resizing context \"%s\": %d, %d", context->title, width, height);
@@ -3666,6 +3675,7 @@ BSAPI void _bs_presentDXGI(bs_Queue* queue, bs_Queue* wait_queues[], int wait_qu
     const DXGI_PRESENT_PARAMETERS presentParams = { 0 };
   //  TODO("Should handle alternative return codes");
   //  TODO("There are some artifacts, which suggest *something* has gone horribly wrong...")
+    DwmFlush();
 
     context->dxgi_swapchain->lpVtbl->Present1(context->dxgi_swapchain, vsyncs, presentFlags, &presentParams);
 

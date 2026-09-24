@@ -3886,6 +3886,7 @@ struct bs_Context {
 #ifdef _WIN32
         struct {
             void* icons_font;
+            void* waitable_object;
         }win32;
 #endif
     };

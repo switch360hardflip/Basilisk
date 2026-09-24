@@ -103,12 +103,12 @@ static void basilisk_hiResSubpass0(bs_RendererScope* scope) {
 void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_color) {
     _clear_color_ = clear_color;
 
-    if (bs_scope()->context->swapchain_ok) {
+  //  if (bs_scope()->context->swapchain_ok) {
         bs_acquire();
-    }
-    if (!bs_scope()->context->swapchain_ok) {
-        return;
-    }
+  //  }
+  //  if (!bs_scope()->context->swapchain_ok) {
+  //      return;
+  //  }
 
     if (bs_resetQueue(queue) == BS_RESULT_OK) {
         if (renderer->render_pass) {
@@ -134,7 +134,6 @@ void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_col
         int wait_semaphores_count = sizeof(wait_semaphores) / sizeof(*wait_semaphores);
 
         bs_pushQueue(queue, wait_semaphores_count, wait_semaphores);
-        bs_stall(queue);
     }
 
     bs_Queue* wait_queues[] = {
@@ -142,6 +141,7 @@ void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_col
     };
 
     bs_present(queue, wait_queues, sizeof(wait_queues) / sizeof(*wait_queues));
+    bs_stall(queue);
 }
 
 bs_Object* basilisk_createHiResRenderer(bs_Context* context, int id) {

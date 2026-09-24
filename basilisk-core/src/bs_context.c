@@ -177,6 +177,11 @@ static inline bs_SwapchainProperties _bs_swapchainProperties() {
         bs_clamp(context->dimensions.x, props.capabilities.minImageExtent.width, props.capabilities.maxImageExtent.width),
         bs_clamp(context->dimensions.y, props.capabilities.minImageExtent.height, props.capabilities.maxImageExtent.height)
     );
+
+    props.resolution = BS_IV2(
+        context->dimensions.x,
+        context->dimensions.y
+    );
     const int max_images_count = 3;
     if (props.capabilities.maxImageCount > max_images_count)
         props.capabilities.maxImageCount = max_images_count;
@@ -215,11 +220,14 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             props.resolution.x,
             props.resolution.y,
             DXGI_FORMAT_R8G8B8A8_UNORM, // TODO
-            0
+            DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT
         );
 
         if (FAILED(hresult)) {
             BS_WARN_HRESULT("ResizeBuffers", hresult);
+
+            hresult = _bs_instance_->dx_device->lpVtbl->GetDeviceRemovedReason(_bs_instance_->dx_device);
+
            // return BS_RESULT_OK; // TODO
           //  return bs_convertHResult(hresult);
         }
@@ -270,10 +278,10 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             .SampleDesc = { 1, 0 },
             .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
             .BufferCount = props.images_count,
-            .Scaling = DXGI_SCALING_STRETCH,
+            .Scaling = DXGI_SCALING_NONE,
             .SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
             .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
-            .Flags = 0
+            .Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT
         };
 
         IDXGISwapChain1* swapchain1;
@@ -338,6 +346,10 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             &IID_ID3D12Resource, 
             &context->swapchain_image->image->_[i].dx_image
         );
+        if (FAILED(hresult)) {
+            BS_WARN_HRESULT("GetBuffer", hresult);
+            return bs_convertHResult(hresult);
+        }
     }
 
     for (int i = 0; i < props.images_count; i++) {
@@ -556,6 +568,13 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
         bsi_nameHandle(context->swapchain_image->image->_[i].vk_image_view, VK_OBJECT_TYPE_IMAGE_VIEW, context->title);
     }
 
+    context->win32.waitable_object = context->dxgi_swapchain->lpVtbl->GetFrameLatencyWaitableObject(context->dxgi_swapchain);
+
+   // hresult = context->dxgi_swapchain->lpVtbl->SetMaximumFrameLatency(context->dxgi_swapchain, 1);
+   // if (FAILED(hresult)) {
+   //     BS_WARN_HRESULT("SetMaximumFrameLatency", hresult);
+   // }
+
     return BS_RESULT_OK;
 }
 
@@ -752,7 +771,7 @@ BSAPI void _bs_resizeWindow(bs_Context* context, bs_U32 width, bs_U32 height) {
         SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER
     );
 
-   //_bs_resizeContext(context, width, height);
+   _bs_resizeContext(context, width, height);
 #else
     _bs_warnF("_bs_resizeWindow has not been implemented for this OS yet");
 #endif
@@ -1108,6 +1127,7 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
 
     if (fixed_tick) {
         _bs_instance_->in_fixed = true;
+        /*
         for (int i = 0; _bs_instance_->advance || (_bs_instance_->elapsed_time < _bs_instance_->time && i < 200 && !_bs_instance_->paused); i++) {
             _bs_instance_->new_time_index = !_bs_instance_->new_time_index;
             _bs_instance_->last_fixed_update_times[_bs_instance_->new_time_index] = _bs_instance_->fixed_time;
@@ -1117,6 +1137,7 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
             _bs_instance_->elapsed_time += _bs_instance_->fixed_time;
             _bs_instance_->advance = false;
         }
+        */
     }
 
     _bs_checkTimer(&_bs_instance_->timer);
@@ -1148,8 +1169,10 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
         bs_Context* ctx = *(bs_Context**)_bs_fetchUnit(contexts, i);
 
         _bs_scope_.context = ctx;
+        //InvalidateRect(ctx->hwnd, NULL, FALSE);
+        //UpdateWindow(ctx->hwnd);
        // if (ctx->swapchain_ok)
-            _bs_tickContext(ctx);
+       //     _bs_tickContext(ctx);
         _bs_scope_.context = NULL;
     }
 
@@ -1542,18 +1565,15 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
     }
 
     switch (msg) {
-    case WM_SIZING:
-        return 1;
     case WM_ERASEBKGND:
         return 1;
     case WM_SIZE:
         uint32_t width = l_param & 0xffff;
         uint32_t height = (l_param >> 16) & 0xffff;
 
-
         if (_bs_instance_->physical_device && context && context->surface && width > 0 && height > 0) {
-
-            _bs_resizeContext(context, width, height);
+            printf("AActual size %d %d\n", width, height);
+         //   _bs_resizeContext(context, width, height);
         }
         return DefWindowProc(hwnd, msg, w_param, l_param);
 
@@ -1583,26 +1603,7 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
         }
         else {
 
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hwnd, &ps);
-
-            RECT title_bar_rect;
-            GetClientRect(hwnd, &title_bar_rect);
-
-            COLORREF bg_color = RGB(0, 255, 0);
-            HBRUSH bg_brush = CreateSolidBrush(bg_color);
-            FillRect(hdc, &title_bar_rect, bg_brush);
-            DeleteObject(bg_brush);
-
-            CustomTitleBarButtonRects button_rects = win32_get_title_bar_button_rects(hwnd, &title_bar_rect);
-
-
-            EndPaint(hwnd, &ps);
             return 0;
-            return DefWindowProc(hwnd, msg, w_param, l_param);
-
-            return 0;
-
         }
         return DefWindowProc(hwnd, msg, w_param, l_param);
     case WM_ACTIVATE:
@@ -1651,6 +1652,26 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             break;
         }
 
+        RECT* rect = 0;
+
+        if (w_param) {
+            rect = ((NCCALCSIZE_PARAMS*)l_param)->rgrc;
+        }
+        else {
+            rect = (RECT*)l_param;
+        }
+
+        {
+            int width = rect->right - rect->left;
+            int height = rect->bottom - rect->top;
+            if (_bs_instance_->physical_device && context && context->surface && width > 0 && height > 0) {
+                _bs_resizeContext(context, width, height);
+            }
+        }
+
+        break;
+
+
         if (context && context->window_type == BS_WINDOW_NO_TITLE_BAR) {
 
             // https://handmade.network/forums/articles/t/9073-custom_window_title_bar_and_almost_correctly_drawing_windows_10_borders
@@ -1660,15 +1681,6 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             int borderLR = GetSystemMetrics(SM_CXFRAME) + padding;
             int borderTB = GetSystemMetrics(SM_CYFRAME) + padding;
 
-            RECT* rect = 0;
-
-            if (w_param) {
-                rect = ((NCCALCSIZE_PARAMS*)l_param)->rgrc;
-            }
-            else {
-                rect = (RECT*)l_param;
-            }
-
             rect->left += borderLR;
             rect->right -= borderLR;
             rect->bottom -= borderTB;
@@ -1676,6 +1688,7 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             if (IsZoomed(hwnd)) {
                 rect->top += borderTB;
             }
+
 
 
             break;

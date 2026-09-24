@@ -2250,6 +2250,7 @@
 				<ifdef cond="_WIN32"/>
 				    <structure instance="win32">
                         <field><type>void*</type><name>icons_font</name></field>
+                        <field><type>void*</type><name>waitable_object</name></field>
 				    </structure>
 				<endif/>
             </structure>
