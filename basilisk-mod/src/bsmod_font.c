@@ -879,7 +879,7 @@ BSMODAPI bs_Result _bsmod_packFont(
 			_bsmod_renderGlyphsMSDF(package_path, resource_name, face, 65, 66);
 			bs_pushQueue(queue->queue, 0, NULL);
 
-			bs_stallQueue(queue->queue);
+			bs_awaitQueue2(queue->queue);
 			_bsmod_pollRasterizer();
 		}
 

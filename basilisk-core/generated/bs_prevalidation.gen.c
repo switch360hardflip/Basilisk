@@ -885,20 +885,20 @@ BSAPI void _preval_bs_destroyQueue(bs_Queue* queue) {
     next.bs_destroyQueue(queue);
 }
 
-BSAPI void _preval_bs_stallGPU() {
-    next.bs_stallGPU();
+BSAPI void _preval_bs_awaitDevice() {
+    next.bs_awaitDevice();
 }
 
-BSAPI void _preval_bs_stallQueue(bs_Queue* queue) {
+BSAPI void _preval_bs_awaitQueue2(bs_Queue* queue) {
     BS_VALIDATE(queue != NULL, ,);
     BS_VALIDATE(queue->head.type == BS_OBJECT_QUEUE, ,);
-    next.bs_stallQueue(queue);
+    next.bs_awaitQueue2(queue);
 }
 
-BSAPI bs_Result _preval_bs_stall(bs_Queue* queue) {
+BSAPI bs_Result _preval_bs_awaitQueue(bs_Queue* queue) {
     BS_VALIDATE(queue != NULL, BS_RESULT_VALIDATION_ERROR,);
     BS_VALIDATE(queue->head.type == BS_OBJECT_QUEUE, BS_RESULT_VALIDATION_ERROR,);
-    return next.bs_stall(queue);
+    return next.bs_awaitQueue(queue);
 }
 
 BSAPI bs_Result _preval_bs_poll(bs_Queue* queue) {
@@ -2912,9 +2912,9 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_enqueue = _preval_bs_enqueue;
     functions.bs_queue = _preval_bs_queue;
     functions.bs_destroyQueue = _preval_bs_destroyQueue;
-    functions.bs_stallGPU = _preval_bs_stallGPU;
-    functions.bs_stallQueue = _preval_bs_stallQueue;
-    functions.bs_stall = _preval_bs_stall;
+    functions.bs_awaitDevice = _preval_bs_awaitDevice;
+    functions.bs_awaitQueue2 = _preval_bs_awaitQueue2;
+    functions.bs_awaitQueue = _preval_bs_awaitQueue;
     functions.bs_poll = _preval_bs_poll;
     functions.bs_imageSwap = _preval_bs_imageSwap;
     functions.bs_image = _preval_bs_image;

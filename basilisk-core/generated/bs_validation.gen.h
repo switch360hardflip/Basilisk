@@ -186,9 +186,9 @@ static inline bs_FunctionTable* _val_bs_getFunctions() {
     functions.bs_enqueue = (PFN_bs_enqueue)bs_getProcAddress(module, "_val_bs_enqueue");
     functions.bs_queue = (PFN_bs_queue)bs_getProcAddress(module, "_val_bs_queue");
     functions.bs_destroyQueue = (PFN_bs_destroyQueue)bs_getProcAddress(module, "_val_bs_destroyQueue");
-    functions.bs_stallGPU = (PFN_bs_stallGPU)bs_getProcAddress(module, "_val_bs_stallGPU");
-    functions.bs_stallQueue = (PFN_bs_stallQueue)bs_getProcAddress(module, "_val_bs_stallQueue");
-    functions.bs_stall = (PFN_bs_stall)bs_getProcAddress(module, "_val_bs_stall");
+    functions.bs_awaitDevice = (PFN_bs_awaitDevice)bs_getProcAddress(module, "_val_bs_awaitDevice");
+    functions.bs_awaitQueue2 = (PFN_bs_awaitQueue2)bs_getProcAddress(module, "_val_bs_awaitQueue2");
+    functions.bs_awaitQueue = (PFN_bs_awaitQueue)bs_getProcAddress(module, "_val_bs_awaitQueue");
     functions.bs_poll = (PFN_bs_poll)bs_getProcAddress(module, "_val_bs_poll");
     functions.bs_imageSwap = (PFN_bs_imageSwap)bs_getProcAddress(module, "_val_bs_imageSwap");
     functions.bs_image = (PFN_bs_image)bs_getProcAddress(module, "_val_bs_image");

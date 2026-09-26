@@ -38,6 +38,7 @@
     #include <uiribbon.h>
 
     #include <dxgi1_6.h>
+    #include <d3d12.h>
 
     #ifndef NDEBUG
         #include <dxgidebug.h>
@@ -200,36 +201,7 @@ static inline bs_SwapchainProperties _bs_swapchainProperties() {
    * DXGI Swapchain
    *============================================================================*/
 
-static void _bs_dumpDxgiMessages() {
-    IDXGIInfoQueue* q = _bs_instance_->dxgi_debug_queue;
-
-    UINT64 count = q->lpVtbl->GetNumStoredMessages(q, DXGI_DEBUG_ALL);
-
-    for (UINT64 i = 0; i < count; ++i) {
-        SIZE_T size = 0;
-
-        HRESULT hr = q->lpVtbl->GetMessage(q, DXGI_DEBUG_ALL, i, NULL, &size);
-
-        if (FAILED(hr))
-            continue;
-
-        DXGI_INFO_QUEUE_MESSAGE* msg = malloc(size);
-
-        if (!msg)
-            continue;
-
-        hr = q->lpVtbl->GetMessage(q, DXGI_DEBUG_ALL, i, msg, &size);
-
-        if (SUCCEEDED(hr))
-            fprintf(stderr, "\nDXGI [%u]\n%s\n", msg->Severity, msg->pDescription);
-
-        free(msg);
-    }
-    
-    q->lpVtbl->ClearStoredMessages(q, DXGI_DEBUG_ALL);
-}
-
-static void _bs_dx_waitForGPU(void) {
+static void _bs_awaitDxCommands() {
     ID3D12CommandQueue* queue = _bs_scope_.context->dx_command_queue;
 
     ID3D12Fence* fence = _bs_scope_.context->dx_fence;
@@ -238,7 +210,7 @@ static void _bs_dx_waitForGPU(void) {
 
     HRESULT hr = queue->lpVtbl->Signal(queue, fence, value);
     if (FAILED(hr)) {
-        BS_WARN_HRESULT("ID3D12CommandQueue::Signal", hr);
+        BS_WARN_HRESULT("Signal", hr);
         return;
     }
 
@@ -250,10 +222,7 @@ static void _bs_dx_waitForGPU(void) {
             return;
         }
 
-        WaitForSingleObject(
-            _bs_scope_.context->dx_fence_event,
-            INFINITE
-        );
+        WaitForSingleObject(_bs_scope_.context->dx_fence_event, INFINITE);
     }
 }
 
@@ -264,18 +233,29 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
     bs_SwapchainProperties props = _bs_swapchainProperties();
 
     if (context->dxgi_swapchain) {
-        bs_stallGPU();
-        _bs_dx_waitForGPU();
+        _bs_awaitDxCommands();
 
         for (int i = 0; i < context->swapchain_image->head->swaps_count; i++) {
             bs_ImageSwaps* swap = context->swapchain_image->image->_ + i;
             vkDestroyImageView(_bs_instance_->device, swap->vk_image_view, NULL);
             vkDestroyImage(_bs_instance_->device, swap->vk_image, NULL);
-            vkFreeMemory(_bs_instance_->device, swap->dx_memory, NULL);
-            swap->dx_image->lpVtbl->Release(swap->dx_image);
-            CloseHandle(swap->dx_shared_handle);
+            vkFreeMemory(_bs_instance_->device, swap->vk_memory, NULL);
+
+            swap->vk_image_view = NULL;
+            swap->vk_image = NULL;
+            swap->vk_memory = NULL;
         }
-        bs_stallGPU();
+
+        for (int i = 0; i < context->swapchain_image->head->swaps_count; i++) {
+            bs_DxSwapchainImage* image = context->dx_swapchain_images + i;
+
+            image->dx_image->lpVtbl->Release(image->dx_image);
+            CloseHandle(image->dx_shared_handle);
+
+            image->dx_image = NULL;
+            image->dx_shared_handle = NULL;
+        }
+
       //  _bs_destroySwapchain();
 
         hresult = context->dxgi_swapchain->lpVtbl->ResizeBuffers(
@@ -291,7 +271,6 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             BS_WARN_HRESULT("ResizeBuffers", hresult);
             if (hresult == 0x887a0005) {
                 hresult = _bs_instance_->dx_device->lpVtbl->GetDeviceRemovedReason(_bs_instance_->dx_device);
-                _bs_dumpDxgiMessages();
                 BS_WARN_HRESULT("GetDeviceRemovedReason", hresult);
             }
 
@@ -427,8 +406,10 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
    /**
     Swapchain Images
     */
-    if (context->swapchain_image == NULL)
+    if (context->swapchain_image == NULL) {
         context->swapchain_image = BS_OBJECT(bs_Image, -1, 0, props.images_count, BS_OBJECT_SWAPCHAIN_IMAGE_BIT, BS_OBJECT_IMAGE);
+        context->dx_swapchain_images = bs_calloc(props.images_count, sizeof(bs_DxSwapchainImage));
+    }
 
     *context->swapchain_image->image = (bs_Image){
         .head = context->swapchain_image->image->head,
@@ -442,7 +423,7 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             context->dxgi_swapchain, 
             i, 
             &IID_ID3D12Resource, 
-            &context->swapchain_image->image->_[i].dx_image
+            &context->dx_swapchain_images[i].dx_image
         );
         if (FAILED(hresult)) {
             BS_WARN_HRESULT("GetBuffer", hresult);
@@ -450,15 +431,20 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
         }
     }
 
+    int len = snprintf(NULL, 0, "Local\\%s0_", context->title) + 36;
+    char* shared_handle_name = bs_alloca(len + 1);
+    LPCWSTR* wide_shared_handle_name = bs_alloca((len + 1) * sizeof(wchar_t));
+
     for (int i = 0; i < props.images_count; i++) {
         bs_ImageSwaps* swap = context->swapchain_image->image->_ + i;
+        bs_DxSwapchainImage* dx_swap = context->dx_swapchain_images + i;
 
         D3D12_RESOURCE_DESC dx_image_desc;
-        swap->dx_image->lpVtbl->GetDesc(swap->dx_image, &dx_image_desc);
+        dx_swap->dx_image->lpVtbl->GetDesc(dx_swap->dx_image, &dx_image_desc);
 
         D3D12_HEAP_PROPERTIES dx_image_heap;
         D3D12_HEAP_FLAGS dx_image_heap_flags;
-        hresult = swap->dx_image->lpVtbl->GetHeapProperties(swap->dx_image, &dx_image_heap, &dx_image_heap_flags);
+        hresult = dx_swap->dx_image->lpVtbl->GetHeapProperties(dx_swap->dx_image, &dx_image_heap, &dx_image_heap_flags);
         if (FAILED(hresult)) {
             BS_WARN_HRESULT("GetHeapProperties", hresult);
             return bs_convertHResult(hresult);
@@ -525,7 +511,7 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             _bs_instance_->device,
             &image_ci,
             NULL,
-            &context->swapchain_image->image->_[i].vk_image
+            &swap->vk_image
         );
         if (vk_result != VK_SUCCESS) {
             _bs_warnF("Failed to create swapchain image for window \"%s\" (%d)", context->title, vk_result);
@@ -534,23 +520,24 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
 
        // bsi_nameHandle((bs_U64)context->swapchain_image->image->_[i].vk_image, VK_OBJECT_TYPE_IMAGE, context->title);
 
-        /**
-         */
-         //TODO("Not sure why I added this optional value. Was this a workaround?")
-        wchar_t* shared_handle_name = L"Local\\SomeBullshitNameIDontNeedAnyway0";
-        int shared_handle_name_len = lstrlenW(shared_handle_name);
+       /**
+        Shared Handle
+        */
+        bs_GUID guid = bs_guid();
+        char guid_string[37];
+        bs_guidToString(&guid, guid_string);
 
-        shared_handle_name[shared_handle_name_len - 1] = '0' + i;
+        sprintf(shared_handle_name, "Local\\%s%d_%s", context->title, i, guid_string);
+        bs_widen(shared_handle_name, wide_shared_handle_name, len + 1);
 
         //TODO("I am pretty sure DX Swapchain is not considered SHARED, but it seems to work anyway.")
-
         hresult = _bs_instance_->dx_device->lpVtbl->CreateSharedHandle(
             _bs_instance_->dx_device,
-            swap->dx_image,
+            dx_swap->dx_image,
             NULL,
             GENERIC_ALL,
-            shared_handle_name,
-            &swap->dx_shared_handle
+            wide_shared_handle_name,
+            &dx_swap->dx_shared_handle
         );
         if (FAILED(hresult)) {
             BS_WARN_HRESULT("CreateSharedHandle", hresult);
@@ -564,7 +551,7 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
         vk_result = _bs_procs_.vkGetMemoryWin32HandlePropertiesKHR(
             _bs_instance_->device, 
             VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT, 
-            swap->dx_shared_handle,
+            dx_swap->dx_shared_handle,
             &win32_mem_props
         );
         if (vk_result != VK_SUCCESS) {
@@ -573,7 +560,7 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
         }
 
         VkMemoryRequirements mem_req;
-        vkGetImageMemoryRequirements(_bs_instance_->device, context->swapchain_image->image->_[i].vk_image, &mem_req);
+        vkGetImageMemoryRequirements(_bs_instance_->device, swap->vk_image, &mem_req);
 
         // TODO("Workaround for AMD driver.");
         if (win32_mem_props.memoryTypeBits == 0xcdcdcdcd)
@@ -603,14 +590,14 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
         // DX12 Resource has to be dedicated per Vk spec
         const VkMemoryDedicatedAllocateInfoKHR memory_dedicated_alloc_i = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO,
-            .image = context->swapchain_image->image->_[i].vk_image,
+            .image = swap->vk_image,
         };
 
         const VkImportMemoryWin32HandleInfoKHR import_memory_win32_handle = {
             .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR,
             .pNext = &memory_dedicated_alloc_i,
             .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D12_RESOURCE_BIT_KHR,
-            .handle = swap->dx_shared_handle,
+            .handle = dx_swap->dx_shared_handle,
         };
 
         const VkMemoryAllocateInfo mem_alloc_i = {
@@ -624,7 +611,7 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             _bs_instance_->device, 
             &mem_alloc_i,
             NULL, 
-            &swap->dx_memory
+            &swap->vk_memory
         ); 
         if (vk_result != VK_SUCCESS) {
             BS_WARN_VULKAN_ERROR("vkAllocateMemory", vk_result, "");
@@ -633,8 +620,8 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
 
         vk_result = vkBindImageMemory(
             _bs_instance_->device, 
-            context->swapchain_image->image->_[i].vk_image,
-            swap->dx_memory,
+            swap->vk_image,
+            swap->vk_memory,
             0
         ); 
         if (vk_result != VK_SUCCESS) {
@@ -644,7 +631,7 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
 
         VkImageViewCreateInfo image_view_ci = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = context->swapchain_image->image->_[i].vk_image,
+            .image = swap->vk_image,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = (VkFormat)_bs_instance_->physical_device->surface_format.format,
             .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -656,7 +643,7 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             _bs_instance_->device, 
             &image_view_ci, 
             NULL, 
-            &context->swapchain_image->image->_[i].vk_image_view
+            &swap->vk_image_view
         );
         if (vk_result != VK_SUCCESS) {
             _bs_warnF("Failed to create swapchain image view for window \"%s\" (%d)", context->title, vk_result);
@@ -824,7 +811,6 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
                 return bs_convertVulkanResult(result);
             }
         }
-
     }
 
     _bs_scope_.context = last_context;
@@ -1665,16 +1651,15 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
     switch (msg) {
     case WM_ERASEBKGND:
         return 1;
-    case WM_SIZE:
+    case WM_SIZE: {
         uint32_t width = l_param & 0xffff;
         uint32_t height = (l_param >> 16) & 0xffff;
 
         if (_bs_instance_->physical_device && context && context->surface && width > 0 && height > 0) {
-            printf("AActual size %d %d\n", width, height);
-         //   _bs_resizeContext(context, width, height);
+            //   _bs_resizeContext(context, width, height);
         }
         return DefWindowProc(hwnd, msg, w_param, l_param);
-
+    }
     case WM_PAINT:
         if (context && context->window_type == BS_WINDOW_WIN32) {
             bool has_focus = !!GetFocus();
@@ -1759,17 +1744,6 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             rect = (RECT*)l_param;
         }
 
-        {
-            int width = rect->right - rect->left;
-            int height = rect->bottom - rect->top;
-            if (_bs_instance_->physical_device && context && context->surface && width > 0 && height > 0) {
-                _bs_resizeContext(context, width, height);
-            }
-        }
-
-        break;
-
-
         if (context && context->window_type == BS_WINDOW_NO_TITLE_BAR) {
 
             // https://handmade.network/forums/articles/t/9073-custom_window_title_bar_and_almost_correctly_drawing_windows_10_borders
@@ -1786,13 +1760,20 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             if (IsZoomed(hwnd)) {
                 rect->top += borderTB;
             }
-
-
-
-            break;
         }
-        else
-            return DefWindowProc(hwnd, msg, w_param, l_param);
+
+        {
+            int width = rect->right - rect->left;
+            int height = rect->bottom - rect->top;
+            if (_bs_instance_->physical_device && context && context->surface && width > 0 && height > 0) {
+                _bs_resizeContext(context, width, height);
+            }
+        }
+        break;
+
+
+      //  else
+      //      return DefWindowProc(hwnd, msg, w_param, l_param);
     case WM_MOUSEACTIVATE:
 
         if (context && context->window_type == BS_WINDOW_POPUP)

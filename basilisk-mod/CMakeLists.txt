@@ -75,7 +75,7 @@ endif()
 if (${IS_DEBUG_BUILD})
     target_link_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_SOURCE_DIR}/external/
-        ${CMAKE_SOURCE_DIR}/build/basilisk/Debug
+        ${CMAKE_SOURCE_DIR}/build/basilisk/$<CONFIG>
         ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang/Debug
         ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang
         ${CMAKE_SOURCE_DIR}/build/external/glslang/glslang/OSDependent/Unix
@@ -123,27 +123,31 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 endif()
 
-if (WIN32 AND ${IS_DEBUG_BUILD})
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        GenericCodeGend
-        glslangd
-        glslang-default-resource-limitsd
-        MachineIndependentd
-        SPIRVd
-        spirv-cross-cd
-        spirv-cross-cored
-        spirv-cross-glsld
-    )
-else()
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        OSDependent
-        GenericCodeGen
-        glslang
-        glslang-default-resource-limits
-        MachineIndependent
-        SPIRV
-        spirv-cross-c
-        spirv-cross-core
-        spirv-cross-glsl
-    )
-endif()
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    $<$<CONFIG:Debug>:OSDependentd>
+    $<$<NOT:$<CONFIG:Debug>>:OSDependent>
+
+    $<$<CONFIG:Debug>:GenericCodeGend>
+    $<$<NOT:$<CONFIG:Debug>>:GenericCodeGen>
+
+    $<$<CONFIG:Debug>:glslangd>
+    $<$<NOT:$<CONFIG:Debug>>:glslang>
+
+    $<$<CONFIG:Debug>:glslang-default-resource-limitsd>
+    $<$<NOT:$<CONFIG:Debug>>:glslang-default-resource-limits>
+
+    $<$<CONFIG:Debug>:MachineIndependentd>
+    $<$<NOT:$<CONFIG:Debug>>:MachineIndependent>
+
+    $<$<CONFIG:Debug>:SPIRVd>
+    $<$<NOT:$<CONFIG:Debug>>:SPIRV>
+
+    $<$<CONFIG:Debug>:spirv-cross-cd>
+    $<$<NOT:$<CONFIG:Debug>>:spirv-cross-c>
+
+    $<$<CONFIG:Debug>:spirv-cross-cored>
+    $<$<NOT:$<CONFIG:Debug>>:spirv-cross-core>
+
+    $<$<CONFIG:Debug>:spirv-cross-glsld>
+    $<$<NOT:$<CONFIG:Debug>>:spirv-cross-glsl>
+)

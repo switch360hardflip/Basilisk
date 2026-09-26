@@ -141,7 +141,7 @@ void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_col
     };
 
     bs_present(queue, wait_queues, sizeof(wait_queues) / sizeof(*wait_queues));
-    bs_stall(queue);
+    bs_awaitQueue(queue);
 }
 
 bs_Object* basilisk_createHiResRenderer(bs_Context* context, int id) {

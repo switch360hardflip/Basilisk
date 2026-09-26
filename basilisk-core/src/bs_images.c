@@ -234,7 +234,7 @@ BSAPI void _bs_transition(bs_Queue* queue, bs_Image* image, int index, bs_ImageL
 
     if (queue->flags & BS_QUEUE_SINGLE_TIMES_BIT) {
         _bs_pushQueue(queue, 0, NULL);
-        _bs_stallQueue(queue);
+        _bs_awaitQueue2(queue);
     }
 }
 
@@ -710,7 +710,7 @@ BSAPI void _bs_copyBufferToImage(bs_Queue* queue, bs_Buffer* buffer, bs_Image* i
 
     if (queue->flags & BS_QUEUE_SINGLE_TIMES_BIT) {
         _bs_pushQueue(queue, 0, NULL);
-        _bs_stallQueue(queue);
+        _bs_awaitQueue2(queue);
     }
 }
 

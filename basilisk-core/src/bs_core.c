@@ -27,6 +27,7 @@
 #ifdef _WIN32
     #define INITGUID
     #include <dxgi1_6.h>
+    #include <d3d12.h>
 
     #ifndef NDEBUG
         #include <dxgidebug.h>
@@ -794,6 +795,7 @@ static void _bs_createDXGIDevice() {
         return;
     }
 
+    /*
 #ifndef NDEBUG
     hresult = DXGIGetDebugInterface1(0, &IID_IDXGIDebug1, &_bs_instance_->dxgi_debug);
     if (FAILED(hresult)) {
@@ -824,6 +826,7 @@ static void _bs_createDXGIDevice() {
     _bs_instance_->dx12_debug->lpVtbl->EnableDebugLayer(_bs_instance_->dx12_debug);
     _bs_instance_->dx12_debug->lpVtbl->SetEnableGPUBasedValidation(_bs_instance_->dx12_debug, TRUE);
 #endif
+    */
 
     hresult = _bs_instance_->dxgi_factory->lpVtbl->EnumAdapterByLuid(
         _bs_instance_->dxgi_factory,
@@ -1251,7 +1254,7 @@ BSAPI void _bs_copyAsync(bs_Queue* queue, bs_Buffer* src, bs_Buffer* dst, bs_U32
 
     if (queue->flags & BS_QUEUE_SINGLE_TIMES_BIT) {
         _bs_pushQueue(queue, 0, NULL);
-        _bs_stallQueue(queue);
+        _bs_awaitQueue2(queue);
     }
 }
 
@@ -2686,7 +2689,7 @@ BSAPI void _bs_dispatchAsync(bs_Queue* queue, bs_Pipeline* pipeline, bs_U32 x, b
 
     if (queue->flags & BS_QUEUE_SINGLE_TIMES_BIT) {
         _bs_pushQueue(queue, 0, NULL);
-        _bs_stallQueue(queue);
+        _bs_awaitQueue2(queue);
     }
 }
 
@@ -2920,7 +2923,7 @@ static bs_Result _bs_buildBLAS(bs_Queue* queue, bs_RayTracer* tracer, bs_Buffer*
     queue->flags |= BS_QUEUE_SINGLE_TIMES_BIT;
 
     _bs_pushQueue(queue, 0, NULL);
-    _bs_stallQueue(queue);
+    _bs_awaitQueue2(queue);
 
     return BS_RESULT_OK;
 }
@@ -3062,7 +3065,7 @@ static bs_Result _bs_buildTLAS(bs_Queue* queue, bs_RayTracer* tracer, bs_Buffer*
     queue->flags |= BS_QUEUE_SINGLE_TIMES_BIT;
 
     _bs_pushQueue(queue, 0, NULL);
-    _bs_stallQueue(queue);
+    _bs_awaitQueue2(queue);
 
     return BS_RESULT_OK;
 }
@@ -3119,7 +3122,7 @@ BSAPI void _bs_barrier(bs_Queue* queue, bs_U32 dependency_flags, bs_U32 src_stag
 
     if (queue->flags & BS_QUEUE_SINGLE_TIMES_BIT) {
         _bs_pushQueue(queue, 0, NULL);
-        _bs_stallQueue(queue);
+        _bs_awaitQueue2(queue);
     }
 }
 
@@ -3343,15 +3346,15 @@ bs_WaitSemaphore _bs_acquisitionSemaphore() {
     };
 }
 
-BSAPI void _bs_stallQueue(bs_Queue* queue) {
+BSAPI void _bs_awaitQueue2(bs_Queue* queue) {
     vkQueueWaitIdle(queue->queue);
 }
 
-BSAPI void _bs_stallGPU() {
+BSAPI void _bs_awaitDevice() {
     vkDeviceWaitIdle(_bs_instance_->device);
 }
 
-BSAPI bs_Result _bs_stall(bs_Queue* queue) {
+BSAPI bs_Result _bs_awaitQueue(bs_Queue* queue) {
     VkResult result;
 
     int swap = _bs_queueSwap(queue);
@@ -3533,8 +3536,6 @@ static void _bs_resizeSwapchain() {
 
     if (ctx->window_type == BS_WINDOW_WIN32)
         return;
-
-  // bs_stallGPU();
 
     _bs_swapchain(_bs_scope_.context);
 

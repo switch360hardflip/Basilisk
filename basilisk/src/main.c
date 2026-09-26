@@ -136,7 +136,6 @@ static void onLog(const bs_LogQueueItem* item) {
 		[BS_MESSAGE_VALIDATION_ERROR] = "[VALIDATION]",
 	};
 
-#ifndef NDEBUG
 	static const char* levels_color[BS_MESSAGE_LEVELS_COUNT] = {
 		[BS_MESSAGE_INFO] = BS_PRINT_COLOR("[INFO]", BS_PRINT_CYAN),
 		[BS_MESSAGE_WARNING] = BS_PRINT_COLOR("[WARNING]", BS_PRINT_YELLOW),
@@ -155,7 +154,6 @@ static void onLog(const bs_LogQueueItem* item) {
 	if (item->code != 0) {
 		printf("    code: %ld\n    code: %lx\n", item->code, item->code);
 	}
-#endif
 
 	bs_writeLogFileF("%s %s [%d] %s\n", libraries[item->library], levels[item->level], item->thread_id, item->message);
 	if (item->function) {
@@ -201,9 +199,25 @@ static void onApplicationResize(bs_Context* context, bs_ivec2 new_size) {
 }
 
 int main(int argc, char* argv[]) {
-	bs_enableValidation();
-	bsgfx_enableValidation();
-	bsmod_enableValidation();
+	bs_disableValidation();
+	bsgfx_disableValidation();
+	bsmod_disableValidation();
+
+#ifndef NDEBUG
+	char* args[] = {
+		"--use-validation-layers",
+		"--track-changes",
+		//  "--force-vulkan-swapchain"
+	};
+	bs_parseArgs(sizeof(args) / sizeof(char*), args);
+	bs_parseArgs(argc, argv);
+#endif
+	//if (bs_args()->use_validation_layers) {
+		bs_enableValidation();
+		bsgfx_enableValidation();
+		bsmod_enableValidation();
+		printf("Enabled validation layers\n");
+//	}
 
 	#ifdef _WIN32
 	basilisk.main_thread_id = thrd_current()._Tid;

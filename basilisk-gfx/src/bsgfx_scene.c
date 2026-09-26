@@ -298,7 +298,7 @@ BSGFXAPI void _bsgfx_loadScene(const char* name) {
         bs_Object* queue_object = BS_QUEUE(-1, 0, 0);
         if (bs_queue(queue_object, 0, BS_QUEUE_COMPUTE_BIT) == BS_RESULT_OK) {
             bs_enqueue(queue_object->queue, _bsgfx_computePrefabShadows);
-            bs_stallGPU();
+            bs_awaitDevice();
         }
         
         //bsgfx_computePrefabShadows();

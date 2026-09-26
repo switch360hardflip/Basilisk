@@ -2213,8 +2213,16 @@
 			<field><type>bs_ContextResizeFunction</type><name>resize</name></field>
 			<field><type>bs_ContextActivateFunction</type><name>activate</name></field>
 		</structure>
-         <structure name="bs_Context">
-            <field><type>bs_Header</type><name>head</name></field>
+		
+		<ifdef cond="_WIN32"/>
+		    <structure name="bs_DxSwapchainImage">
+				<field><type>struct ID3D12Resource*</type><name>dx_image</name></field>
+				<field><type>void*</type><name>dx_shared_handle</name></field>
+		    </structure>
+		<endif/>
+
+		<structure name="bs_Context">
+			<field><type>bs_Header</type><name>head</name></field>
             <field><type>const char*</type><name>title</name></field>
             <field><type>bs_ivec2</type><name>dimensions</name></field>
             <field><type>bs_vec2</type><name>cursor</name></field>
@@ -2256,10 +2264,13 @@
             </structure>
 			 
 	 		<ifdef cond="_WIN32"/>
-			<field><type>void*</type><name>hwnd</name></field>
-			<field><type>struct IDXGISwapChain4*</type><name>dxgi_swapchain</name></field>
-			<field><type>struct ID3D12CommandQueue*</type><name>dx_command_queue</name></field>
-		 	<endif/>
+			    <field><type>void*</type><name>hwnd</name></field>
+			    <field><type>struct IDXGISwapChain4*</type><name>dxgi_swapchain</name></field>
+			    <field><type>struct ID3D12CommandQueue*</type><name>dx_command_queue</name></field>
+			    <field><type>struct ID3D12Fence*</type><name>dx_fence</name></field>
+			    <field><type>bs_U64</type><name>dx_fence_value</name></field>
+			    <field><type>void*</type><name>dx_fence_event</name></field>
+			 <endif/>
 
 			<ifdef cond="__linux__"/>
 			 <field><type>void*</type><name>display</name></field>
@@ -2280,13 +2291,16 @@
 			 <field><type>void*</type><name>buffer</name></field>
 			<endif/>
 			 
+			<field><type>bs_DxSwapchainImage*</type><name>dx_swapchain_images</name></field>
+			
 			<field><type>struct VkSwapchainKHR_T*</type><name>swapchain</name></field>
 			<field><type>struct VkSurfaceKHR_T*</type><name>surface</name></field>
-			 
-            <structure instance="_[]">
+
+			 <structure instance="_[]">
 				<field><type>struct VkSemaphore_T*</type><name>semaphore</name></field>
             </structure>
         </structure>
+		
 		<structure name="bs_Scope">
             <field><type>bs_Context*</type><name>context</name></field>
 			<field><type>bs_Queue*</type><name>queue</name></field>
@@ -3295,14 +3309,14 @@
             <return>void</return>
             <param><type>bs_Queue*</type><name>queue</name></param>
         </function>
-        <function name="bs_stallGPU">
+        <function name="bs_awaitDevice">
             <return>void</return>
         </function>
-        <function name="bs_stallQueue">
+        <function name="bs_awaitQueue2">
             <return>void</return>
             <param><type>bs_Queue*</type><name>queue</name></param>
         </function>
-        <function name="bs_stall">
+        <function name="bs_awaitQueue">
             <return>bs_Result</return>
             <param><type>bs_Queue*</type><name>queue</name></param>
         </function>

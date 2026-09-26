@@ -1769,21 +1769,21 @@ void bs_destroyQueue(
     next.bs_destroyQueue(queue);
 }
 
-void bs_stallGPU()
+void bs_awaitDevice()
 {
-    next.bs_stallGPU();
+    next.bs_awaitDevice();
 }
 
-void bs_stallQueue(
+void bs_awaitQueue2(
     bs_Queue* queue)
 {
-    next.bs_stallQueue(queue);
+    next.bs_awaitQueue2(queue);
 }
 
-bs_Result bs_stall(
+bs_Result bs_awaitQueue(
     bs_Queue* queue)
 {
-    return next.bs_stall(queue);
+    return next.bs_awaitQueue(queue);
 }
 
 bs_Result bs_poll(

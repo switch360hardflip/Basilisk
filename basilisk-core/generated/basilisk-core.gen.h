@@ -146,6 +146,7 @@ typedef struct bs_PhysicalDevice bs_PhysicalDevice;
 typedef struct bs_ContextInputParams bs_ContextInputParams;
 typedef struct bs_ContextActivateParams bs_ContextActivateParams;
 typedef struct bs_ContextListener bs_ContextListener;
+typedef struct bs_DxSwapchainImage bs_DxSwapchainImage;
 typedef struct bs_Context bs_Context;
 typedef struct bs_Scope bs_Scope;
 typedef struct bs_Args bs_Args;
@@ -3159,17 +3160,7 @@ struct bs_ImageIndex {
 struct bs_ImageSwaps {
     struct VkImage_T* vk_image;
     struct VkImageView_T* vk_image_view;
-    union {
-        struct {
-            struct VkDeviceMemory_T* vk_memory;
-        };
-
-        struct {
-            struct ID3D12Resource* dx_image;
-            void* dx_shared_handle;
-            struct VkDeviceMemory_T* dx_memory;
-        };
-    };
+    struct VkDeviceMemory_T* vk_memory;
 };
 
 struct bs_Image {
@@ -3853,6 +3844,13 @@ struct bs_ContextListener {
     bs_ContextActivateFunction activate;
 };
 
+#ifdef _WIN32
+struct bs_DxSwapchainImage {
+    struct ID3D12Resource* dx_image;
+    void* dx_shared_handle;
+};
+
+#endif
 struct bs_Context {
     bs_Header head;
     const char* title;
@@ -3915,6 +3913,7 @@ struct bs_Context {
     void* viewport;
     void* buffer;
 #endif
+    bs_DxSwapchainImage* dx_swapchain_images;
     struct VkSwapchainKHR_T* swapchain;
     struct VkSurfaceKHR_T* surface;
     struct {
@@ -6454,14 +6453,14 @@ bs_destroyQueue(
   @return void
   */
 BSAPI void
-bs_stallGPU();
+bs_awaitDevice();
 
  /**
   @param queue
   @return void
   */
 BSAPI void
-bs_stallQueue(
+bs_awaitQueue2(
     bs_Queue* queue);
 
  /**
@@ -6469,7 +6468,7 @@ bs_stallQueue(
   @return bs_Result
   */
 BSAPI bs_Result
-bs_stall(
+bs_awaitQueue(
     bs_Queue* queue);
 
  /**
