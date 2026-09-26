@@ -3894,6 +3894,9 @@ struct bs_Context {
     void* hwnd;
     struct IDXGISwapChain4* dxgi_swapchain;
     struct ID3D12CommandQueue* dx_command_queue;
+    struct ID3D12Fence* dx_fence;
+    bs_U64 dx_fence_value;
+    void* dx_fence_event;
 #endif
 #ifdef __linux__
     void* display;
@@ -3955,7 +3958,7 @@ struct bs_LogQueueItem {
     bs_Library library;
     bs_MessageLevel level;
     bs_Result result;
-    int code;
+    long code;
     const char* function;
     const char* file;
     int line;

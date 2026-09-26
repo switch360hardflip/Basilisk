@@ -2321,7 +2321,7 @@
 			<field><type>bs_Library</type><name>library</name></field>
 			<field><type>bs_MessageLevel</type><name>level</name></field>
 			<field><type>bs_Result</type><name>result</name></field>
-			<field><type>int</type><name>code</name></field>
+			<field><type>long</type><name>code</name></field>
 			<field><type>const char*</type><name>function</name></field>
 			<field><type>const char*</type><name>file</name></field>
 			<field><type>int</type><name>line</name></field>

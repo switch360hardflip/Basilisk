@@ -150,12 +150,14 @@ void _bs_destroySwapchain() {
     bs_Image* swapchain_image = _bs_scope_.context->swapchain_image->image;
 
     for (int i = 0; i < _bs_scope_.context->head.swaps_count; i++) {
-        vkDestroyImageView(_bs_instance_->device, swapchain_image->_[i].vk_image_view, NULL);
-        swapchain_image->_[i].vk_image_view = 0;
+        if (swapchain_image->_[i].vk_image_view)
+            vkDestroyImageView(_bs_instance_->device, swapchain_image->_[i].vk_image_view, NULL);
+        swapchain_image->_[i].vk_image_view = VK_NULL_HANDLE;
     }
 
-    vkDestroySwapchainKHR(_bs_instance_->device, _bs_scope_.context->swapchain, NULL);
-    _bs_scope_.context->swapchain = 0;
+    if (_bs_scope_.context->swapchain)
+        vkDestroySwapchainKHR(_bs_instance_->device, _bs_scope_.context->swapchain, NULL);
+    _bs_scope_.context->swapchain = VK_NULL_HANDLE;
 }
 
 
@@ -198,6 +200,63 @@ static inline bs_SwapchainProperties _bs_swapchainProperties() {
    * DXGI Swapchain
    *============================================================================*/
 
+static void _bs_dumpDxgiMessages() {
+    IDXGIInfoQueue* q = _bs_instance_->dxgi_debug_queue;
+
+    UINT64 count = q->lpVtbl->GetNumStoredMessages(q, DXGI_DEBUG_ALL);
+
+    for (UINT64 i = 0; i < count; ++i) {
+        SIZE_T size = 0;
+
+        HRESULT hr = q->lpVtbl->GetMessage(q, DXGI_DEBUG_ALL, i, NULL, &size);
+
+        if (FAILED(hr))
+            continue;
+
+        DXGI_INFO_QUEUE_MESSAGE* msg = malloc(size);
+
+        if (!msg)
+            continue;
+
+        hr = q->lpVtbl->GetMessage(q, DXGI_DEBUG_ALL, i, msg, &size);
+
+        if (SUCCEEDED(hr))
+            fprintf(stderr, "\nDXGI [%u]\n%s\n", msg->Severity, msg->pDescription);
+
+        free(msg);
+    }
+    
+    q->lpVtbl->ClearStoredMessages(q, DXGI_DEBUG_ALL);
+}
+
+static void _bs_dx_waitForGPU(void) {
+    ID3D12CommandQueue* queue = _bs_scope_.context->dx_command_queue;
+
+    ID3D12Fence* fence = _bs_scope_.context->dx_fence;
+
+    UINT64 value = ++_bs_scope_.context->dx_fence_value;
+
+    HRESULT hr = queue->lpVtbl->Signal(queue, fence, value);
+    if (FAILED(hr)) {
+        BS_WARN_HRESULT("ID3D12CommandQueue::Signal", hr);
+        return;
+    }
+
+    if (fence->lpVtbl->GetCompletedValue(fence) < value) {
+        hr = fence->lpVtbl->SetEventOnCompletion(fence, value, _bs_scope_.context->dx_fence_event);
+
+        if (FAILED(hr)) {
+            BS_WARN_HRESULT("SetEventOnCompletion", hr);
+            return;
+        }
+
+        WaitForSingleObject(
+            _bs_scope_.context->dx_fence_event,
+            INFINITE
+        );
+    }
+}
+
 static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
     HRESULT hresult;
     VkResult vk_result;
@@ -205,14 +264,19 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
     bs_SwapchainProperties props = _bs_swapchainProperties();
 
     if (context->dxgi_swapchain) {
+        bs_stallGPU();
+        _bs_dx_waitForGPU();
+
         for (int i = 0; i < context->swapchain_image->head->swaps_count; i++) {
             bs_ImageSwaps* swap = context->swapchain_image->image->_ + i;
-            vkFreeMemory(_bs_instance_->device, swap->dx_memory, NULL);
-            CloseHandle(swap->dx_shared_handle);
+            vkDestroyImageView(_bs_instance_->device, swap->vk_image_view, NULL);
             vkDestroyImage(_bs_instance_->device, swap->vk_image, NULL);
+            vkFreeMemory(_bs_instance_->device, swap->dx_memory, NULL);
             swap->dx_image->lpVtbl->Release(swap->dx_image);
+            CloseHandle(swap->dx_shared_handle);
         }
-        _bs_destroySwapchain();
+        bs_stallGPU();
+      //  _bs_destroySwapchain();
 
         hresult = context->dxgi_swapchain->lpVtbl->ResizeBuffers(
             context->dxgi_swapchain,
@@ -225,8 +289,11 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
 
         if (FAILED(hresult)) {
             BS_WARN_HRESULT("ResizeBuffers", hresult);
-
-            hresult = _bs_instance_->dx_device->lpVtbl->GetDeviceRemovedReason(_bs_instance_->dx_device);
+            if (hresult == 0x887a0005) {
+                hresult = _bs_instance_->dx_device->lpVtbl->GetDeviceRemovedReason(_bs_instance_->dx_device);
+                _bs_dumpDxgiMessages();
+                BS_WARN_HRESULT("GetDeviceRemovedReason", hresult);
+            }
 
            // return BS_RESULT_OK; // TODO
           //  return bs_convertHResult(hresult);
@@ -264,6 +331,37 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
     
         if (FAILED(hresult)) {
             BS_WARN_HRESULT("CreateCommandQueue", hresult);
+            return bs_convertHResult(hresult);
+        }
+
+       /**
+        Fence
+        */
+        hresult = _bs_instance_->dx_device->lpVtbl->CreateFence(
+            _bs_instance_->dx_device,
+            0,
+            D3D12_FENCE_FLAG_NONE,
+            &IID_ID3D12Fence,
+            (void**)&context->dx_fence
+        );
+
+        if (FAILED(hresult)) {
+            BS_WARN_HRESULT("CreateFence", hresult);
+            return bs_convertHResult(hresult);
+        }
+
+        context->dx_fence_value = 0;
+
+        context->dx_fence_event = CreateEvent(
+            NULL,
+            FALSE, // auto-reset
+            FALSE,
+            NULL
+        );
+
+        if (!context->dx_fence_event) {
+            hresult = HRESULT_FROM_WIN32(GetLastError());
+            BS_WARN_HRESULT("CreateEvent", hresult);
             return bs_convertHResult(hresult);
         }
 
@@ -434,7 +532,7 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             return bs_convertVulkanResult(vk_result);
         }
 
-        bsi_nameHandle((bs_U64)context->swapchain_image->image->_[i].vk_image, VK_OBJECT_TYPE_IMAGE, context->title);
+       // bsi_nameHandle((bs_U64)context->swapchain_image->image->_[i].vk_image, VK_OBJECT_TYPE_IMAGE, context->title);
 
         /**
          */
@@ -565,10 +663,10 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             return bs_convertVulkanResult(vk_result);
         }
 
-        bsi_nameHandle(context->swapchain_image->image->_[i].vk_image_view, VK_OBJECT_TYPE_IMAGE_VIEW, context->title);
+        //bsi_nameHandle(context->swapchain_image->image->_[i].vk_image_view, VK_OBJECT_TYPE_IMAGE_VIEW, context->title);
     }
 
-    context->win32.waitable_object = context->dxgi_swapchain->lpVtbl->GetFrameLatencyWaitableObject(context->dxgi_swapchain);
+    //context->win32.waitable_object = context->dxgi_swapchain->lpVtbl->GetFrameLatencyWaitableObject(context->dxgi_swapchain);
 
    // hresult = context->dxgi_swapchain->lpVtbl->SetMaximumFrameLatency(context->dxgi_swapchain, 1);
    // if (FAILED(hresult)) {

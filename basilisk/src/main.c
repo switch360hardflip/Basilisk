@@ -33,6 +33,7 @@
 #endif
 
 #include <stdio.h>
+#include <inttypes.h>
 #include <threads.h>
 
 Basilisk basilisk = {
@@ -152,7 +153,7 @@ static void onLog(const bs_LogQueueItem* item) {
 	}
 
 	if (item->code != 0) {
-		printf("    code: %d\n", item->code);
+		printf("    code: %ld\n    code: %lx\n", item->code, item->code);
 	}
 #endif
 
@@ -162,7 +163,7 @@ static void onLog(const bs_LogQueueItem* item) {
 	}
 
 	if (item->code != 0) {
-		bs_writeLogFileF("    code: %d\n", item->code);
+		bs_writeLogFileF("    code: %ld\n    code: %lx\n", item->code, item->code);
 	}
 }
 

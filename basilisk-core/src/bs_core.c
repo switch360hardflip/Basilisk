@@ -794,9 +794,7 @@ static void _bs_createDXGIDevice() {
         return;
     }
 
-    /*
 #ifndef NDEBUG
-
     hresult = DXGIGetDebugInterface1(0, &IID_IDXGIDebug1, &_bs_instance_->dxgi_debug);
     if (FAILED(hresult)) {
         BS_WARN_HRESULT("DXGIGetDebugInterface1", hresult);
@@ -811,24 +809,8 @@ static void _bs_createDXGIDevice() {
 
     _bs_instance_->dxgi_debug->lpVtbl->EnableLeakTrackingForThread(_bs_instance_->dxgi_debug);
 
-    DXGI_INFO_QUEUE_MESSAGE_SEVERITY dxgi_denied_severities[] = {DXGI_INFO_QUEUE_MESSAGE_SEVERITY_MESSAGE, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_INFO};
-    DXGI_INFO_QUEUE_FILTER dxgiFilter = { 
-        .DenyList = {
-            .NumSeverities = sizeof(dxgi_denied_severities) / sizeof(*dxgi_denied_severities),
-            .pSeverityList = dxgi_denied_severities,
-        }
-    };
-
-    _bs_instance_->dxgi_debug_queue->lpVtbl->PushRetrievalFilter(
-        _bs_instance_->dxgi_debug_queue, 
-        DXGI_DEBUG_ALL, 
-        &dxgiFilter
-    );
-
-    hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->PushStorageFilter(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_ALL, &dxgiFilter);
-
     // TODO("For some reason DXGI_DEBUG_ALL returns E_INAVALIDARG.");
-    hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->SetMessageCountLimit(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_DXGI, (bs_U64)(-1));
+    //hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->SetMessageCountLimit(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_DXGI, (bs_U64)(-1));
     hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->SetBreakOnSeverity(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, TRUE);
     hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->SetBreakOnSeverity(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, TRUE);
     hresult = _bs_instance_->dxgi_debug_queue->lpVtbl->SetBreakOnSeverity(_bs_instance_->dxgi_debug_queue, DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, TRUE);
@@ -842,7 +824,7 @@ static void _bs_createDXGIDevice() {
     _bs_instance_->dx12_debug->lpVtbl->EnableDebugLayer(_bs_instance_->dx12_debug);
     _bs_instance_->dx12_debug->lpVtbl->SetEnableGPUBasedValidation(_bs_instance_->dx12_debug, TRUE);
 #endif
-    */
+
     hresult = _bs_instance_->dxgi_factory->lpVtbl->EnumAdapterByLuid(
         _bs_instance_->dxgi_factory,
         *(LUID*)_bs_props_.device_luid, 
@@ -3640,7 +3622,7 @@ BSAPI void _bs_presentDXGI(bs_Queue* queue, bs_Queue* wait_queues[], int wait_qu
 
     bs_Context* context = _bs_scope_.context;
 
-   // assert(swapchainImageIndex == context->dxgi_swapchain->lpVtbl->GetCurrentBackBufferIndex(context->dxgi_swapchain));
+    assert(context->image_index == context->dxgi_swapchain->lpVtbl->GetCurrentBackBufferIndex(context->dxgi_swapchain));
 
     const VkFenceCreateInfo fci = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
