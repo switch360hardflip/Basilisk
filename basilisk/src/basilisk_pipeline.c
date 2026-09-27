@@ -56,7 +56,8 @@ static void basilisk_hiResSubpass0(bs_RendererScope* scope) {
     bs_beginCommentN(queue, BS_CONSTANT_STRING("High Resolution Subpass 0"));
 
     bs_vec4 clear_color = bs_rgbUCharToV4(_clear_color_);
-    clear_color.xyz = bs_sRGBToLinearV3(&clear_color.xyz);
+    if (bs_instance()->physical_device->flags & BS_PHYSICAL_DEVICE_SRGB_FORMAT)
+        clear_color.xyz = bs_sRGBToLinearV3(&clear_color.xyz);
 
     bs_clearColor(queue, 0, bs_resolution(bs_scope()->context), &clear_color);
 

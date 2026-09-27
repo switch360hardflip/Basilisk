@@ -1076,6 +1076,10 @@ BSAPI bool _preval_bs_hasAlpha(bs_Format format) {
     return next.bs_hasAlpha(format);
 }
 
+BSAPI bool _preval_bs_isSRGB(bs_Format format) {
+    return next.bs_isSRGB(format);
+}
+
 BSAPI void _preval_bs_destroySampler(bs_Sampler* sampler) {
     BS_VALIDATE(sampler != NULL, ,);
     BS_VALIDATE(sampler->head.type == BS_OBJECT_SAMPLER, ,);
@@ -2455,6 +2459,11 @@ BSAPI void _preval_bs_moveWindow(bs_Context* context, int x, int y) {
     next.bs_moveWindow(context, x, y);
 }
 
+BSAPI void _preval_bs_addBorderPadding(bs_Context* context, int padding) {
+    BS_VALIDATE(context != NULL, ,);
+    next.bs_addBorderPadding(context, padding);
+}
+
 BSAPI bs_Context* _preval_bs_queryPopupWindow(bs_I32 id) {
     return next.bs_queryPopupWindow(id);
 }
@@ -2942,6 +2951,7 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_isStencilFormat = _preval_bs_isStencilFormat;
     functions.bs_isDepthFormat = _preval_bs_isDepthFormat;
     functions.bs_hasAlpha = _preval_bs_hasAlpha;
+    functions.bs_isSRGB = _preval_bs_isSRGB;
     functions.bs_destroySampler = _preval_bs_destroySampler;
     functions.bs_sampler = _preval_bs_sampler;
     functions.bs_loadAtlas = _preval_bs_loadAtlas;
@@ -3209,6 +3219,7 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_resizeContext = _preval_bs_resizeContext;
     functions.bs_resizeWindow = _preval_bs_resizeWindow;
     functions.bs_moveWindow = _preval_bs_moveWindow;
+    functions.bs_addBorderPadding = _preval_bs_addBorderPadding;
     functions.bs_queryPopupWindow = _preval_bs_queryPopupWindow;
     functions.bs_closeAllPopupWindows = _preval_bs_closeAllPopupWindows;
     functions.bs_closePopupWindow = _preval_bs_closePopupWindow;

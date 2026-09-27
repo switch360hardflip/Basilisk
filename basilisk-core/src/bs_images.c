@@ -45,8 +45,10 @@ BSAPI bool _bs_isStencilFormat(bs_Format format) {
 }
 
 BSAPI bool _bs_isDepthFormat(bs_Format format) {
-    return _bs_isStencilFormat(format) ||
-        format == BS_FORMAT_D16_UNORM || format == BS_FORMAT_D32_SFLOAT;
+    return 
+        _bs_isStencilFormat(format) ||
+        format == BS_FORMAT_D16_UNORM || 
+        format == BS_FORMAT_D32_SFLOAT;
 }
 
 BSAPI bool _bs_hasAlpha(bs_Format format) {
@@ -65,6 +67,42 @@ BSAPI bool _bs_hasAlpha(bs_Format format) {
         format == BS_FORMAT_B8G8R8A8_UINT ||
         format == BS_FORMAT_B8G8R8A8_SINT ||
         format == BS_FORMAT_B8G8R8A8_SRGB;
+}
+
+BSAPI bool _bs_isSRGB(bs_Format format) {
+    return
+        format == BS_FORMAT_R8_SRGB ||
+        format == BS_FORMAT_R8G8_SRGB ||
+        format == BS_FORMAT_R8G8B8_SRGB ||
+        format == BS_FORMAT_B8G8R8_SRGB ||
+        format == BS_FORMAT_R8G8B8A8_SRGB ||
+        format == BS_FORMAT_B8G8R8A8_SRGB ||
+        format == BS_FORMAT_A8B8G8R8_SRGB_PACK32;
+        // Texture compression
+    /*
+        format == BS_FORMAT_BC1_RGB_SRGB_BLOCK ||
+        format == BS_FORMAT_BC1_RGBA_SRGB_BLOCK ||
+        format == BS_FORMAT_BC2_SRGB_BLOCK ||
+        format == BS_FORMAT_BC3_SRGB_BLOCK ||
+        format == BS_FORMAT_BC7_SRGB_BLOCK ||
+        format == BS_FORMAT_ETC2_R8G8B8_SRGB_BLOCK ||
+        format == BS_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK ||
+        format == BS_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_4x4_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_5x4_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_5x5_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_6x5_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_6x6_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_8x5_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_8x6_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_8x8_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_10x5_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_10x6_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_10x8_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_10x10_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_12x10_SRGB_BLOCK ||
+        format == BS_FORMAT_ASTC_12x12_SRGB_BLOCK;
+    */
 }
 
 static inline int _bs_imageSwap(bs_Image* image) {

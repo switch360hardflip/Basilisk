@@ -205,6 +205,7 @@ typedef enum bs_CursorIcon bs_CursorIcon;
 typedef enum bs_ObjectType bs_ObjectType;
 typedef enum bs_SurfaceType bs_SurfaceType;
 typedef enum bs_SwapchainMode bs_SwapchainMode;
+typedef enum bs_PhysicalDeviceFlag bs_PhysicalDeviceFlag;
 typedef enum bs_JsonType bs_JsonType;
 typedef enum bs_ShaderType bs_ShaderType;
 typedef enum bs_Format bs_Format;
@@ -2507,6 +2508,10 @@ enum bs_SwapchainMode {
     BS_SWAPCHAIN_MODE_MAX = 3,
 };
 
+enum bs_PhysicalDeviceFlag {
+    BS_PHYSICAL_DEVICE_SRGB_FORMAT = 1 << 0,
+};
+
 enum bs_JsonType {
     BS_JSON_UNDEFINED = 1,
     BS_JSON_DONT_CARE = 2,
@@ -3817,7 +3822,8 @@ struct bs_PhysicalDevice {
     struct VkPhysicalDevice_T* vk_device;
     bool supports_present;
     bs_U32 api_version;
-    int type;
+    bs_I32 type;
+    bs_U32 flags;
     bs_List queue_families;
     bs_List surface_formats;
     bs_SurfaceFormat surface_format;
@@ -3863,6 +3869,7 @@ struct bs_Context {
     int frames_in_flight;
     int frame;
     int image_index;
+    int border_padding;
     bool swapchain_ok;
     bool hovering;
     bool hidden;
@@ -3926,6 +3933,7 @@ struct bs_Scope {
     bs_Queue* queue;
     bs_Renderer* renderer;
     int subpass;
+    bool resizing;
 };
 
 struct bs_Args {
@@ -6865,6 +6873,14 @@ bs_isDepthFormat(
   */
 BSAPI bool
 bs_hasAlpha(
+    bs_Format format);
+
+ /**
+  @param format
+  @return bool
+  */
+BSAPI bool
+bs_isSRGB(
     bs_Format format);
 
  /**
@@ -9816,6 +9832,16 @@ bs_moveWindow(
     bs_Context* context,
     int x,
     int y);
+
+ /**
+  @param context
+  @param padding
+  @return void
+  */
+BSAPI void
+bs_addBorderPadding(
+    bs_Context* context,
+    int padding);
 
  /**
   @param id

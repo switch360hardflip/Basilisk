@@ -55,10 +55,12 @@
 #define BASILISK_TITLE_BAR_HEIGHT 32
 
 //BSGFX_CACHE_ATLAS_QUERY(BSMOD_ATLASES, BSMOD_ATLAS_UI, icon)
-//BSGFX_CACHE_COLOR_MATERIAL(test_color, BS_RGBA(255, 83, 83, 255))
+BSGFX_CACHE_COLOR_MATERIAL(border_outline_color, BS_RGBA(38, 38, 38, 255))
+BSGFX_CACHE_COLOR_MATERIAL(background_color, BS_RGBA(52, 52, 52, 255))
 
 void basilisk_instantiateBaseUI() {
-    bs_ivec2 resolution = bs_resolution(bs_scope()->context);
+    bs_Context* context = bs_scope()->context;
+    bs_ivec2 resolution = bs_resolution(context);
     bs_vec2 title_bar_size = { resolution.x, BASILISK_TITLE_BAR_HEIGHT };
 
     bs_vec3 position;
@@ -69,14 +71,32 @@ void basilisk_instantiateBaseUI() {
     position = BS_V3(0, resolution.y - title_bar_size.y, 0);
     position.y = 0.0;
 
+   
+    const int padding = context->border_padding;
+    const int border_outline_size = 1;
+
+   /**
+    Border outline
+    */
+    bs_vec3 border_position = { padding, padding, position.z };
+    bs_vec2 border_size = { resolution.x - padding * 2, resolution.y - BASILISK_TITLE_BAR_HEIGHT - padding };
+    bsgfx_instantiateSolidUI((bsgfx_UISolid) {
+        .position = border_position,
+        .size = border_size,
+        .material_id = $border_outline_color()->id,
+    }, element);
+    position.z++;
+    
    /**
     Background
     */
+    bs_vec3 background_position = BS_V3(border_position.x + border_outline_size, border_position.y + border_outline_size, position.z);
+    bs_vec2 background_size = BS_V2(border_size.x - border_outline_size * 2, border_size.y - border_outline_size * 2);
+
     bsgfx_instantiateSolidUI((bsgfx_UISolid) {
-        .position = position,
-        .size = title_bar_size,
-   //     .material_id = $test_color()->id,
+        .position = background_position,
+        .size = background_size,
+        .material_id = $background_color()->id,
     }, element);
     position.z++;
-
 }

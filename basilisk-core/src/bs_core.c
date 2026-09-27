@@ -744,6 +744,9 @@ static void _bs_querySwapchainFormat(VkFormat candidates[], int candidates_count
 
             if ((bs_Format)candidate == surface_format->format) {
                 _bs_instance_->physical_device->surface_format = *surface_format;
+
+                if (_bs_isSRGB(surface_format->format))
+                    _bs_instance_->physical_device->flags |= BS_PHYSICAL_DEVICE_SRGB_FORMAT;
                 return;
             }
         }
@@ -3480,104 +3483,6 @@ BSAPI void _bs_enqueue(bs_Queue* queue, bs_Callback function) {
   /*==============================================================================
    * Swapchain / Presentation
    *============================================================================*/
-
-typedef void(* bs_AutoResizeFunction)(bs_Object*);
-
-/*
-static void _bs_onAutoResizeImage(bs_Object* object) {
-    bs_Image* image = object->image;
-
-    if (image->context == _bs_scope_.context) {
-        if (image == _bs_scope_.context->swapchain_image->image)
-            return;
-
-        bs_ivec2 resolution = bs_resolution(_bs_scope_.context);
-        _bs_resizeImage(image, resolution, image->num_indices);
-    }
-}
-*/
-static void _bs_onAutoResizeRenderer(bs_Object* object) {
-    bs_Renderer* renderer = object->renderer;
-
-    if (renderer->context == _bs_scope_.context) {
-        bs_ivec2 resolution = bs_resolution(_bs_scope_.context);
-
-        for (int i = 0; i < renderer->outputs.count; i++) {
-            bs_Output* output = _bs_fetchUnit(&renderer->outputs, i);
-            bs_Image* image = output->image;
-
-            if (image != _bs_scope_.context->swapchain_image->image)
-                bs_resizeImage(image, resolution, image->num_indices);
-        }
-
-        _bs_resizeRenderer(renderer, resolution);
-    }
-}
-
-static inline void _bs_autoResize(bs_ObjectType type, bs_AutoResizeFunction function) {
-    bs_List* object_types = bs_objectSources();
-
-    for (int i = 0; i < object_types->count; i++) {
-        bs_ObjectSource* source = bs_fetchUnit(object_types, i);
-
-        if (source->type == type) {
-            for (int j = 0; j < source->ids_count; j++) {
-                if (!source->ids[j].object)
-                    continue;
-
-                function(source->ids[j].object);
-            }
-        }
-    }
-}
-
-static void _bs_resizeSwapchain() {
-    bs_Context* ctx = _bs_scope_.context;
-
-    if (ctx->window_type == BS_WINDOW_WIN32)
-        return;
-
-    _bs_swapchain(_bs_scope_.context);
-
-    _bs_scope_.context = ctx;
-}
-void _bs_tickContext(bs_Context* context);
-
-void _bs_resizeContext(bs_Context* context, bs_U32 width, bs_U32 height) {
-    bs_Context* previous_context = _bs_scope_.context;
-    _bs_scope_.context = context;
-
-    if (context->dimensions.x == width && context->dimensions.y == height) {
-        return;
-    }
-
-    context->dimensions.x = width;
-    context->dimensions.y = height;
-    bs_logF("Resizing context \"%s\": %d, %d", context->title, width, height);
-
-    _bs_resizeSwapchain();
-
-   /**
-    Auto resize
-    */
-    //_bs_autoResize(BS_OBJECT_IMAGE, _bs_onAutoResizeImage);
-    _bs_autoResize(BS_OBJECT_RENDERER, _bs_onAutoResizeRenderer);
-
-    if (context->window_type == BS_WINDOW_WIN32) {
-        InvalidateRect(context->hwnd, NULL, FALSE);
-        UpdateWindow(context->hwnd);
-    }
-    else {
-        context->swapchain_ok = true;
-        _bs_tickContext(context);
-    }
-
-    if (context->listener.resize) {
-        context->listener.resize(context, width, height);
-    }
-
-    _bs_scope_.context = previous_context;
-}
 
 #ifdef _WIN32
 static uint32_t _bs_acquireDXGI() {

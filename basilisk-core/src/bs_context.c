@@ -197,8 +197,10 @@ static inline bs_SwapchainProperties _bs_swapchainProperties() {
 }
 
 
+
   /*==============================================================================
    * DXGI Swapchain
+   * Mostly taken from https://github.com/krOoze/Hello_Triangle/blob/dxgi_interop
    *============================================================================*/
 
 static void _bs_awaitDxCommands() {
@@ -1167,6 +1169,103 @@ void _bs_tickContext(bs_Context* context) {
     _bs_instance_->time_old = _bs_instance_->time;
 }
 
+
+
+  /*==============================================================================
+   * Resize
+   *============================================================================*/
+
+typedef void(*bs_AutoResizeFunction)(bs_Object*);
+
+/*
+static void _bs_onAutoResizeImage(bs_Object* object) {
+    bs_Image* image = object->image;
+
+    if (image->context == _bs_scope_.context) {
+        if (image == _bs_scope_.context->swapchain_image->image)
+            return;
+
+        bs_ivec2 resolution = bs_resolution(_bs_scope_.context);
+        _bs_resizeImage(image, resolution, image->num_indices);
+    }
+}
+*/
+
+static void _bs_onAutoResizeRenderer(bs_Object* object) {
+    bs_Renderer* renderer = object->renderer;
+
+    if (renderer->context == _bs_scope_.context) {
+        bs_ivec2 resolution = bs_resolution(_bs_scope_.context);
+
+        for (int i = 0; i < renderer->outputs.count; i++) {
+            bs_Output* output = _bs_fetchUnit(&renderer->outputs, i);
+            bs_Image* image = output->image;
+
+            if (image != _bs_scope_.context->swapchain_image->image)
+                bs_resizeImage(image, resolution, image->num_indices);
+        }
+
+        _bs_resizeRenderer(renderer, resolution);
+    }
+}
+
+static inline void _bs_autoResize(bs_ObjectType type, bs_AutoResizeFunction function) {
+    bs_List* object_types = bs_objectSources();
+
+    for (int i = 0; i < object_types->count; i++) {
+        bs_ObjectSource* source = bs_fetchUnit(object_types, i);
+
+        if (source->type == type) {
+            for (int j = 0; j < source->ids_count; j++) {
+                if (!source->ids[j].object)
+                    continue;
+
+                function(source->ids[j].object);
+            }
+        }
+    }
+}
+
+void _bs_resizeContext(bs_Context* context, bs_U32 width, bs_U32 height) {
+    bs_Context* previous_context = _bs_scope_.context;
+    _bs_scope_.context = context;
+
+    if (context->dimensions.x == width && context->dimensions.y == height) {
+        return;
+    }
+
+    context->dimensions.x = width;
+    context->dimensions.y = height;
+
+    bs_logF("Resizing context \"%s\": %d, %d", context->title, width, height);
+
+    if (context->window_type != BS_WINDOW_WIN32)
+        _bs_swapchain(context);
+
+    /**
+     Auto resize
+     */
+     //_bs_autoResize(BS_OBJECT_IMAGE, _bs_onAutoResizeImage);
+    _bs_autoResize(BS_OBJECT_RENDERER, _bs_onAutoResizeRenderer);
+
+    if (context->window_type == BS_WINDOW_WIN32) {
+        InvalidateRect(context->hwnd, NULL, FALSE);
+        UpdateWindow(context->hwnd);
+    }
+    else {
+        context->swapchain_ok = true;
+        _bs_scope_.resizing = true;
+        _bs_tickContext(context);
+        _bs_scope_.resizing = false;
+    }
+
+    if (context->listener.resize) {
+        context->listener.resize(context, width, height);
+    }
+
+    _bs_scope_.context = previous_context;
+}
+
 static bs_List* _bs_getAllContexts() {
     static _Thread_local bs_List contexts = { .unit_size = sizeof(bs_Context*), .increment = 4 };
     contexts.count = 0;
@@ -1253,20 +1352,18 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
         bs_Context* ctx = *(bs_Context**)_bs_fetchUnit(contexts, i);
 
         _bs_scope_.context = ctx;
-        //InvalidateRect(ctx->hwnd, NULL, FALSE);
-        //UpdateWindow(ctx->hwnd);
-       // if (ctx->swapchain_ok)
-       //     _bs_tickContext(ctx);
+        if (ctx->swapchain_ok)
+            _bs_tickContext(ctx);
         _bs_scope_.context = NULL;
     }
 
     _bs_checkTimer(&_bs_instance_->timer);
 
     #ifdef _WIN32
-    //while ((_bs_instance_->timer.seconds - frame_start) < _bs_instance_->target_frame_time) {
-    //    Sleep(0);
-    //    _bs_checkTimer(&_bs_instance_->timer);
-    //}
+    while ((_bs_instance_->timer.seconds - frame_start) < _bs_instance_->target_frame_time) {
+        Sleep(1);
+        _bs_checkTimer(&_bs_instance_->timer);
+    }
     #endif
 }
 
@@ -1472,37 +1569,12 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
     }
 }
 
-static int
-win32_dpi_scale(
-    int value,
-    UINT dpi
-) {
+// https://handmade.network/forums/articles/t/9073-custom_window_title_bar_and_almost_correctly_drawing_windows_10_borders
+
+static int _bs_dpiScale(int value, UINT dpi) {
     return (int)((float)value * dpi / 96);
 }
 
-static void
-win32_center_rect_in_rect(
-    RECT* to_center,
-    const RECT* outer_rect
-) {
-    int to_width = to_center->right - to_center->left;
-    int to_height = to_center->bottom - to_center->top;
-    int outer_width = outer_rect->right - outer_rect->left;
-    int outer_height = outer_rect->bottom - outer_rect->top;
-
-    int padding_x = (outer_width - to_width) / 2;
-    int padding_y = (outer_height - to_height) / 2;
-
-    to_center->left = outer_rect->left + padding_x;
-    to_center->top = outer_rect->top + padding_y;
-    to_center->right = to_center->left + to_width;
-    to_center->bottom = to_center->top + to_height;
-}
-
-// Set this to 0 to remove the fake shadow painting
-#define WIN32_FAKE_SHADOW_HEIGHT 1
-// The offset of the 2 rectangles of the maximized window button
-#define WIN32_MAXIMIZED_RECTANGLE_OFFSET 2
 typedef struct {
     RECT close;
     RECT maximize;
@@ -1516,15 +1588,11 @@ typedef enum {
     CustomTitleBarHoveredButton_Close,
 } CustomTitleBarHoveredButton;
 
-static CustomTitleBarButtonRects
-win32_get_title_bar_button_rects(
-    HWND handle,
-    const RECT* title_bar_rect
-) {
+static CustomTitleBarButtonRects _bs_getTitleBarButtonRects(HWND handle, const RECT* title_bar_rect) {
     UINT dpi = GetDpiForWindow(handle);
     CustomTitleBarButtonRects button_rects;
     // Sadly SM_CXSIZE does not result in the right size buttons for Win10
-    int button_width = win32_dpi_scale(47, dpi);
+    int button_width = _bs_dpiScale(47, dpi);
     button_rects.close = *title_bar_rect;
     //button_rects.close.top += WIN32_FAKE_SHADOW_HEIGHT;
 
@@ -1550,9 +1618,12 @@ win32_window_is_maximized(
     return false;
 }
 
+void _bs_loadSystemIcons() {
+}
+
 static HFONT _bs_loadFont(bs_U32 dpi, LPCWSTR name) {
     return CreateFontW(
-        -win32_dpi_scale(10, dpi),  // height
+        -_bs_dpiScale(10, dpi),  // height
         0,                          // width
         0,                          // escapement
         0,                          // orientation
@@ -1596,9 +1667,14 @@ static void _bs_updateWindowDPI(bs_Context* context) {
 }
 
 #ifdef _WIN32
-static LRESULT _bs_hitTestResize(bs_Context* context, bs_ivec2 pt, LRESULT fallback) {
+static LRESULT _bs_hitTestResize(bs_Context* context, bs_ivec2 pt, LRESULT fallback, int padding) {
     RECT rc;
     GetWindowRect(context->hwnd, &rc);
+
+    rc.left += padding;
+    rc.top += padding;
+    rc.right -= padding;
+    rc.bottom -= padding;
 
     const bool left = pt.x < rc.left + context->border_size.x;
     const bool right = pt.x >= rc.right - context->border_size.x;
@@ -1633,6 +1709,20 @@ static void _bs_drawIcon(bs_Context* context, HDC hdc, RECT* button_rect, WCHAR 
     );
 
     SelectObject(hdc, old_font);
+}
+
+static inline void _bs_adjustWindowRect(UINT dpi, HWND hwnd, RECT* rect) {
+    const int padding = 0;
+
+    int borderLR = GetSystemMetricsForDpi(SM_CXFRAME, dpi) + padding;
+    int borderTB = GetSystemMetricsForDpi(SM_CYFRAME, dpi) + padding;
+
+    rect->left += borderLR;
+    rect->right -= borderLR;
+    rect->bottom -= borderTB;
+
+    if (IsZoomed(hwnd))
+        rect->top += borderTB;
 }
 
 LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param) {
@@ -1675,7 +1765,7 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             FillRect(hdc, &ps.rcPaint, bg_brush);
             DeleteObject(bg_brush);
 
-            CustomTitleBarButtonRects button_rects = win32_get_title_bar_button_rects(hwnd, &title_bar_rect);
+            CustomTitleBarButtonRects button_rects = _bs_getTitleBarButtonRects(hwnd, &title_bar_rect);
 
             _bs_drawIcon(context, hdc, &button_rects.minimize, L'\xE921');
             _bs_drawIcon(context, hdc, &button_rects.maximize, L'\xE922');
@@ -1685,10 +1775,8 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
             return 0;
         }
         else {
-
-            return 0;
+            return DefWindowProc(hwnd, msg, w_param, l_param);
         }
-        return DefWindowProc(hwnd, msg, w_param, l_param);
     case WM_ACTIVATE:
         if (context && context->listener.activate) {
             context->listener.activate(context, (bs_ContextActivateParams) {
@@ -1702,9 +1790,6 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
         return DefWindowProc(hwnd, msg, w_param, l_param);
     case WM_NCHITTEST:
         if (context) {
-            if (context->window_type == BS_WINDOW_WIN32) 
-                break;
-
             if (context->window_type == BS_WINDOW_POPUP)
                 return HTCLIENT;
             else if (_bs_callbacks_.client_area_tick) {
@@ -1714,14 +1799,13 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
                 };
 
                 bs_NonClientArea non_client_area = _bs_callbacks_.client_area_tick(context, pt);
-
                 switch (non_client_area) {
                 case BS_CLIENT_AREA:
-                    return _bs_hitTestResize(context, pt, HTCLIENT);
+                    return _bs_hitTestResize(context, pt, HTCLIENT, context->border_padding);
                 case BS_NON_CLIENT_AREA_CAPTION_BUTTON:
-                    return _bs_hitTestResize(context, pt, HTCLIENT);
+                    return HTCLIENT;
                 case BS_NON_CLIENT_AREA_CAPTION:
-                    return _bs_hitTestResize(context, pt, HTCAPTION);
+                    return _bs_hitTestResize(context, pt, HTCAPTION, context->border_padding);
                 }
 
                 return HTCLIENT;
@@ -1737,37 +1821,25 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
 
         RECT* rect = 0;
 
-        if (w_param) {
+        if (w_param)
             rect = ((NCCALCSIZE_PARAMS*)l_param)->rgrc;
-        }
-        else {
+        else
             rect = (RECT*)l_param;
-        }
-
-        if (context && context->window_type == BS_WINDOW_NO_TITLE_BAR) {
-
-            // https://handmade.network/forums/articles/t/9073-custom_window_title_bar_and_almost_correctly_drawing_windows_10_borders
-            // int padding = GetSystemMetrics(SM_CXPADDEDBORDER);
-            // TODO: dpi shit
-            int padding = 0;
-            int borderLR = GetSystemMetrics(SM_CXFRAME) + padding;
-            int borderTB = GetSystemMetrics(SM_CYFRAME) + padding;
-
-            rect->left += borderLR;
-            rect->right -= borderLR;
-            rect->bottom -= borderTB;
-
-            if (IsZoomed(hwnd)) {
-                rect->top += borderTB;
-            }
-        }
 
         {
+            UINT dpi = GetDpiForWindow(hwnd);
+            _bs_adjustWindowRect(dpi, hwnd, rect);
+
             int width = rect->right - rect->left;
             int height = rect->bottom - rect->top;
-            if (_bs_instance_->physical_device && context && context->surface && width > 0 && height > 0) {
+
+            if (_bs_instance_->physical_device && context && context->surface && width > 0 && height > 0)
                 _bs_resizeContext(context, width, height);
-            }
+            else
+               /**
+                Hack to update dimensions upon window creation
+                */
+                _bs_scope_.context->dimensions = BS_IV2(width, height);
         }
         break;
 
@@ -1810,6 +1882,10 @@ BSAPI void _bs_moveWindow(bs_Context* context, int x, int y) {
 }
 
 void _test(bs_Context* context, const char* title);
+
+BSAPI void _bs_addBorderPadding(bs_Context* context, int padding) {
+    context->border_padding = padding;
+}
 
 BSAPI bs_Context* _bs_queryPopupWindow(bs_I32 id) {
     for (int i = 0; i < _bs_instance_->popup_windows.count; i++) {

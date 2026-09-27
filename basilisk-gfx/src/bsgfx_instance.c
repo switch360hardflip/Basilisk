@@ -371,6 +371,8 @@ BSGFXAPI void _val_bsgfx_resetInstanceType(bsgfx_InstanceType* type) {
 BSGFXAPI void _bsgfx_resetInstanceType(bsgfx_InstanceType* type) {
 	for (int i = 0; i < type->subtypes.count; i++) {
 		bsgfx_InstanceSubtype* instance_subtype = bs_fetchUnit(&type->subtypes, i);
+		instance_subtype->instance_type2->instance_count -= instance_subtype->host_instances.count;
+		assert(instance_subtype->instance_type2->instance_count >= 0);
 		instance_subtype->host_instances.count = 0;
 	}
 	type->tick_count = 0;

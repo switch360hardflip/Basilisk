@@ -414,6 +414,9 @@
 			<line><name>BS_SWAPCHAIN_MODE_TRIPLE</name><value>3</value></line>
 			<line><name>BS_SWAPCHAIN_MODE_MAX</name><value>3</value></line>
 		</enum>
+		<enum name="bs_PhysicalDeviceFlag">
+			<line><name>BS_PHYSICAL_DEVICE_SRGB_FORMAT</name><value>1 &lt;&lt; 0</value></line>
+		</enum>
 	</enums>
 
     <macros>
@@ -2188,7 +2191,8 @@
             <field><type>struct VkPhysicalDevice_T*</type><name>vk_device</name></field>
             <field><type>bool</type><name>supports_present</name></field>
             <field><type>bs_U32</type><name>api_version</name></field>
-            <field><type>int</type><name>type</name></field>
+            <field><type>bs_I32</type><name>type</name></field>
+            <field><type>bs_U32</type><name>flags</name></field>
             <field><type>bs_List</type><name>queue_families</name></field>
             <field><type>bs_List</type><name>surface_formats</name></field>
 						
@@ -2234,6 +2238,7 @@
             <field><type>int</type><name>frames_in_flight</name></field>
             <field><type>int</type><name>frame</name></field>
             <field><type>int</type><name>image_index</name></field>
+            <field><type>int</type><name>border_padding</name></field>
             <field><type>bool</type><name>swapchain_ok</name></field>
             <field><type>bool</type><name>hovering</name></field>
             <field><type>bool</type><name>hidden</name></field>
@@ -2306,6 +2311,7 @@
 			<field><type>bs_Queue*</type><name>queue</name></field>
 			<field><type>bs_Renderer*</type><name>renderer</name></field>
 			<field><type>int</type><name>subpass</name></field>
+			<field><type>bool</type><name>resizing</name></field>
         </structure>
 
         <structure name="bs_Args">
@@ -3447,6 +3453,10 @@
             <return>bool</return>
             <param><type>bs_Format</type><name>format</name></param>
         </function>
+		<function name="bs_isSRGB">
+            <return>bool</return>
+            <param><type>bs_Format</type><name>format</name></param>
+        </function>
         <function name="bs_destroySampler">
             <return>void</return>
             <param><type>bs_Sampler*</type><name>sampler</name></param>
@@ -4472,6 +4482,11 @@
             <param><type>bs_Context*</type><name>context</name></param>
             <param><type>int</type><name>x</name></param>
             <param><type>int</type><name>y</name></param>
+        </function>
+		<function name="bs_addBorderPadding">
+            <return>void</return>
+            <param><type>bs_Context*</type><name>context</name></param>
+            <param><type>int</type><name>padding</name></param>
         </function>
 		<function name="bs_queryPopupWindow">
             <return>bs_Context*</return>

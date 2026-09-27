@@ -228,7 +228,8 @@ static void basilisk_renderContextMenu(bs_RendererScope* scope) {
     bs_beginCommentN(queue, BS_CONSTANT_STRING("High Resolution Subpass 0"));
 
     bs_vec4 clear_color = bs_rgbUCharToV4(BASILISK_CONTEXT_MENU_CLEAR_COLOR);
-    clear_color.xyz = bs_sRGBToLinearV3(&clear_color.xyz);
+    if (bs_instance()->physical_device->flags & BS_PHYSICAL_DEVICE_SRGB_FORMAT)
+        clear_color.xyz = bs_sRGBToLinearV3(&clear_color.xyz);
 
     bs_clearColor(queue, 0, bs_resolution(bs_scope()->context), &clear_color);
 
@@ -292,7 +293,6 @@ void onContextMenuTick(bs_Context* context, void* params) {
         return;
 
     bsgfx_computeContextCamera();
-    basilisk_instantiateContextMenuUI(context);
 
     if (bs_inputDownOnce(BS_LEFT_MOUSE_BUTTON)) {
         //hideContextMenuUI();
@@ -328,7 +328,6 @@ void onContextMenuTick(bs_Context* context, void* params) {
 void toggleContextMenu(bs_ivec2 position, ContextMenuType type) {
     bs_Context* ctx = bs_queryPopupWindow(type);
     if (ctx) {
-        printf("exists\n");
         bs_closePopupWindow(ctx);
         return;
     }
@@ -340,7 +339,6 @@ void toggleContextMenu(bs_ivec2 position, ContextMenuType type) {
     ContextMenuElement* element = context_menus[type].elements_count;
 
     int height = context_menus[type].elements_count * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT;
-    printf("creating\n");
 
     bs_openPopupWindow((bs_ContextListener) {
         .tick = onContextMenuTick,

@@ -104,15 +104,27 @@ static void onLoadScene() {
 static void onTick(bs_Context* context) {
 	// todo move outside of tick
 	static bool ticked = false;
-	if (!ticked) {
-		
+	if (!ticked || bs_scope()->resizing) {
+		bsgfx_resetInstanceTypes();
+
+	//	basilisk_instantiateContextMenuUI(context);
+
+		basilisk_instantiateBaseUI();
+		basilisk_instantiateTitleBarUI();
+
+		bsgfx_tickInstanceTypes();
 		ticked = true;
 	}
-	bsgfx_resetInstanceTypes();
-	basilisk_instantiateTitleBarUI();
-	bsgfx_tickInstanceTypes();
-	onTitleBarTick();
+	bool title_bar_has_changes = onTitleBarTick();
 
+	if (title_bar_has_changes) {
+
+		bs_Renderer* renderer = bs_fetch(BASILISK_RENDERERS, BASILISK_RENDERER_MAIN)->renderer;
+		bs_Queue* queue = bs_fetch(BSGFX_QUEUES, BSGFX_QUEUE_GRAPHICS)->queue;
+
+		bs_RGBA clear_color = BS_RGBA(83, 83, 83, 255);
+		basilisk_pipeline(queue, renderer, clear_color);
+	}
 }
 
 
@@ -261,6 +273,7 @@ int main(int argc, char* argv[]) {
 	bsgfx_ini("Basilisk", 1200, 900, BS_WINDOW_NO_TITLE_BAR, argc, argv);
 
 	basilisk.context = bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context;
+	bs_addBorderPadding(basilisk.context, 4);
 
 	//bs_Object* title_bar_context = BS_CONTEXT(BASILISK_CONTEXTS, BASILISK_CONTEXT_TITLE_BAR, 0);
 	//bs_window(title_bar_context->context, basilisk.context, onTitleBarTick, bs_resolution(basilisk.context).x, 32, "test", 0);

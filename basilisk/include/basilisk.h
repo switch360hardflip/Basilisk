@@ -131,7 +131,7 @@ bs_NonClientArea onClientAreaTick(bs_Context* context, bs_ivec2 pt);
 
 void onContextMenuTick(bs_Context* context, void* params);
 void toggleContextMenu(bs_ivec2 position, ContextMenuType type);
-void onTitleBarTick();
+bool onTitleBarTick();
 
 void basilisk_renderDither(bs_RendererScope* scope, bs_Queue* queue);
 void basilisk_renderUIStencil(bs_RendererScope* scope, bs_Queue* queue);

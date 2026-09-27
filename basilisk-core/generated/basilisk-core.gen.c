@@ -2056,6 +2056,12 @@ bool bs_hasAlpha(
     return next.bs_hasAlpha(format);
 }
 
+bool bs_isSRGB(
+    bs_Format format)
+{
+    return next.bs_isSRGB(format);
+}
+
 void bs_destroySampler(
     bs_Sampler* sampler)
 {
@@ -4194,6 +4200,13 @@ void bs_moveWindow(
     int y)
 {
     next.bs_moveWindow(context, x, y);
+}
+
+void bs_addBorderPadding(
+    bs_Context* context, 
+    int padding)
+{
+    next.bs_addBorderPadding(context, padding);
 }
 
 bs_Context* bs_queryPopupWindow(

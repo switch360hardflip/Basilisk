@@ -209,6 +209,7 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_isStencilFormat = (PFN_bs_isStencilFormat)bs_getProcAddress(module, "_preval_bs_isStencilFormat");
     functions.bs_isDepthFormat = (PFN_bs_isDepthFormat)bs_getProcAddress(module, "_preval_bs_isDepthFormat");
     functions.bs_hasAlpha = (PFN_bs_hasAlpha)bs_getProcAddress(module, "_preval_bs_hasAlpha");
+    functions.bs_isSRGB = (PFN_bs_isSRGB)bs_getProcAddress(module, "_preval_bs_isSRGB");
     functions.bs_destroySampler = (PFN_bs_destroySampler)bs_getProcAddress(module, "_preval_bs_destroySampler");
     functions.bs_sampler = (PFN_bs_sampler)bs_getProcAddress(module, "_preval_bs_sampler");
     functions.bs_loadAtlasN = (PFN_bs_loadAtlasN)bs_getProcAddress(module, "_preval_bs_loadAtlasN");
@@ -428,6 +429,7 @@ static inline bs_FunctionTable* _preval_bs_getFunctions() {
     functions.bs_resizeContext = (PFN_bs_resizeContext)bs_getProcAddress(module, "_preval_bs_resizeContext");
     functions.bs_resizeWindow = (PFN_bs_resizeWindow)bs_getProcAddress(module, "_preval_bs_resizeWindow");
     functions.bs_moveWindow = (PFN_bs_moveWindow)bs_getProcAddress(module, "_preval_bs_moveWindow");
+    functions.bs_addBorderPadding = (PFN_bs_addBorderPadding)bs_getProcAddress(module, "_preval_bs_addBorderPadding");
     functions.bs_queryPopupWindow = (PFN_bs_queryPopupWindow)bs_getProcAddress(module, "_preval_bs_queryPopupWindow");
     functions.bs_closeAllPopupWindows = (PFN_bs_closeAllPopupWindows)bs_getProcAddress(module, "_preval_bs_closeAllPopupWindows");
     functions.bs_closePopupWindow = (PFN_bs_closePopupWindow)bs_getProcAddress(module, "_preval_bs_closePopupWindow");

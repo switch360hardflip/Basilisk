@@ -45,7 +45,7 @@
 #define BSGFX_CACHE_RMISS(path) BSGFX_CACHE_SHADER(path, rmiss)
 
 #define BSGFX_CACHE_MODEL(path, flags)                                                          \
-    static inline bs_Model* $##path##() {                                                              \
+    static inline bs_Model* $##path##() {                                                       \
         static bs_Model* model = NULL;                                                          \
         const char* p = #path + 1;                                                              \
         if (!model)                                                                             \
@@ -57,19 +57,20 @@ static inline bs_vec4 _bsgfx_convertColor(bs_RGBA color) {
     return BS_V4((float)color.r / 255.0, (float)color.g / 255.0, (float)color.b / 255.0, (float)color.a / 255.0);
 }
 
-#define BSGFX_CACHE_COLOR_MATERIAL(name, _color)                                    \
-    static inline bsgfx_Material* $##name() {                                              \
-        static int id = -1;                                                         \
-        if (id == -1) {                                                             \
-            id = bsgfx_materialN(BS_CONSTANT_STRING(#name))->id;                    \
-            bsgfx_Material* material = bs_fetchUnit(bsgfx_materials(), id);         \
-            bs_vec4 c = bs_rgbUCharToV4(_color);                                    \
-            c.xyz = bs_sRGBToLinearV3(&c.xyz);                                      \
-            material->category = 0;                                                 \
-            material->contract->color = c;                                          \
-        }                                                                           \
-        bsgfx_Material* material = bs_fetchUnit(bsgfx_materials(), id);             \
-        return material;                                                            \
+#define BSGFX_CACHE_COLOR_MATERIAL(name, _color)                                                \
+    static inline bsgfx_Material* $##name() {                                                   \
+        static int id = -1;                                                                     \
+        if (id == -1) {                                                                         \
+            id = bsgfx_materialN(BS_CONSTANT_STRING(#name))->id;                                \
+            bsgfx_Material* material = bs_fetchUnit(bsgfx_materials(), id);                     \
+            bs_vec4 c = bs_rgbUCharToV4(_color);                                                \
+            if (bs_instance()->physical_device->flags & BS_PHYSICAL_DEVICE_SRGB_FORMAT)         \
+                c.xyz = bs_sRGBToLinearV3(&c.xyz);                                              \
+            material->category = 0;                                                             \
+            material->contract->color = c;                                                      \
+        }                                                                                       \
+        bsgfx_Material* material = bs_fetchUnit(bsgfx_materials(), id);                         \
+        return material;                                                                        \
     }
 
 #define BSGFX_CACHE_ATLAS_QUERY(source_id, atlas_id, n)                             \

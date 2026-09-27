@@ -212,6 +212,7 @@ typedef bs_Result(* PFN_bs_loadImageF)(bs_Queue* queue, bs_Object* object, int p
 typedef bool(* PFN_bs_isStencilFormat)(bs_Format format);
 typedef bool(* PFN_bs_isDepthFormat)(bs_Format format);
 typedef bool(* PFN_bs_hasAlpha)(bs_Format format);
+typedef bool(* PFN_bs_isSRGB)(bs_Format format);
 typedef void(* PFN_bs_destroySampler)(bs_Sampler* sampler);
 typedef bs_Result(* PFN_bs_sampler)(bs_Object* object, bs_ImageFilter filter, bs_SamplerBits flags);
 typedef bs_Result(* PFN_bs_loadAtlas)(bs_Queue* queue, bs_Object* object, int package_id, bs_U32 flags, char* path);
@@ -504,6 +505,7 @@ typedef int(* PFN_bs_scroll)();
 typedef void(* PFN_bs_resizeContext)(bs_Context* context, bs_U32 width, bs_U32 height);
 typedef void(* PFN_bs_resizeWindow)(bs_Context* context, bs_U32 width, bs_U32 height);
 typedef void(* PFN_bs_moveWindow)(bs_Context* context, int x, int y);
+typedef void(* PFN_bs_addBorderPadding)(bs_Context* context, int padding);
 typedef bs_Context*(* PFN_bs_queryPopupWindow)(bs_I32 id);
 typedef void(* PFN_bs_closeAllPopupWindows)();
 typedef void(* PFN_bs_closePopupWindow)(bs_Context* context);
@@ -752,6 +754,7 @@ typedef struct {
     PFN_bs_isStencilFormat bs_isStencilFormat;
     PFN_bs_isDepthFormat bs_isDepthFormat;
     PFN_bs_hasAlpha bs_hasAlpha;
+    PFN_bs_isSRGB bs_isSRGB;
     PFN_bs_destroySampler bs_destroySampler;
     PFN_bs_sampler bs_sampler;
     PFN_bs_loadAtlas bs_loadAtlas;
@@ -1044,6 +1047,7 @@ typedef struct {
     PFN_bs_resizeContext bs_resizeContext;
     PFN_bs_resizeWindow bs_resizeWindow;
     PFN_bs_moveWindow bs_moveWindow;
+    PFN_bs_addBorderPadding bs_addBorderPadding;
     PFN_bs_queryPopupWindow bs_queryPopupWindow;
     PFN_bs_closeAllPopupWindows bs_closeAllPopupWindows;
     PFN_bs_closePopupWindow bs_closePopupWindow;
@@ -1292,6 +1296,7 @@ BSAPI bs_Result _bs_loadImageF(bs_Queue* queue, bs_Object* object, int package_i
 BSAPI bool _bs_isStencilFormat(bs_Format format);
 BSAPI bool _bs_isDepthFormat(bs_Format format);
 BSAPI bool _bs_hasAlpha(bs_Format format);
+BSAPI bool _bs_isSRGB(bs_Format format);
 BSAPI void _bs_destroySampler(bs_Sampler* sampler);
 BSAPI bs_Result _bs_sampler(bs_Object* object, bs_ImageFilter filter, bs_SamplerBits flags);
 BSAPI bs_Result _bs_loadAtlas(bs_Queue* queue, bs_Object* object, int package_id, bs_U32 flags, char* path);
@@ -1584,6 +1589,7 @@ BSAPI int _bs_scroll();
 BSAPI void _bs_resizeContext(bs_Context* context, bs_U32 width, bs_U32 height);
 BSAPI void _bs_resizeWindow(bs_Context* context, bs_U32 width, bs_U32 height);
 BSAPI void _bs_moveWindow(bs_Context* context, int x, int y);
+BSAPI void _bs_addBorderPadding(bs_Context* context, int padding);
 BSAPI bs_Context* _bs_queryPopupWindow(bs_I32 id);
 BSAPI void _bs_closeAllPopupWindows();
 BSAPI void _bs_closePopupWindow(bs_Context* context);
@@ -1834,6 +1840,7 @@ static inline bs_FunctionTable* _bs_getFunctions() {
     functions.bs_isStencilFormat = _bs_isStencilFormat;
     functions.bs_isDepthFormat = _bs_isDepthFormat;
     functions.bs_hasAlpha = _bs_hasAlpha;
+    functions.bs_isSRGB = _bs_isSRGB;
     functions.bs_destroySampler = _bs_destroySampler;
     functions.bs_sampler = _bs_sampler;
     functions.bs_loadAtlas = _bs_loadAtlas;
@@ -2126,6 +2133,7 @@ static inline bs_FunctionTable* _bs_getFunctions() {
     functions.bs_resizeContext = _bs_resizeContext;
     functions.bs_resizeWindow = _bs_resizeWindow;
     functions.bs_moveWindow = _bs_moveWindow;
+    functions.bs_addBorderPadding = _bs_addBorderPadding;
     functions.bs_queryPopupWindow = _bs_queryPopupWindow;
     functions.bs_closeAllPopupWindows = _bs_closeAllPopupWindows;
     functions.bs_closePopupWindow = _bs_closePopupWindow;
