@@ -443,14 +443,24 @@ BSGFXAPI bsgfx_Range _preval_bsgfx_instantiateASCIITextV(bsgfx_InstanceSubtype* 
     return next.bsgfx_instantiateASCIITextV(subtype, font, position, pt_size, material_id, out_size, format, args);
 }
 
-BSGFXAPI bsgfx_InstanceHeader* _preval_bsgfx_instanceHeader(bsgfx_InstanceSubtype* subtype, int instance_id) {
+BSGFXAPI bsgfx_InstanceHeader* _preval_bsgfx_hostInstanceHeader(bsgfx_InstanceSubtype* subtype, int instance_id) {
     BSGFX_VALIDATE(subtype != NULL, NULL,);
-    return next.bsgfx_instanceHeader(subtype, instance_id);
+    return next.bsgfx_hostInstanceHeader(subtype, instance_id);
 }
 
-BSGFXAPI void* _preval_bsgfx_instanceData(bsgfx_InstanceSubtype* subtype, int instance_id) {
+BSGFXAPI bsgfx_InstanceHeader* _preval_bsgfx_deviceInstanceHeader(bsgfx_InstanceSubtype* subtype, int instance_id) {
     BSGFX_VALIDATE(subtype != NULL, NULL,);
-    return next.bsgfx_instanceData(subtype, instance_id);
+    return next.bsgfx_deviceInstanceHeader(subtype, instance_id);
+}
+
+BSGFXAPI void* _preval_bsgfx_hostInstanceData(bsgfx_InstanceSubtype* subtype, int instance_id) {
+    BSGFX_VALIDATE(subtype != NULL, NULL,);
+    return next.bsgfx_hostInstanceData(subtype, instance_id);
+}
+
+BSGFXAPI void* _preval_bsgfx_deviceInstanceData(bsgfx_InstanceSubtype* subtype, int instance_id) {
+    BSGFX_VALIDATE(subtype != NULL, NULL,);
+    return next.bsgfx_deviceInstanceData(subtype, instance_id);
 }
 
 BSGFXAPI bool _preval_bsgfx_hoveringQuadInstance(bsgfx_InstanceSubtype* subtype, int offset) {
@@ -865,8 +875,10 @@ bsgfx_FunctionTable* _preval_bsgfx_getFunctionTable() {
     functions.bsgfx_instantiateASCIIText = _preval_bsgfx_instantiateASCIIText;
     functions.bsgfx_instantiateASCIITextN = _preval_bsgfx_instantiateASCIITextN;
     functions.bsgfx_instantiateASCIITextV = _preval_bsgfx_instantiateASCIITextV;
-    functions.bsgfx_instanceHeader = _preval_bsgfx_instanceHeader;
-    functions.bsgfx_instanceData = _preval_bsgfx_instanceData;
+    functions.bsgfx_hostInstanceHeader = _preval_bsgfx_hostInstanceHeader;
+    functions.bsgfx_deviceInstanceHeader = _preval_bsgfx_deviceInstanceHeader;
+    functions.bsgfx_hostInstanceData = _preval_bsgfx_hostInstanceData;
+    functions.bsgfx_deviceInstanceData = _preval_bsgfx_deviceInstanceData;
     functions.bsgfx_hoveringQuadInstance = _preval_bsgfx_hoveringQuadInstance;
     functions.bsgfx_matrix = _preval_bsgfx_matrix;
     functions.bsgfx_renderFineShadowVolumes = _preval_bsgfx_renderFineShadowVolumes;

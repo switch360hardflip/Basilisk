@@ -126,8 +126,10 @@ static inline bsgfx_FunctionTable* _preval_bsgfx_getFunctions() {
     functions.bsgfx_instanceAtlasFlipped = (PFN_bsgfx_instanceAtlasFlipped)bs_getProcAddress(module, "_preval_bsgfx_instanceAtlasFlipped");
     functions.bsgfx_fontHeight = (PFN_bsgfx_fontHeight)bs_getProcAddress(module, "_preval_bsgfx_fontHeight");
     functions.bsgfx_instantiateASCIITextN = (PFN_bsgfx_instantiateASCIITextN)bs_getProcAddress(module, "_preval_bsgfx_instantiateASCIITextN");
-    functions.bsgfx_instanceHeader = (PFN_bsgfx_instanceHeader)bs_getProcAddress(module, "_preval_bsgfx_instanceHeader");
-    functions.bsgfx_instanceData = (PFN_bsgfx_instanceData)bs_getProcAddress(module, "_preval_bsgfx_instanceData");
+    functions.bsgfx_hostInstanceHeader = (PFN_bsgfx_hostInstanceHeader)bs_getProcAddress(module, "_preval_bsgfx_hostInstanceHeader");
+    functions.bsgfx_deviceInstanceHeader = (PFN_bsgfx_deviceInstanceHeader)bs_getProcAddress(module, "_preval_bsgfx_deviceInstanceHeader");
+    functions.bsgfx_hostInstanceData = (PFN_bsgfx_hostInstanceData)bs_getProcAddress(module, "_preval_bsgfx_hostInstanceData");
+    functions.bsgfx_deviceInstanceData = (PFN_bsgfx_deviceInstanceData)bs_getProcAddress(module, "_preval_bsgfx_deviceInstanceData");
     functions.bsgfx_hoveringQuadInstance = (PFN_bsgfx_hoveringQuadInstance)bs_getProcAddress(module, "_preval_bsgfx_hoveringQuadInstance");
     functions.bsgfx_matrix = (PFN_bsgfx_matrix)bs_getProcAddress(module, "_preval_bsgfx_matrix");
     functions.bsgfx_renderFineShadowVolumes = (PFN_bsgfx_renderFineShadowVolumes)bs_getProcAddress(module, "_preval_bsgfx_renderFineShadowVolumes");

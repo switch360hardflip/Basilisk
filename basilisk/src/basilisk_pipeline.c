@@ -47,7 +47,7 @@ static void _bsgfx_loResSubpass0() {
   */
 _Thread_local bs_RGBA _clear_color_;
 
-static void basilisk_hiResSubpass0(bs_RendererScope* scope) {
+void basilisk_renderMainContext(bs_RendererScope* scope) {
     bs_Queue* queue = scope->queue;
 
     bs_PipelineHash hash;
@@ -65,10 +65,10 @@ static void basilisk_hiResSubpass0(bs_RendererScope* scope) {
     basilisk_renderPoints(scope, queue);
     basilisk_renderCones(scope, queue);
     basilisk_renderSelectedTile(scope, queue);
-    basilisk_renderRoundedQuads(scope, queue);
+    basilisk_renderRoundedQuads(scope, queue, bsgfx_subtypes()[BSGFX_SUBTYPE_ATLAS_ICON]);
     bsgfx_renderColorPickers(scope, queue);
-    basilisk_renderUISolid(scope, queue);
-    basilisk_renderUI(scope, queue);
+    basilisk_renderUISolid(scope, queue, bsgfx_subtypes()[BSGFX_SUBTYPE_UI_COLOR]);
+    basilisk_renderUI(scope, queue, bsgfx_subtypes()[BSGFX_SUBTYPE_UI]);
 
     basilisk_renderFontSubtype(scope, queue, bsgfx_subtypes()[BSGFX_SUBTYPE_FONT], 0, $fs_bsgfx_font_small());
 
@@ -101,7 +101,7 @@ static void basilisk_hiResSubpass0(bs_RendererScope* scope) {
     bs_endComment(queue);
 }
 
-void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_color) {
+void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_color, bs_SubpassFunction callbacks[], int callbacks_count) {
     _clear_color_ = clear_color;
 
   //  if (bs_scope()->context->swapchain_ok) {
@@ -113,17 +113,16 @@ void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_col
 
     if (bs_resetQueue(queue) == BS_RESULT_OK) {
         if (renderer->render_pass) {
-            bs_SubpassFunction callbacks[] = {
-                basilisk_hiResSubpass0,
-            };
-            bs_runPass(queue, renderer, callbacks, sizeof(callbacks) / sizeof(*callbacks));
+            bs_runPass(queue, renderer, callbacks, callbacks_count);
         }
         else {
             bs_Output* output = bs_fetchUnit(&renderer->outputs, 0);
             bs_transition(queue, output->image, 0, BS_IMAGE_LAYOUT_UNDEFINED, BS_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
             bs_RendererScope scope = bs_beginRender(queue, renderer);
-            basilisk_hiResSubpass0(&scope);
+
+            for (int i = 0; i < callbacks_count; i++)
+                callbacks[i](&scope);
 
             bs_endRender(queue, renderer);
             bs_transition(queue, output->image, 0, BS_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, BS_IMAGE_LAYOUT_PRESENT_SRC_KHR);

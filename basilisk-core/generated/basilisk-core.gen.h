@@ -2041,6 +2041,7 @@ typedef bs_U32 bs_ModelFlags;
 typedef bs_U32 bs_ArmatureFlags;
 typedef bs_U32 bs_AnimationFlags;
 typedef bs_U32 bs_SaveJsonBits;
+typedef void (* bs_ContextCreateFunction)(bs_Context* context);
 typedef void (* bs_ContextTickFunction)(bs_Context* context, void* params);
 typedef void (* bs_ContextInputFunction)(bs_Context* context, bs_ContextInputParams params);
 typedef void (* bs_ContextEnterFunction)(bs_Context* context, void* params);
@@ -3842,6 +3843,7 @@ struct bs_ContextActivateParams {
 };
 
 struct bs_ContextListener {
+    bs_ContextCreateFunction create;
     bs_ContextTickFunction tick;
     bs_ContextInputFunction input;
     bs_ContextLeaveFunction leave;
@@ -3865,6 +3867,7 @@ struct bs_Context {
     bs_vec2 border_size;
     bs_WindowType window_type;
     bs_CursorIcon cursor_icon;
+    bs_NonClientArea hovering_non_client_area;
     bs_U32 dpi;
     int frames_in_flight;
     int frame;
@@ -3881,7 +3884,6 @@ struct bs_Context {
     bs_Timer timer;
     bs_IO io;
     bs_ContextListener listener;
-    bs_Context* first_child;
     bs_Context* next;
     union {
         struct {
@@ -9867,6 +9869,7 @@ bs_closePopupWindow(
 
  /**
   @param listener
+  @param context
   @param id
   @param x
   @param y
@@ -9878,6 +9881,7 @@ bs_closePopupWindow(
 BSAPI bs_Result
 bs_openPopupWindow(
     bs_ContextListener listener,
+    bs_Context* context,
     bs_I32 id,
     bs_I32 x,
     bs_I32 y,

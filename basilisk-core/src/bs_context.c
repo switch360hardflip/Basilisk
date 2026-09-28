@@ -1352,8 +1352,9 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
         bs_Context* ctx = *(bs_Context**)_bs_fetchUnit(contexts, i);
 
         _bs_scope_.context = ctx;
-        if (ctx->swapchain_ok)
+        if (ctx->swapchain_ok) {
             _bs_tickContext(ctx);
+        }
         _bs_scope_.context = NULL;
     }
 
@@ -1741,6 +1742,14 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
     switch (msg) {
     case WM_ERASEBKGND:
         return 1;
+    case WM_SHOWWINDOW:
+        if (context && context->listener.create) {
+            bs_Context* last = _bs_scope_.context;
+            _bs_scope_.context = context;
+            context->listener.create(context);
+            _bs_scope_.context = last;
+        }
+        break;
     case WM_SIZE: {
         uint32_t width = l_param & 0xffff;
         uint32_t height = (l_param >> 16) & 0xffff;
@@ -1798,8 +1807,8 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
                     GET_Y_LPARAM(l_param)
                 };
 
-                bs_NonClientArea non_client_area = _bs_callbacks_.client_area_tick(context, pt);
-                switch (non_client_area) {
+                context->hovering_non_client_area = _bs_callbacks_.client_area_tick(context, pt);
+                switch (context->hovering_non_client_area) {
                 case BS_CLIENT_AREA:
                     return _bs_hitTestResize(context, pt, HTCLIENT, context->border_padding);
                 case BS_NON_CLIENT_AREA_CAPTION_BUTTON:
@@ -1815,9 +1824,12 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
         return DefWindowProc(hwnd, msg, w_param, l_param);
     case WM_NCCALCSIZE:
 
-        if (context && context->window_type == BS_WINDOW_WIN32) {
+        if (context) {
+            if (context->window_type == BS_WINDOW_POPUP)
+                break;
+        } 
+        else
             break;
-        }
 
         RECT* rect = 0;
 
@@ -1900,14 +1912,23 @@ BSAPI bs_Context* _bs_queryPopupWindow(bs_I32 id) {
 
 BSAPI void _bs_closePopupWindow(bs_Context* context) {
     bs_hideWindow(context);
+    bs_Context* child = context->next;
+    while (child) {
+        bs_hideWindow(child);
+
+        bs_Context* next = child->next;
+        child->next = NULL;
+        child = next;
+    }
+    context->next = NULL;
 }
 
-BSAPI bs_Result _val_bs_openPopupWindow(bs_ContextListener listener, bs_I32 id, bs_I32 x, bs_I32 y, bs_U32 width, bs_U32 height, static const char* title) {
+BSAPI bs_Result _val_bs_openPopupWindow(bs_ContextListener listener, bs_Context* parent, bs_I32 id, bs_I32 x, bs_I32 y, bs_U32 width, bs_U32 height, static const char* title) {
     BS_VALIDATE(_bs_queryPopupWindow(id) == NULL, BS_RESULT_VALIDATION_ERROR,);
-    return _bs_openPopupWindow(listener, id, x, y, width, height, title);
+    return _bs_openPopupWindow(listener, parent, id, x, y, width, height, title);
 }
 
-BSAPI bs_Result _bs_openPopupWindow(bs_ContextListener listener, bs_I32 id, bs_I32 x, bs_I32 y, bs_U32 width, bs_U32 height, static const char* title) {
+BSAPI bs_Result _bs_openPopupWindow(bs_ContextListener listener, bs_Context* parent, bs_I32 id, bs_I32 x, bs_I32 y, bs_U32 width, bs_U32 height, static const char* title) {
     bs_Context* last_context = _bs_scope_.context;
     _bs_scope_.context = NULL;
 
@@ -1957,6 +1978,9 @@ BSAPI bs_Result _bs_openPopupWindow(bs_ContextListener listener, bs_I32 id, bs_I
     _bs_moveWindow(context, x, y);
     _bs_showWindow(context);
 
+    if (parent)
+        parent->next = context;
+
     _bs_scope_.context = last_context;
 
     return BS_RESULT_OK;
@@ -1995,7 +2019,7 @@ BSAPI bs_Result _bs_window(
     context->window_type = type;
 
     bs_Timer timer = _bs_timer();
-    _bs_setTargetFramerate(24);
+    _bs_setTargetFramerate(60);
 
     #ifdef _WIN32
     const char* class_name = title;
@@ -2035,19 +2059,7 @@ BSAPI bs_Result _bs_window(
     HWND parent_hwnd = NULL;
 
     if (parent) {
-        bs_Context* last_node = parent->first_child;
-        bs_Context* node = parent->first_child;
-
-        while (node) {
-            last_node = node;
-            node = node->next;
-        }
-
-        if (last_node)
-            last_node->next = context;
-        else
-            parent->first_child = context;
-
+        parent->next = context;
         parent_hwnd = parent->hwnd;
         style = WS_CHILD | WS_VISIBLE;
     }

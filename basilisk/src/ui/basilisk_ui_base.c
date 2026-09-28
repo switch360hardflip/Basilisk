@@ -58,8 +58,7 @@
 BSGFX_CACHE_COLOR_MATERIAL(border_outline_color, BS_RGBA(38, 38, 38, 255))
 BSGFX_CACHE_COLOR_MATERIAL(background_color, BS_RGBA(52, 52, 52, 255))
 
-void basilisk_instantiateBaseUI() {
-    bs_Context* context = bs_scope()->context;
+void basilisk_instantiateBaseUI(bs_Context* context) {
     bs_ivec2 resolution = bs_resolution(context);
     bs_vec2 title_bar_size = { resolution.x, BASILISK_TITLE_BAR_HEIGHT };
 
@@ -84,6 +83,7 @@ void basilisk_instantiateBaseUI() {
         .position = border_position,
         .size = border_size,
         .material_id = $border_outline_color()->id,
+        .subtype = bsgfx_subtypes()[BSGFX_SUBTYPE_UI_COLOR],
     }, element);
     position.z++;
     
@@ -97,6 +97,7 @@ void basilisk_instantiateBaseUI() {
         .position = background_position,
         .size = background_size,
         .material_id = $background_color()->id,
+        .subtype = bsgfx_subtypes()[BSGFX_SUBTYPE_UI_COLOR],
     }, element);
     position.z++;
 }

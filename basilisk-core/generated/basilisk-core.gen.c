@@ -4228,6 +4228,7 @@ void bs_closePopupWindow(
 
 bs_Result bs_openPopupWindow(
     bs_ContextListener listener, 
+    bs_Context* context, 
     bs_I32 id, 
     bs_I32 x, 
     bs_I32 y, 
@@ -4235,7 +4236,7 @@ bs_Result bs_openPopupWindow(
     bs_I32 height, 
     const char* title)
 {
-    return next.bs_openPopupWindow(listener, id, x, y, width, height, title);
+    return next.bs_openPopupWindow(listener, context, id, x, y, width, height, title);
 }
 
 bs_Result bs_window(

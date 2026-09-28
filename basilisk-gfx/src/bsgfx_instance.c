@@ -30,7 +30,7 @@
 #include <assert.h>
 #include <bs_internal.h>
 
-static bs_List _bsgfx_instance_types = { .unit_size = sizeof(bsgfx_InstanceType), .increment = 32 };
+static bs_List _bsgfx_instance_types = { .unit_size = sizeof(bsgfx_InstanceType), .increment = 32 }; // TODO dangling after 32
 
 
 
@@ -148,7 +148,7 @@ BSGFXAPI bs_Result _bsgfx_instanceType(size_t instance_size, int bind_set, int p
 	*out = bs_pushBack(&_bsgfx_instance_types, &(bsgfx_InstanceType) {
 		.device_instances = object->buffer,
 		.instance_size = instance_size,
-		.subtypes = bs_list(sizeof(bsgfx_InstanceSubtype), 256)
+		.subtypes = bs_list(sizeof(bsgfx_InstanceSubtype), 256) // TODO dangling after 256
 	});
 
 //	int num_swaps = (instance_types->flags & BSI_BUFFER_SWAPS_BIT) ? bs_scope()->context->frames_in_flight : 1;
@@ -578,19 +578,28 @@ BSGFXAPI void* _bsgfx_hostInstanceData(bsgfx_InstanceSubtype* subtype, int insta
 }
 */
 
-BSGFXAPI bsgfx_InstanceHeader* _bsgfx_instanceHeader(bsgfx_InstanceSubtype* subtype, int instance_id) {
+BSGFXAPI bsgfx_InstanceHeader* _bsgfx_hostInstanceHeader(bsgfx_InstanceSubtype* subtype, int instance_id) {
+	bsgfx_InstanceHeader* header = bs_fetchUnit(&subtype->host_instances, instance_id);
+	return header;
+}
+
+BSGFXAPI bsgfx_InstanceHeader* _bsgfx_deviceInstanceHeader(bsgfx_InstanceSubtype* subtype, int instance_id) {
 	unsigned char* device_instances = bs_bufferMap(subtype->instance_type2->device_instances);
-	//bsgfx_InstanceHeader* header = bs_fetchUnit(&subtype->host_instances, instance_id);
 	return device_instances + subtype->instance_type2->instance_size * (subtype->instance_offset + instance_id);
 }
 
-BSGFXAPI void* _bsgfx_instanceData(bsgfx_InstanceSubtype* subtype, int instance_id) {
-	bsgfx_InstanceHeader* header = _bsgfx_instanceHeader(subtype, instance_id);
+BSGFXAPI void* _bsgfx_hostInstanceData(bsgfx_InstanceSubtype* subtype, int instance_id) {
+	bsgfx_InstanceHeader* header = _bsgfx_hostInstanceHeader(subtype, instance_id);
+	return (void*)(header + 1);
+}
+
+BSGFXAPI void* _bsgfx_deviceInstanceData(bsgfx_InstanceSubtype* subtype, int instance_id) {
+	bsgfx_InstanceHeader* header = _bsgfx_deviceInstanceHeader(subtype, instance_id);
 	return (void*)(header + 1);
 }
 
 BSGFXAPI bool _bsgfx_hoveringQuadInstance(bsgfx_InstanceSubtype* subtype, int offset) {
-	bsgfx_QuadInstance* instance = bsgfx_instanceData(subtype, offset);
+	bsgfx_QuadInstance* instance = _bsgfx_deviceInstanceData(subtype, offset);
 
 	bs_vec2 position = instance->transform.v[3].xy;
 	bs_vec2 size = BS_V2(instance->transform.v[0].x, instance->transform.v[1].y);

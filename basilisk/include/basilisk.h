@@ -106,11 +106,21 @@ BS_GENERATE_ENUM(BASILISK_FONT_IDS);
 #define BASILISK_ATLASES basilisk.sources[BS_OBJECT_ATLAS]
 #define BASILISK_FONTS basilisk.sources[BS_OBJECT_FONT]
 
+typedef struct {
+    bs_vec3 position;
+    bs_Range background_instance_range;
+    bool was_hovering;
+    bool hovering;
+    bool hover_once;
+    bool hover_release;
+} Button;
+
 typedef enum {
     CONTEXT_MENU_UNDEFINED,
 
     CONTEXT_MENU_FILE,
     CONTEXT_MENU_OPEN_RECENT,
+    CONTEXT_MENU_TEST,
 
     CONTEXT_MENU_COUNT
 } ContextMenuType;
@@ -119,25 +129,32 @@ typedef struct {
     const char* left_text;
     const char* right_text;
     ContextMenuType hover_menu_type;
+
+    Button button;
 } ContextMenuElement;
 
 bs_Object* basilisk_createHiResRenderer(bs_Context* context, int id);
 void basilisk_createRenderers();
 
-void basilisk_instantiateContextMenuUI();
-void basilisk_instantiateTitleBarUI();
-void basilisk_instantiateBaseUI();
+void basilisk_renderContextMenu(bs_RendererScope* scope, ContextMenuType menu_type);
+void basilisk_instantiateContextMenuUI(ContextMenuType menu_type);
+void basilisk_instantiateTitleBarUI(bs_Context* context);
+void basilisk_instantiateBaseUI(bs_Context* context);
 bs_NonClientArea onClientAreaTick(bs_Context* context, bs_ivec2 pt);
 
 void onContextMenuTick(bs_Context* context, void* params);
+void iniContextMenu(ContextMenuType type);
+
+void openContextMenu(bs_ivec2 position, ContextMenuType type, bs_Context* context);
 void toggleContextMenu(bs_ivec2 position, ContextMenuType type);
+
 bool onTitleBarTick();
 
 void basilisk_renderDither(bs_RendererScope* scope, bs_Queue* queue);
 void basilisk_renderUIStencil(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderUISolid(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderUI(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderRoundedQuads(bs_RendererScope* scope, bs_Queue* queue);
+void basilisk_renderUISolid(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype);
+void basilisk_renderUI(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype);
+void basilisk_renderRoundedQuads(bsgfx_InstanceSubtype* subtype, bs_RendererScope* scope, bs_Queue* queue);
 void basilisk_renderPrefabOutlines(bs_RendererScope* scope, bs_Queue* queue);
 void basilisk_renderFontSubtype(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype, int font_id, bs_Shader* fragment_shader);
 void basilisk_renderTiles(bs_RendererScope* scope, bs_Queue* queue);
@@ -148,6 +165,7 @@ void basilisk_renderPoints(bs_RendererScope* scope, bs_Queue* queue);
 void basilisk_renderLines(bs_RendererScope* scope, bs_Queue* queue);
 void basilisk_renderDepthlessLines(bs_RendererScope* scope, bs_Queue* queue);
 
-void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_color);
+void basilisk_renderMainContext(bs_RendererScope* scope);
+void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_color, bs_SubpassFunction callbacks[], int callbacks_count);
 
 #endif

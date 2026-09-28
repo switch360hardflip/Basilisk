@@ -1039,6 +1039,7 @@
 			<field><type>bs_vec3</type><name>position</name></field>
 			<field><type>bs_vec2</type><name>align</name></field>
 			<field><type>int</type><name>material_id</name></field>
+			<field><type>bsgfx_InstanceSubtype*</type><name>subtype</name></field>
 		</structure>
 
 		<structure name="bsgfx_UIText">
@@ -1050,6 +1051,7 @@
 				<field><type>char*</type><name>as_ascii</name></field>
 			</structure>
 			<field><type>int</type><name>material_id</name></field>
+			<field><type>bsgfx_InstanceSubtype*</type><name>subtype</name></field>
 		</structure>
 
 		<structure name="bsgfx_Text">
@@ -2077,14 +2079,26 @@
 			<param><type>int</type><name>material_id</name></param>
 			<param><type>bs_vec2*</type><name>out_size</name></param>
 		</variadicStringTemplate>
-
-		<function name="bsgfx_instanceHeader">
+		
+		<function name="bsgfx_hostInstanceHeader">
 			<return>bsgfx_InstanceHeader*</return>
 			<param><type>bsgfx_InstanceSubtype*</type><name>subtype</name></param>
 			<param><type>int</type><name>instance_id</name></param>
 		</function>
 
-		<function name="bsgfx_instanceData">
+		<function name="bsgfx_deviceInstanceHeader">
+			<return>bsgfx_InstanceHeader*</return>
+			<param><type>bsgfx_InstanceSubtype*</type><name>subtype</name></param>
+			<param><type>int</type><name>instance_id</name></param>
+		</function>
+
+		<function name="bsgfx_hostInstanceData">
+			<return>void*</return>
+			<param><type>bsgfx_InstanceSubtype*</type><name>subtype</name></param>
+			<param><type>int</type><name>instance_id</name></param>
+		</function>
+		
+		<function name="bsgfx_deviceInstanceData">
 			<return>void*</return>
 			<param><type>bsgfx_InstanceSubtype*</type><name>subtype</name></param>
 			<param><type>int</type><name>instance_id</name></param>

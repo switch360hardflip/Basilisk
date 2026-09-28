@@ -1137,6 +1137,7 @@ struct bsgfx_UISolid {
     bs_vec3 position;
     bs_vec2 align;
     int material_id;
+    bsgfx_InstanceSubtype* subtype;
 };
 
 struct bsgfx_UIText {
@@ -1148,6 +1149,7 @@ struct bsgfx_UIText {
         char* as_ascii;
     };
     int material_id;
+    bsgfx_InstanceSubtype* subtype;
 };
 
 struct bsgfx_Text {
@@ -2655,7 +2657,17 @@ bsgfx_instantiateASCIITextF(
   @return bsgfx_InstanceHeader*
   */
 BSGFXAPI bsgfx_InstanceHeader*
-bsgfx_instanceHeader(
+bsgfx_hostInstanceHeader(
+    bsgfx_InstanceSubtype* subtype,
+    int instance_id);
+
+ /**
+  @param subtype
+  @param instance_id
+  @return bsgfx_InstanceHeader*
+  */
+BSGFXAPI bsgfx_InstanceHeader*
+bsgfx_deviceInstanceHeader(
     bsgfx_InstanceSubtype* subtype,
     int instance_id);
 
@@ -2665,7 +2677,17 @@ bsgfx_instanceHeader(
   @return void*
   */
 BSGFXAPI void*
-bsgfx_instanceData(
+bsgfx_hostInstanceData(
+    bsgfx_InstanceSubtype* subtype,
+    int instance_id);
+
+ /**
+  @param subtype
+  @param instance_id
+  @return void*
+  */
+BSGFXAPI void*
+bsgfx_deviceInstanceData(
     bsgfx_InstanceSubtype* subtype,
     int instance_id);
 

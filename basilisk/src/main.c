@@ -70,6 +70,24 @@ static void queryFonts() {
 	}
 }
 
+static void updateInstances() {
+	bsgfx_resetInstanceTypes();
+
+	bs_Context* context;
+	
+	for (int i = 1; i < CONTEXT_MENU_COUNT; i++) {
+		basilisk_instantiateContextMenuUI(i);
+	}
+
+	context = bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context;
+	basilisk_instantiateBaseUI(context);
+	basilisk_instantiateTitleBarUI(context);
+
+	bsgfx_tickInstanceTypes();
+
+	printf("%d\n", bsgfx_instanceTypes()[BSGFX_INSTANCE_TYPE_2_QUAD]->instance_count);
+}
+
 static void onLoadScene() {
 	bsgfx_test(); // temp testing fonts
 	$vs_bsgfx_mesh_color();
@@ -93,6 +111,12 @@ static void onLoadScene() {
 
 	bsmod_onLoad();
 	bsmod_bindAtlases();
+
+	for (int i = 1; i < CONTEXT_MENU_COUNT; i++) {
+		iniContextMenu(i);
+	}
+
+	updateInstances();
 }
 
 
@@ -102,19 +126,12 @@ static void onLoadScene() {
    *============================================================================*/
 
 static void onTick(bs_Context* context) {
-	// todo move outside of tick
-	static bool ticked = false;
-	if (!ticked || bs_scope()->resizing) {
-		bsgfx_resetInstanceTypes();
-
-	//	basilisk_instantiateContextMenuUI(context);
-
-		basilisk_instantiateBaseUI();
-		basilisk_instantiateTitleBarUI();
-
-		bsgfx_tickInstanceTypes();
-		ticked = true;
+	if (context == bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context) {
+		if (bs_scope()->resizing)
+			updateInstances();
 	}
+
+
 	bool title_bar_has_changes = onTitleBarTick();
 
 	if (title_bar_has_changes) {
@@ -123,7 +140,12 @@ static void onTick(bs_Context* context) {
 		bs_Queue* queue = bs_fetch(BSGFX_QUEUES, BSGFX_QUEUE_GRAPHICS)->queue;
 
 		bs_RGBA clear_color = BS_RGBA(83, 83, 83, 255);
-		basilisk_pipeline(queue, renderer, clear_color);
+
+		bs_SubpassFunction funcs[] = {
+			basilisk_renderMainContext,
+		};
+
+		basilisk_pipeline(queue, renderer, clear_color, funcs, sizeof(funcs) / sizeof(*funcs));
 	}
 }
 
@@ -198,16 +220,8 @@ static void onApplicationWindowActivate(bs_Context* context, bs_ContextActivateP
 }
 
 static void onApplicationWindowInput(bs_Context* context, bs_ContextInputParams params) {
-	//if (params.state == BS_INPUT_PRESSED)
-	//	bs_closeAllPopupWindows();
-}
-
-static void onApplicationResize(bs_Context* context, bs_ivec2 new_size) {
-	bs_Context* child = context->first_child;
-	while (child) {
-		bs_resizeWindow(child, new_size.x, child->dimensions.y);
-		child = child->next;
-	}
+	if (params.state == BS_INPUT_PRESSED && context->hovering_non_client_area != BS_NON_CLIENT_AREA_CAPTION_BUTTON)
+		bs_closeAllPopupWindows();
 }
 
 int main(int argc, char* argv[]) {
@@ -251,7 +265,6 @@ int main(int argc, char* argv[]) {
 			.tick = onTick,
 			.activate = onApplicationWindowActivate,
 			.input = onApplicationWindowInput,
-			.resize = onApplicationResize
 		}
 	};
 
@@ -273,7 +286,7 @@ int main(int argc, char* argv[]) {
 	bsgfx_ini("Basilisk", 1200, 900, BS_WINDOW_NO_TITLE_BAR, argc, argv);
 
 	basilisk.context = bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context;
-	bs_addBorderPadding(basilisk.context, 4);
+	bs_addBorderPadding(basilisk.context, 2);
 
 	//bs_Object* title_bar_context = BS_CONTEXT(BASILISK_CONTEXTS, BASILISK_CONTEXT_TITLE_BAR, 0);
 	//bs_window(title_bar_context->context, basilisk.context, onTitleBarTick, bs_resolution(basilisk.context).x, 32, "test", 0);

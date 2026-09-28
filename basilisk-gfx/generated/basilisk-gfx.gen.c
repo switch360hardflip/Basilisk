@@ -659,18 +659,32 @@ bsgfx_Range bsgfx_instantiateASCIITextF(
     return _return;
 }
 
-bsgfx_InstanceHeader* bsgfx_instanceHeader(
+bsgfx_InstanceHeader* bsgfx_hostInstanceHeader(
     bsgfx_InstanceSubtype* subtype, 
     int instance_id)
 {
-    return next.bsgfx_instanceHeader(subtype, instance_id);
+    return next.bsgfx_hostInstanceHeader(subtype, instance_id);
 }
 
-void* bsgfx_instanceData(
+bsgfx_InstanceHeader* bsgfx_deviceInstanceHeader(
     bsgfx_InstanceSubtype* subtype, 
     int instance_id)
 {
-    return next.bsgfx_instanceData(subtype, instance_id);
+    return next.bsgfx_deviceInstanceHeader(subtype, instance_id);
+}
+
+void* bsgfx_hostInstanceData(
+    bsgfx_InstanceSubtype* subtype, 
+    int instance_id)
+{
+    return next.bsgfx_hostInstanceData(subtype, instance_id);
+}
+
+void* bsgfx_deviceInstanceData(
+    bsgfx_InstanceSubtype* subtype, 
+    int instance_id)
+{
+    return next.bsgfx_deviceInstanceData(subtype, instance_id);
 }
 
 bool bsgfx_hoveringQuadInstance(

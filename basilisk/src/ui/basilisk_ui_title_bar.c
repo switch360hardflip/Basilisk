@@ -58,6 +58,7 @@ typedef enum {
 
 typedef struct {
     bs_Range instance_range;
+    bs_vec3 position;
     bool hovering;
     bool hover_once;
     bool hover_release;
@@ -90,6 +91,7 @@ static bs_Range basilisk_instantiateButtonBackgroundUI(bsgfx_UIElement* element,
         .position = position,
         .size = size,
         .material_id = material->id,
+        .subtype = bsgfx_subtypes()[BSGFX_SUBTYPE_UI_COLOR],
     };
 
     bsgfx_solidUIElement(button, element);
@@ -143,6 +145,7 @@ static void basilisk_instantiateTitleBarTextButtonUI(
         .as_ascii = text,
         .px_size = 13,
         .align = { 0, BASILISK_TITLE_BAR_HEIGHT },
+        .subtype = bsgfx_subtypes()[BSGFX_SUBTYPE_FONT],
     };
 
     bsgfx_instantiateTextUI(text_ui, element);
@@ -157,13 +160,13 @@ static void basilisk_instantiateTitleBarTextButtonUI(
     button->instance_range = basilisk_instantiateButtonBackgroundUI(element, material, element->position, BS_V2(element->size.x + TITLE_BAR_BUTTON_PADDING_X * 2, height));
 }
 
-void basilisk_instantiateTitleBarUI() {
+void basilisk_instantiateTitleBarUI(bs_Context* context) {
     basilisk_title_bar_font = _fonts_.selawik;
 
     if (!basilisk_title_bar_font)
         return;
 
-    bs_ivec2 resolution = bs_resolution(bs_scope()->context);
+    bs_ivec2 resolution = bs_resolution(context);
     bs_vec2 title_bar_size = { resolution.x, BASILISK_TITLE_BAR_HEIGHT };
 
     bsgfx_AtlasCache* icon_atlas_cache = $BSMOD_ATLAS_UI_icon();
@@ -189,6 +192,7 @@ void basilisk_instantiateTitleBarUI() {
         .position = position,
         .size = title_bar_size,
         .material_id = $title_bar_background()->id,
+        .subtype = bsgfx_subtypes()[BSGFX_SUBTYPE_UI_COLOR],
     }, element);
     position.z++;
     */
@@ -245,7 +249,10 @@ static void buttonTest(TitleBarButtonId id, bsgfx_Material* hovering_material) {
     button->hovering = bsgfx_hoveringQuadInstance(subtype, button->instance_range.offset);
     button->hover_once = false;
     button->hover_release = false;
-    bsgfx_InstanceHeader* header = bsgfx_instanceHeader(subtype, button->instance_range.offset);
+    bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(subtype, button->instance_range.offset);
+    bsgfx_QuadInstance* instance = bsgfx_deviceInstanceData(subtype, button->instance_range.offset);
+
+    button->position = instance->transform.v[3];
 
     if (button->hovering) {
         if (header->material == hovering_material->id)
@@ -288,7 +295,7 @@ bool onTitleBarTick() {
 
     if (bs_inputDownOnce(BS_LEFT_MOUSE_BUTTON)) {
         if (title_bar_buttons[TITLE_BAR_BUTTON_FILE].hovering) {
-            bs_vec3 position = { 0 };
+            bs_vec3 position = title_bar_buttons[TITLE_BAR_BUTTON_FILE].position;
             position.x += TITLE_BAR_BUTTON_PADDING_X / 2;
             position.y -= TITLE_BAR_BUTTON_PADDING_Y / 2;
             toggleContextMenu(BS_IV2(position.x, position.y), CONTEXT_MENU_FILE);

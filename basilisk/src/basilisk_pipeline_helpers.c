@@ -238,7 +238,7 @@ void basilisk_renderPrefabOutlines(bs_RendererScope* scope, bs_Queue* queue) {
 
 }
 
-void basilisk_renderRoundedQuads(bs_RendererScope* scope, bs_Queue* queue) {
+void basilisk_renderRoundedQuads(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -281,13 +281,13 @@ void basilisk_renderRoundedQuads(bs_RendererScope* scope, bs_Queue* queue) {
         bs_beginCommentN(queue, BS_CONSTANT_STRING("Rounded Quads"));
 
         bs_pushConstant(queue, pipeline, 0, sizeof(push_const), &push_const);
-        bsgfx_renderSubtype(queue, bsgfx_subtypes()[BSGFX_SUBTYPE_ATLAS_ICON], pipeline);
+        bsgfx_renderSubtype(queue, subtype, pipeline);
 
         bs_endComment(queue);
     }
 }
 
-void basilisk_renderUI(bs_RendererScope* scope, bs_Queue* queue) {
+void basilisk_renderUI(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -312,7 +312,7 @@ void basilisk_renderUI(bs_RendererScope* scope, bs_Queue* queue) {
         bs_beginCommentN(queue, BS_CONSTANT_STRING("UI"));
 
         bs_pushConstant(queue, pipeline, 0, sizeof(push_const), &push_const);
-        bsgfx_renderSubtype(queue, bsgfx_subtypes()[BSGFX_SUBTYPE_UI], pipeline);
+        bsgfx_renderSubtype(queue, subtype, pipeline);
 
         bs_endComment(queue);
     }
@@ -336,7 +336,7 @@ void basilisk_renderFontSubtype(bs_RendererScope* scope, bs_Queue* queue, bsgfx_
     }
 }
 
-void basilisk_renderUISolid(bs_RendererScope* scope, bs_Queue* queue) {
+void basilisk_renderUISolid(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -361,7 +361,7 @@ void basilisk_renderUISolid(bs_RendererScope* scope, bs_Queue* queue) {
         bs_beginCommentN(queue, BS_CONSTANT_STRING("UI (Color only)"));
 
         bs_pushConstant(queue, pipeline, 0, sizeof(push_const), &push_const);
-        bsgfx_renderSubtype(queue, bsgfx_subtypes()[BSGFX_SUBTYPE_UI_COLOR], pipeline);
+        bsgfx_renderSubtype(queue, subtype, pipeline);
 
         bs_endComment(queue);
     }

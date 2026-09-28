@@ -2477,9 +2477,9 @@ BSAPI void _preval_bs_closePopupWindow(bs_Context* context) {
     next.bs_closePopupWindow(context);
 }
 
-BSAPI bs_Result _preval_bs_openPopupWindow(bs_ContextListener listener, bs_I32 id, bs_I32 x, bs_I32 y, bs_I32 width, bs_I32 height, const char* title) {
+BSAPI bs_Result _preval_bs_openPopupWindow(bs_ContextListener listener, bs_Context* context, bs_I32 id, bs_I32 x, bs_I32 y, bs_I32 width, bs_I32 height, const char* title) {
     BS_VALIDATE(title != NULL, BS_RESULT_VALIDATION_ERROR,);
-    return next.bs_openPopupWindow(listener, id, x, y, width, height, title);
+    return next.bs_openPopupWindow(listener, context, id, x, y, width, height, title);
 }
 
 BSAPI bs_Result _preval_bs_window(bs_Context* context, bs_Context* parent, bs_ContextListener listener, bs_U32 width, bs_U32 height, const char* title, bs_WindowType type) {

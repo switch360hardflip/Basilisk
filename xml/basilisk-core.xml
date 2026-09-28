@@ -112,6 +112,7 @@
 		<typedef><type>bs_U32</type><name>bs_AnimationFlags</name></typedef>
 		<typedef><type>bs_U32</type><name>bs_SaveJsonBits</name></typedef>
 				
+        <typedef><type>void</type><name>(* bs_ContextCreateFunction)(bs_Context* context)</name></typedef>
         <typedef><type>void</type><name>(* bs_ContextTickFunction)(bs_Context* context, void* params)</name></typedef>
         <typedef><type>void</type><name>(* bs_ContextInputFunction)(bs_Context* context, bs_ContextInputParams params)</name></typedef>
         <typedef><type>void</type><name>(* bs_ContextEnterFunction)(bs_Context* context, void* params)</name></typedef>
@@ -1375,7 +1376,7 @@
             <field><type>long</type><name>high_part</name></field>
             <field><type>long long</type><name>quad_part</name></field>
         </structure>
-
+		
         <structure name="bs_Aabb">
             <field><type>bs_vec3</type><name>min</name></field>
             <field><type>bs_vec3</type><name>max</name></field>
@@ -2210,6 +2211,7 @@
 			<field><type>bool</type><name>active</name></field>
 		</structure>
 		<structure name="bs_ContextListener">
+			<field><type>bs_ContextCreateFunction</type><name>create</name></field>
 			<field><type>bs_ContextTickFunction</type><name>tick</name></field>
 			<field><type>bs_ContextInputFunction</type><name>input</name></field>
 			<field><type>bs_ContextLeaveFunction</type><name>leave</name></field>
@@ -2233,6 +2235,7 @@
             <field><type>bs_vec2</type><name>border_size</name></field>
             <field><type>bs_WindowType</type><name>window_type</name></field>
             <field><type>bs_CursorIcon</type><name>cursor_icon</name></field>
+            <field><type>bs_NonClientArea</type><name>hovering_non_client_area</name></field>
 			 
             <field><type>bs_U32</type><name>dpi</name></field>
             <field><type>int</type><name>frames_in_flight</name></field>
@@ -4502,6 +4505,7 @@
 		<function name="bs_openPopupWindow">
             <return>bs_Result</return>
             <param><type>bs_ContextListener</type><name>listener</name></param>
+            <param nullable="true"><type>bs_Context*</type><name>context</name></param>
             <param><type>bs_I32</type><name>id</name></param>
 			<param><type>bs_I32</type><name>x</name></param>
             <param><type>bs_I32</type><name>y</name></param>
