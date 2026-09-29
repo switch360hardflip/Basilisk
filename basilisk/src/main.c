@@ -25,7 +25,7 @@
 
 #include <basilisk-mod.h>
 #include <basilisk.h>
-#include <basilisk_pipeline.h>
+#include <pipeline.h>
 #include <bsgfx_cache.h>
 
 #ifdef _WIN32
@@ -70,22 +70,22 @@ static void queryFonts() {
 	}
 }
 
-static void updateInstances() {
+void updateInstances() {
 	bsgfx_resetInstanceTypes();
 
 	bs_Context* context;
 	
 	for (int i = 1; i < CONTEXT_MENU_COUNT; i++) {
-		basilisk_instantiateContextMenuUI(i);
+		instantiateContextMenuUI(i);
 	}
 
 	context = bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context;
-	basilisk_instantiateBaseUI(context);
-	basilisk_instantiateTitleBarUI(context);
+	instantiateTitleBarUI(context);
+
+	context = bs_fetch(BASILISK_CONTEXTS, BASILISK_CONTEXT_NEW_PROJECT)->context;
+	instantiateNewProjectMenu(context);
 
 	bsgfx_tickInstanceTypes();
-
-	printf("%d\n", bsgfx_instanceTypes()[BSGFX_INSTANCE_TYPE_2_QUAD]->instance_count);
 }
 
 static void onLoadScene() {
@@ -93,8 +93,8 @@ static void onLoadScene() {
 	$vs_bsgfx_mesh_color();
 	$fs_bsgfx_atlas();
 
-	basilisk_createRenderers();
-		//basilisk_loadFonts();
+	createRenderers();
+		//loadFonts();
 
 	queryFonts();
 
@@ -112,9 +112,11 @@ static void onLoadScene() {
 	bsmod_onLoad();
 	bsmod_bindAtlases();
 
+	iniTitleBar();
 	for (int i = 1; i < CONTEXT_MENU_COUNT; i++) {
 		iniContextMenu(i);
 	}
+	iniNewProjectMenu();
 
 	updateInstances();
 }
@@ -139,13 +141,11 @@ static void onTick(bs_Context* context) {
 		bs_Renderer* renderer = bs_fetch(BASILISK_RENDERERS, BASILISK_RENDERER_MAIN)->renderer;
 		bs_Queue* queue = bs_fetch(BSGFX_QUEUES, BSGFX_QUEUE_GRAPHICS)->queue;
 
-		bs_RGBA clear_color = BS_RGBA(83, 83, 83, 255);
-
 		bs_SubpassFunction funcs[] = {
-			basilisk_renderMainContext,
+			renderMainContext,
 		};
 
-		basilisk_pipeline(queue, renderer, clear_color, funcs, sizeof(funcs) / sizeof(*funcs));
+		pipeline(queue, renderer, funcs, sizeof(funcs) / sizeof(*funcs));
 	}
 }
 
@@ -260,7 +260,7 @@ int main(int argc, char* argv[]) {
 	bsgfx_Callbacks* gfx_callbacks = bsgfx_callbacks();
 	*gfx_callbacks = (bsgfx_Callbacks) {
 		.loadScene = onLoadScene,
-		.pipeline = basilisk_pipeline,
+		.pipeline = pipeline,
 		.context_listener = {
 			.tick = onTick,
 			.activate = onApplicationWindowActivate,
@@ -286,7 +286,7 @@ int main(int argc, char* argv[]) {
 	bsgfx_ini("Basilisk", 1200, 900, BS_WINDOW_NO_TITLE_BAR, argc, argv);
 
 	basilisk.context = bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context;
-	bs_addBorderPadding(basilisk.context, 2);
+	bs_addBorderPadding(basilisk.context, BORDER_PADDING);
 
 	//bs_Object* title_bar_context = BS_CONTEXT(BASILISK_CONTEXTS, BASILISK_CONTEXT_TITLE_BAR, 0);
 	//bs_window(title_bar_context->context, basilisk.context, onTitleBarTick, bs_resolution(basilisk.context).x, 32, "test", 0);

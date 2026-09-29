@@ -25,7 +25,7 @@
 
 #include <basilisk-mod.h>
 #include <bsmod_cache.h>
-#include <basilisk_pipeline.h>
+#include <pipeline.h>
 #include <basilisk.h>
 
 /**
@@ -45,65 +45,8 @@ static void _bsgfx_loResSubpass0() {
   High Resolution Subpass 0
   Writes to the swapchain
   */
-_Thread_local bs_RGBA _clear_color_;
 
-void basilisk_renderMainContext(bs_RendererScope* scope) {
-    bs_Queue* queue = scope->queue;
-
-    bs_PipelineHash hash;
-    bs_Pipeline* pipeline;
-
-    bs_beginCommentN(queue, BS_CONSTANT_STRING("High Resolution Subpass 0"));
-
-    bs_vec4 clear_color = bs_rgbUCharToV4(_clear_color_);
-    if (bs_instance()->physical_device->flags & BS_PHYSICAL_DEVICE_SRGB_FORMAT)
-        clear_color.xyz = bs_sRGBToLinearV3(&clear_color.xyz);
-
-    bs_clearColor(queue, 0, bs_resolution(bs_scope()->context), &clear_color);
-
-    basilisk_renderDepthlessLines(scope, queue);
-    basilisk_renderPoints(scope, queue);
-    basilisk_renderCones(scope, queue);
-    basilisk_renderSelectedTile(scope, queue);
-    basilisk_renderRoundedQuads(scope, queue, bsgfx_subtypes()[BSGFX_SUBTYPE_ATLAS_ICON]);
-    bsgfx_renderColorPickers(scope, queue);
-    basilisk_renderUISolid(scope, queue, bsgfx_subtypes()[BSGFX_SUBTYPE_UI_COLOR]);
-    basilisk_renderUI(scope, queue, bsgfx_subtypes()[BSGFX_SUBTYPE_UI]);
-
-    basilisk_renderFontSubtype(scope, queue, bsgfx_subtypes()[BSGFX_SUBTYPE_FONT], 0, $fs_bsgfx_font_small());
-
-    basilisk_renderUIStencil(scope, queue);
-    basilisk_renderDither(scope, queue);
-
-  //  bs_clearDepth(0, bs_fetch(BSMOD_IMAGES, BSMOD_IMAGE_DEPTH)->image->dim, 1.0);
-    basilisk_renderTiles(scope, queue);
-    bsgfx_renderPrimitives(scope, queue, bsgfx_app()->screen_camera.result);
-
-    bsgfx_renderColorPickers(scope, queue);
-
-    /**
-     Textures
-     */
-    hash = bsgfx_defaultPipelineHash();
-    bsgfx_requiredForTransparency(&hash);
-    hash.shaders[0] = $vs_bsgfx_quad_instanced();
-    hash.shaders[1] = $fs_bsgfx_256_hi_res();
-
-    if (bs_pipeline(scope, queue, &hash, &pipeline) == BS_RESULT_OK) {
-
-        bs_pushConstant(queue, pipeline, 0, sizeof(bsgfx_app()->screen_camera.result), &bsgfx_app()->screen_camera.result);
-        bsgfx_renderSubtype(queue, bsgfx_subtypes()[BSGFX_SUBTYPE_256_HI], pipeline);
-    }
-
-    bsgfx_renderAtlasIcons(scope, queue);
-    bsgfx_renderTileIcons(scope, queue);
-
-    bs_endComment(queue);
-}
-
-void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_color, bs_SubpassFunction callbacks[], int callbacks_count) {
-    _clear_color_ = clear_color;
-
+void pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_SubpassFunction callbacks[], int callbacks_count) {
   //  if (bs_scope()->context->swapchain_ok) {
         bs_acquire();
   //  }
@@ -144,7 +87,7 @@ void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_col
     bs_awaitQueue(queue);
 }
 
-bs_Object* basilisk_createHiResRenderer(bs_Context* context, int id) {
+bs_Object* createHiResRenderer(bs_Context* context, int id) {
     bs_Object* hi_res = BS_RENDERER(BASILISK_RENDERERS, id, BS_OBJECT_SWAPCHAIN_IMAGE_BIT);
     if (bs_renderer(hi_res, 0) == BS_RESULT_OK) {
         bs_autoResizeRenderer(hi_res->renderer, context);
@@ -184,8 +127,8 @@ bs_Object* basilisk_createHiResRenderer(bs_Context* context, int id) {
     return hi_res;
 }
 
-void basilisk_createRenderers() {
-    basilisk_createHiResRenderer(bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context, BASILISK_RENDERER_MAIN);
+void createRenderers() {
+    createHiResRenderer(bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context, BASILISK_RENDERER_MAIN);
     if (bs_exists(BASILISK_CONTEXTS, BASILISK_CONTEXT_TITLE_BAR))
-        basilisk_createHiResRenderer(bs_fetch(BASILISK_CONTEXTS, BASILISK_CONTEXT_TITLE_BAR)->context, BASILISK_RENDERER_TITLE_BAR);
+        createHiResRenderer(bs_fetch(BASILISK_CONTEXTS, BASILISK_CONTEXT_TITLE_BAR)->context, BASILISK_RENDERER_TITLE_BAR);
 }

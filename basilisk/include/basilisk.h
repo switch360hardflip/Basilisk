@@ -46,6 +46,7 @@ extern Fonts _fonts_;
 
 #define BASILISK_CONTEXT_IDS(X)                                 \
     X(BASILISK_CONTEXT_TITLE_BAR)                               \
+    X(BASILISK_CONTEXT_NEW_PROJECT)                          \
     X(BASILISK_CONTEXT_MENU_0)                                  \
     X(BASILISK_CONTEXT_MENU_1)                                  \
     X(BASILISK_CONTEXTS_COUNT)
@@ -106,6 +107,8 @@ BS_GENERATE_ENUM(BASILISK_FONT_IDS);
 #define BASILISK_ATLASES basilisk.sources[BS_OBJECT_ATLAS]
 #define BASILISK_FONTS basilisk.sources[BS_OBJECT_FONT]
 
+#define BORDER_PADDING 2
+
 typedef struct {
     bs_vec3 position;
     bs_Range background_instance_range;
@@ -125,21 +128,85 @@ typedef enum {
     CONTEXT_MENU_COUNT
 } ContextMenuType;
 
+typedef void (*OnContextMenuClick)();
+
 typedef struct {
     const char* left_text;
     const char* right_text;
     ContextMenuType hover_menu_type;
 
     Button button;
+
+    OnContextMenuClick on_click;
 } ContextMenuElement;
 
-bs_Object* basilisk_createHiResRenderer(bs_Context* context, int id);
-void basilisk_createRenderers();
+typedef struct {
+    bsgfx_InstanceSubtype* ui;
+    bsgfx_InstanceSubtype* ui_solid;
+    bsgfx_InstanceSubtype* text;
+} CommonSubtypes;
 
-void basilisk_renderContextMenu(bs_RendererScope* scope, ContextMenuType menu_type);
-void basilisk_instantiateContextMenuUI(ContextMenuType menu_type);
-void basilisk_instantiateTitleBarUI(bs_Context* context);
-void basilisk_instantiateBaseUI(bs_Context* context);
+
+void instantiateNewProjectMenu(bs_Context* context);
+void iniNewProjectMenu();
+void onCreateProjectFromContextMenu();
+
+bs_Object* createHiResRenderer(bs_Context* context, int id);
+void createRenderers();
+
+void renderContextMenu(bs_RendererScope* scope);
+void instantiateContextMenuUI(ContextMenuType menu_type);
+
+typedef enum {
+    TITLE_BAR_BUTTON_FILE,
+    TITLE_BAR_BUTTON_MINIMIZE,
+    TITLE_BAR_BUTTON_MAXIMIZE,
+    TITLE_BAR_BUTTON_CLOSE,
+
+    TITLE_BAR_BUTTON_COUNT
+} TitleBarButtonId;
+
+typedef struct {
+    bs_Range instance_range;
+    bs_vec3 position;
+    bool hovering;
+    bool hover_once;
+    bool hover_release;
+} TitleBarButton;
+
+bs_Range instantiateButtonBackgroundUI(
+    const CommonSubtypes* subtypes,
+    bsgfx_UIElement* element,
+    bsgfx_Material* material,
+    bs_vec3 position,
+    bs_vec2 size
+);
+
+void instantiateTitleBarButtonUI(
+    const CommonSubtypes* subtypes,
+    TitleBarButton buttons[TITLE_BAR_BUTTON_COUNT],
+    TitleBarButtonId id,
+    bsgfx_AtlasCache* icon_cache,
+    bsgfx_Material* material,
+    bs_vec3 position,
+    bs_vec2 title_bar_size,
+    int width
+);
+
+void instantiateTitleBarTextButtonUI(
+    const CommonSubtypes* subtypes,
+    TitleBarButton buttons[TITLE_BAR_BUTTON_COUNT],
+    TitleBarButtonId id,
+    const char* text,
+    bsgfx_Material* material,
+    bs_vec3 position,
+    bs_vec2 title_bar_size
+);
+void titleBarButtonTest(const CommonSubtypes* subtypes, TitleBarButton buttons[TITLE_BAR_BUTTON_COUNT], TitleBarButtonId id, bsgfx_Material* hovering_material);
+void instantiateTitleBarUI(bs_Context* context);
+
+
+void instantiateBaseUI(bs_Context* context, const CommonSubtypes* subtypes);
 bs_NonClientArea onClientAreaTick(bs_Context* context, bs_ivec2 pt);
 
 void onContextMenuTick(bs_Context* context, void* params);
@@ -149,23 +216,26 @@ void openContextMenu(bs_ivec2 position, ContextMenuType type, bs_Context* contex
 void toggleContextMenu(bs_ivec2 position, ContextMenuType type);
 
 bool onTitleBarTick();
+void iniTitleBar();
 
-void basilisk_renderDither(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderUIStencil(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderUISolid(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype);
-void basilisk_renderUI(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype);
-void basilisk_renderRoundedQuads(bsgfx_InstanceSubtype* subtype, bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderPrefabOutlines(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderFontSubtype(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype, int font_id, bs_Shader* fragment_shader);
-void basilisk_renderTiles(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderSelectedTile(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderUIPost(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderCones(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderPoints(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderLines(bs_RendererScope* scope, bs_Queue* queue);
-void basilisk_renderDepthlessLines(bs_RendererScope* scope, bs_Queue* queue);
+void renderDither(bs_RendererScope* scope, bs_Queue* queue);
+void renderUIStencil(bs_RendererScope* scope, bs_Queue* queue);
+void renderUISolid(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype);
+void renderUI(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype);
+void renderRoundedQuads(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype);
+void renderPrefabOutlines(bs_RendererScope* scope, bs_Queue* queue);
+void renderFontSubtype(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype, int font_id, bs_Shader* fragment_shader);
+void renderTiles(bs_RendererScope* scope, bs_Queue* queue);
+void renderSelectedTile(bs_RendererScope* scope, bs_Queue* queue);
+void renderUIPost(bs_RendererScope* scope, bs_Queue* queue);
+void renderCones(bs_RendererScope* scope, bs_Queue* queue);
+void renderPoints(bs_RendererScope* scope, bs_Queue* queue);
+void renderLines(bs_RendererScope* scope, bs_Queue* queue);
+void renderDepthlessLines(bs_RendererScope* scope, bs_Queue* queue);
 
-void basilisk_renderMainContext(bs_RendererScope* scope);
-void basilisk_pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_RGBA clear_color, bs_SubpassFunction callbacks[], int callbacks_count);
+void renderMainContext(bs_RendererScope* scope);
+void pipeline(bs_Queue* queue, bs_Renderer* renderer, bs_SubpassFunction callbacks[], int callbacks_count);
+
+void updateInstances();
 
 #endif

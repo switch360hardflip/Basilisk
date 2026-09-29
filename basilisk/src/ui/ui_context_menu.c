@@ -68,6 +68,7 @@ ContextMenuElement _context_menu_file_elements_[] = {
     {
         .left_text = "New...",
         .right_text = "Ctrl+N",
+        .on_click = onCreateProjectFromContextMenu,
     },
     {
         .left_text = "Open...",
@@ -97,11 +98,10 @@ ContextMenuElement _context_menu_file_elements_[] = {
 BSGFX_CACHE_COLOR_MATERIAL(blue_button_background_color, BS_RGBA(72, 150, 255, 255))
 BSGFX_CACHE_COLOR_MATERIAL(transparent_color, BS_RGBA(0, 0, 0, 0))
 
-
 typedef struct {
     const char* title;
     bool has_changes;
-  //  bs_Context* context;
+    //  bs_Context* context;
     ContextMenuElement* elements;
     int elements_count;
     bsgfx_InstanceSubtype* text_subtype;
@@ -115,8 +115,10 @@ ContextMenu context_menus[CONTEXT_MENU_COUNT] = {
     [CONTEXT_MENU_TEST] = CONTEXT_MENU(_context_menu_test_elements_),
 };
 
-static void instantiateContextMenuUI(ContextMenu* menu, ContextMenuElement elements[], int elements_count) {
-    int window_height = elements_count * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT;
+void instantiateContextMenuUI(ContextMenuType menu_type) {
+    ContextMenu* menu = context_menus + menu_type;
+
+    int window_height = menu->elements_count * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT;
     const int border_size = 1;
 
     bs_vec3 position = { 0.0 };
@@ -148,8 +150,8 @@ static void instantiateContextMenuUI(ContextMenu* menu, ContextMenuElement eleme
     */
     position.y += window_height;
 
-    for (int i = 0; i < elements_count; i++) {
-        ContextMenuElement* context_menu_element = elements + i;
+    for (int i = 0; i < menu->elements_count; i++) {
+        ContextMenuElement* context_menu_element = menu->elements + i;
         bsgfx_UIElement element;
 
         bsgfx_Material* text_material = $black_material();
@@ -254,7 +256,7 @@ static void instantiateContextMenuUI(ContextMenu* menu, ContextMenuElement eleme
     }
 }
 
-void basilisk_renderContextMenu(bs_RendererScope* scope) {
+void renderContextMenu(bs_RendererScope* scope) {
     ContextMenu* menu = context_menus + bs_scope()->context->popup.id;
     bs_Queue* queue = scope->queue;
 
@@ -268,9 +270,9 @@ void basilisk_renderContextMenu(bs_RendererScope* scope) {
 
     bs_clearColor(queue, 0, bs_resolution(bs_scope()->context), &clear_color);
 
-    basilisk_renderUISolid(scope, queue, menu->ui_solid_subtype);
-    basilisk_renderUI(scope, queue, menu->ui_subtype);
-    basilisk_renderFontSubtype(scope, queue, menu->text_subtype, 0, $fs_bsgfx_font_small());
+    renderUISolid(scope, queue, menu->ui_solid_subtype);
+    renderUI(scope, queue, menu->ui_subtype);
+    renderFontSubtype(scope, queue, menu->text_subtype, 0, $fs_bsgfx_font_small());
 
 #ifndef NDEBUG
     bs_endComment(queue);
@@ -301,16 +303,10 @@ void contextMenuPipeline(bs_Context* context) {
     bs_Queue* queue = bs_fetch(BSGFX_QUEUES, BSGFX_QUEUE_GRAPHICS)->queue;
 
     bs_SubpassFunction funcs[] = {
-        basilisk_renderContextMenu,
+        renderContextMenu,
     };
 
-    basilisk_pipeline(queue, &renderer, BASILISK_CONTEXT_MENU_CLEAR_COLOR, funcs, sizeof(funcs) / sizeof(*funcs));
-}
-
-void basilisk_instantiateContextMenuUI(ContextMenuType menu_type) {
-    ContextMenu* menu = context_menus + menu_type;
-
-    instantiateContextMenuUI(menu, menu->elements, menu->elements_count);
+    pipeline(queue, &renderer, funcs, sizeof(funcs) / sizeof(*funcs));
 }
 
 static void buttonTest(bsgfx_InstanceSubtype* subtype, Button* button) {
@@ -421,6 +417,16 @@ void onContextMenuTick(bs_Context* context, void* params) {
     if (menu->has_changes) {
         menu->has_changes = false;
         contextMenuPipeline(context);
+    }
+
+    for (int i = 0; i < menu->elements_count; i++) {
+        ContextMenuElement* element = menu->elements + i;
+
+        if (element->button.hovering) {
+            if (element->on_click && bs_inputDownOnce(BS_LEFT_MOUSE_BUTTON)) {
+                element->on_click(menu, element);
+            }
+        }
     }
 }
 

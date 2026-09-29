@@ -858,6 +858,7 @@ static void _bs_createDXGIDevice() {
 #endif
 
 BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
+    bs_Context* last_context = _bs_scope_.context;
     _bs_scope_.context = context;
 
     _bs_preparePhysicalDevice(context);
@@ -894,7 +895,7 @@ BSAPI void _bs_device(bs_Context* context, bs_PhysicalDevice* device) {
         _bs_createDXGIDevice();
 #endif
 
-    _bs_scope_.context = NULL;
+    _bs_scope_.context = last_context;
 }
 
 

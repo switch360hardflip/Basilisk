@@ -2061,7 +2061,7 @@ BSAPI bs_Result _bs_window(
     if (parent) {
         parent->next = context;
         parent_hwnd = parent->hwnd;
-        style = WS_CHILD | WS_VISIBLE;
+       // style = WS_CHILD | WS_VISIBLE;
     }
     else if (type == BS_WINDOW_NO_TITLE_BAR) {
         style = WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;

@@ -25,9 +25,9 @@
 
 #include <basilisk-mod.h>
 #include <bsmod_cache.h>
-#include <basilisk_pipeline.h>
+#include <pipeline.h>
 
-void basilisk_renderDepthlessLines(bs_RendererScope* scope, bs_Queue* queue) {
+void renderDepthlessLines(bs_RendererScope* scope, bs_Queue* queue) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -49,7 +49,7 @@ void basilisk_renderDepthlessLines(bs_RendererScope* scope, bs_Queue* queue) {
     }
 }
 
-void basilisk_renderLines(bs_RendererScope* scope, bs_Queue* queue) {
+void renderLines(bs_RendererScope* scope, bs_Queue* queue) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -70,7 +70,7 @@ void basilisk_renderLines(bs_RendererScope* scope, bs_Queue* queue) {
     }
 }
 
-void basilisk_renderPoints(bs_RendererScope* scope, bs_Queue* queue) {
+void renderPoints(bs_RendererScope* scope, bs_Queue* queue) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -87,7 +87,7 @@ void basilisk_renderPoints(bs_RendererScope* scope, bs_Queue* queue) {
     }
 }
 
-void basilisk_renderCones(bs_RendererScope* scope, bs_Queue* queue) {
+void renderCones(bs_RendererScope* scope, bs_Queue* queue) {
     if (!bs_exists(BSGFX_ATLASES, BSGFX_ATLAS_ANY))
         return;
 
@@ -118,7 +118,7 @@ void basilisk_renderCones(bs_RendererScope* scope, bs_Queue* queue) {
     }
 }
 
-void basilisk_renderUIPost(bs_RendererScope* scope, bs_Queue* queue) {
+void renderUIPost(bs_RendererScope* scope, bs_Queue* queue) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -150,7 +150,7 @@ void basilisk_renderUIPost(bs_RendererScope* scope, bs_Queue* queue) {
     }
 }
 
-void basilisk_renderSelectedTile(bs_RendererScope* scope, bs_Queue* queue) {
+void renderSelectedTile(bs_RendererScope* scope, bs_Queue* queue) {
     return; // TODO: $fs_bsgfx_tile_selected needs to compile
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
@@ -178,7 +178,7 @@ void basilisk_renderSelectedTile(bs_RendererScope* scope, bs_Queue* queue) {
     }
 }
 
-void basilisk_renderTiles(bs_RendererScope* scope, bs_Queue* queue) {
+void renderTiles(bs_RendererScope* scope, bs_Queue* queue) {
     return; // TODO: $fs_bsgfx_tile_screen needs to compile
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
@@ -204,7 +204,7 @@ void basilisk_renderTiles(bs_RendererScope* scope, bs_Queue* queue) {
     }
 }
 
-void basilisk_renderPrefabOutlines(bs_RendererScope* scope, bs_Queue* queue) {
+void renderPrefabOutlines(bs_RendererScope* scope, bs_Queue* queue) {
     if (!bs_exists(BSGFX_ATLASES, BSGFX_ATLAS_ANY))
         return;
 
@@ -238,7 +238,7 @@ void basilisk_renderPrefabOutlines(bs_RendererScope* scope, bs_Queue* queue) {
 
 }
 
-void basilisk_renderRoundedQuads(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype) {
+void renderRoundedQuads(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -287,7 +287,7 @@ void basilisk_renderRoundedQuads(bs_RendererScope* scope, bs_Queue* queue, bsgfx
     }
 }
 
-void basilisk_renderUI(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype) {
+void renderUI(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -318,7 +318,7 @@ void basilisk_renderUI(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceS
     }
 }
 
-void basilisk_renderFontSubtype(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype, int font_id, bs_Shader* fragment_shader) {
+void renderFontSubtype(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype, int font_id, bs_Shader* fragment_shader) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -336,7 +336,7 @@ void basilisk_renderFontSubtype(bs_RendererScope* scope, bs_Queue* queue, bsgfx_
     }
 }
 
-void basilisk_renderUISolid(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype) {
+void renderUISolid(bs_RendererScope* scope, bs_Queue* queue, bsgfx_InstanceSubtype* subtype) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -367,7 +367,7 @@ void basilisk_renderUISolid(bs_RendererScope* scope, bs_Queue* queue, bsgfx_Inst
     }
 }
 
-void basilisk_renderUIStencil(bs_RendererScope* scope, bs_Queue* queue) {
+void renderUIStencil(bs_RendererScope* scope, bs_Queue* queue) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
@@ -408,7 +408,7 @@ void basilisk_renderUIStencil(bs_RendererScope* scope, bs_Queue* queue) {
     }
 }
 
-void basilisk_renderDither(bs_RendererScope* scope, bs_Queue* queue) {
+void renderDither(bs_RendererScope* scope, bs_Queue* queue) {
     bs_PipelineHash hash;
     bs_Pipeline* pipeline;
 
