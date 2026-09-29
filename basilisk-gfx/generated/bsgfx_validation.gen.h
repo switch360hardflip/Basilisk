@@ -107,6 +107,7 @@ static inline bsgfx_FunctionTable* _val_bsgfx_getFunctions() {
     functions.bsgfx_animator = (PFN_bsgfx_animator)bs_getProcAddress(module, "_val_bsgfx_animator");
     functions.bsgfx_ensureInstanceCount = (PFN_bsgfx_ensureInstanceCount)bs_getProcAddress(module, "_val_bsgfx_ensureInstanceCount");
     functions.bsgfx_instanceType = (PFN_bsgfx_instanceType)bs_getProcAddress(module, "_val_bsgfx_instanceType");
+    functions.bsgfx_nameSubtype = (PFN_bsgfx_nameSubtype)bs_getProcAddress(module, "_val_bsgfx_nameSubtype");
     functions.bsgfx_deleteSubtype = (PFN_bsgfx_deleteSubtype)bs_getProcAddress(module, "_val_bsgfx_deleteSubtype");
     functions.bsgfx_subtype = (PFN_bsgfx_subtype)bs_getProcAddress(module, "_val_bsgfx_subtype");
     functions.bsgfx_instantiate = (PFN_bsgfx_instantiate)bs_getProcAddress(module, "_val_bsgfx_instantiate");

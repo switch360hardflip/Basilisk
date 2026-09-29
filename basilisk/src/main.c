@@ -233,7 +233,7 @@ int main(int argc, char* argv[]) {
 	char* args[] = {
 		"--use-validation-layers",
 		"--track-changes",
-		//  "--force-vulkan-swapchain"
+		//"--force-vulkan-swapchain"
 	};
 	bs_parseArgs(sizeof(args) / sizeof(char*), args);
 	bs_parseArgs(argc, argv);

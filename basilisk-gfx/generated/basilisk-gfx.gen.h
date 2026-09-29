@@ -1304,6 +1304,7 @@ struct bsgfx_InstanceSubtype {
     int batch_source_id;
     int batch_id;
     uint flags;
+    const char* name;
     bsgfx_InstanceType* instance_type2;
     bs_List host_instances;
 };
@@ -2278,6 +2279,16 @@ bsgfx_instanceType(
     int bind_set,
     int binding,
     bsgfx_InstanceType** out);
+
+ /**
+  @param instance_subtype
+  @param name
+  @return void
+  */
+BSGFXAPI void
+bsgfx_nameSubtype(
+    bsgfx_InstanceSubtype* instance_subtype,
+    const char* name);
 
  /**
   @param instance_subtype

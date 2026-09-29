@@ -308,6 +308,12 @@ BSGFXAPI bs_Result _preval_bsgfx_instanceType(size_t instance_size, int bind_set
     return next.bsgfx_instanceType(instance_size, bind_set, binding, out);
 }
 
+BSGFXAPI void _preval_bsgfx_nameSubtype(bsgfx_InstanceSubtype* instance_subtype, const char* name) {
+    BSGFX_VALIDATE(instance_subtype != NULL, ,);
+    BSGFX_VALIDATE(name != NULL, ,);
+    next.bsgfx_nameSubtype(instance_subtype, name);
+}
+
 BSGFXAPI void _preval_bsgfx_deleteSubtype(bsgfx_InstanceSubtype* instance_subtype) {
     BSGFX_VALIDATE(instance_subtype != NULL, ,);
     next.bsgfx_deleteSubtype(instance_subtype);
@@ -851,6 +857,7 @@ bsgfx_FunctionTable* _preval_bsgfx_getFunctionTable() {
     functions.bsgfx_animator = _preval_bsgfx_animator;
     functions.bsgfx_ensureInstanceCount = _preval_bsgfx_ensureInstanceCount;
     functions.bsgfx_instanceType = _preval_bsgfx_instanceType;
+    functions.bsgfx_nameSubtype = _preval_bsgfx_nameSubtype;
     functions.bsgfx_deleteSubtype = _preval_bsgfx_deleteSubtype;
     functions.bsgfx_subtype = _preval_bsgfx_subtype;
     functions.bsgfx_instantiate = _preval_bsgfx_instantiate;

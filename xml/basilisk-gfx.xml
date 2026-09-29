@@ -1206,6 +1206,7 @@
 			<field><type>int</type><name>batch_source_id</name></field>
 			<field><type>int</type><name>batch_id</name></field>
 			<field><type>uint</type><name>flags</name></field>
+			<field><type>const char*</type><name>name</name></field>
 			<field><type>bsgfx_InstanceType*</type><name>instance_type2</name></field>
 			<field><type>bs_List</type><name>host_instances</name></field>
 		</structure>
@@ -1926,6 +1927,11 @@
 			<param><type>int</type><name>bind_set</name></param>
 			<param><type>int</type><name>binding</name></param>
 			<param><type>bsgfx_InstanceType**</type><name>out</name></param>
+		</function>
+		<function name="bsgfx_nameSubtype">
+			<return>void</return>
+			<param><type>bsgfx_InstanceSubtype*</type><name>instance_subtype</name></param>
+			<param><type>const char*</type><name>name</name></param>
 		</function>
 		<function name="bsgfx_deleteSubtype">
 			<return>void</return>

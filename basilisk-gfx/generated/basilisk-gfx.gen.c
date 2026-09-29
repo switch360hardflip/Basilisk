@@ -419,6 +419,13 @@ bs_Result bsgfx_instanceType(
     return next.bsgfx_instanceType(instance_size, bind_set, binding, out);
 }
 
+void bsgfx_nameSubtype(
+    bsgfx_InstanceSubtype* instance_subtype, 
+    const char* name)
+{
+    next.bsgfx_nameSubtype(instance_subtype, name);
+}
+
 void bsgfx_deleteSubtype(
     bsgfx_InstanceSubtype* instance_subtype)
 {

@@ -4401,7 +4401,18 @@
         </function>
         <function name="bs_windowPosition">
             <return>bs_ivec2</return>
+            <param><type>bs_Context*</type><name>context</name></param>
         </function>
+
+        <function name="bs_maximizeWindow">
+            <return>void</return>
+            <param><type>bs_Context*</type><name>context</name></param>
+        </function>
+        <function name="bs_minimizeWindow">
+            <return>void</return>
+            <param><type>bs_Context*</type><name>context</name></param>
+        </function>
+
         <function name="bs_screenCursorPosition">
             <return>bs_vec2</return>
         </function>

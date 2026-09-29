@@ -302,6 +302,18 @@ bool onTitleBarTick() {
         }
     }
 
+    if (bs_inputUpOnce(BS_LEFT_MOUSE_BUTTON)) {
+        if (title_bar_buttons[TITLE_BAR_BUTTON_MINIMIZE].hovering) {
+            bs_minimizeWindow(context);
+        }
+        else if (title_bar_buttons[TITLE_BAR_BUTTON_MAXIMIZE].hovering) {
+            bs_maximizeWindow(context);
+        }
+        else if (title_bar_buttons[TITLE_BAR_BUTTON_CLOSE].hovering) {
+            bs_exit();
+        }
+    }
+
     hovering_any_title_bar_button = false;
     for (int i = 0; i < TITLE_BAR_BUTTON_COUNT; i++) {
         if (title_bar_buttons[i].hovering) {

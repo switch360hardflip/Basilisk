@@ -55,26 +55,32 @@ BSGFXAPI bs_Result _bsgfx_ensureInstanceCount(bsgfx_InstanceType* instance_type,
 
 	if ((existing_size + requested_size) > existing_capacity) {
 		size_t remaining_size = existing_capacity - existing_size;
-		size_t needed_size = remaining_size - requested_size;
+		size_t needed_size = requested_size - remaining_size;
 
 		size_t overhead_size = overhead_count * (size_t)instance_type->instance_size;
 		size_t total_size = existing_capacity + needed_size + overhead_size;
 
-		assert(remaining_size > requested_size);
+		assert(remaining_size < requested_size);
 
+		bs_U32 bind_set = instance_type->device_instances->bind_set;
+		bs_U32 binding = instance_type->device_instances->binding;
+		bs_BufferUsageFlags usage_flags = instance_type->device_instances->usage_flags;
+		bs_MemoryPropertyFlags memory_flags = instance_type->device_instances->memory_flags;
 		bs_destroyBuffer(instance_type->device_instances);
 
 		bs_Object* object = BS_BUFFER(-1, -1, 0);
-		result = bs_buffer(object, total_size,
-			BS_BUFFER_USAGE_UNIFORM_BUFFER_BIT | BS_BUFFER_USAGE_TRANSFER_DST_BIT | BS_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			BS_MEMORY_PROPERTY_HOST_VISIBLE_BIT | BS_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			0);
+		result = bs_buffer(object, total_size, usage_flags, memory_flags, 0);
 
 		if (result != BS_RESULT_OK)
 			return result;
 
+		instance_type->device_instances = object->buffer;
+
 		result = bs_mapBuffer(object->buffer, BS_U32_MAX);
-		result = bs_bindBuffer(BSGFX_SET_INSTANCE_SUBTYPES, BSGFX_BINDING_INSTANCE_SUBTYPES, object->buffer);
+		if (result != BS_RESULT_OK)
+			return result;
+
+		result = bs_bindBuffer(bind_set, binding, object->buffer);
 	}
 
 	return result;
@@ -165,6 +171,10 @@ BSGFXAPI bs_Result _bsgfx_instanceType(size_t instance_size, int bind_set, int p
   /*==============================================================================
    * Subtypes
    =============================================================================*/
+
+BSGFXAPI void _bsgfx_nameSubtype(bsgfx_InstanceSubtype* subtype, const char* name) {
+	subtype->name = name;
+}
 
 BSGFXAPI bool _bsgfx_validateSubtype(const char* library_name, bsgfx_InstanceSubtype* subtype) { // TODO: use library_name
 	BSGFX_VALIDATE(subtype != NULL, BS_RESULT_VALIDATION_ERROR, );
@@ -310,6 +320,8 @@ BSGFXAPI int _val_bsgfx_instantiate(bsgfx_InstanceSubtype* subtype, const void* 
 
 BSGFXAPI int _bsgfx_instantiate(bsgfx_InstanceSubtype* subtype, const void* data, int data_size, bs_U32 flags, unsigned int bone_index, int id, int material) {
 	//int out_index = bsgfx_index(flags, instance_type->instance_count);
+
+	_bsgfx_ensureInstanceCount(subtype->instance_type2, 1, 32);
 
 	subtype->instance_type2->instance_count++;
 

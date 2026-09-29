@@ -90,6 +90,7 @@ typedef void(* PFN_bsgfx_runAnimator)(bsgfx_Animator* animator, bsgfx_AnimatorCa
 typedef bsgfx_Animator(* PFN_bsgfx_animator)(bs_Armature* armature, int resting_animation_id, int animations_count);
 typedef bs_Result(* PFN_bsgfx_ensureInstanceCount)(bsgfx_InstanceType* instance_type, bs_U32 instances_count, bs_U32 overhead_count);
 typedef bs_Result(* PFN_bsgfx_instanceType)(size_t instance_size, int bind_set, int binding, bsgfx_InstanceType** out);
+typedef void(* PFN_bsgfx_nameSubtype)(bsgfx_InstanceSubtype* instance_subtype, const char* name);
 typedef void(* PFN_bsgfx_deleteSubtype)(bsgfx_InstanceSubtype* instance_subtype);
 typedef bs_Result(* PFN_bsgfx_subtype)(bsgfx_InstanceType* instance_type, bs_Batch* batch, bs_U32 flags, bs_Range range, bsgfx_InstanceSubtype** out);
 typedef int(* PFN_bsgfx_instantiate)(bsgfx_InstanceSubtype* instance_subtype, const void* data, int data_size, bs_U32 flags, unsigned int bone_index, int id, int material);
@@ -242,6 +243,7 @@ typedef struct {
     PFN_bsgfx_animator bsgfx_animator;
     PFN_bsgfx_ensureInstanceCount bsgfx_ensureInstanceCount;
     PFN_bsgfx_instanceType bsgfx_instanceType;
+    PFN_bsgfx_nameSubtype bsgfx_nameSubtype;
     PFN_bsgfx_deleteSubtype bsgfx_deleteSubtype;
     PFN_bsgfx_subtype bsgfx_subtype;
     PFN_bsgfx_instantiate bsgfx_instantiate;
@@ -394,6 +396,7 @@ BSGFXAPI void _bsgfx_runAnimator(bsgfx_Animator* animator, bsgfx_AnimatorCallbac
 BSGFXAPI bsgfx_Animator _bsgfx_animator(bs_Armature* armature, int resting_animation_id, int animations_count);
 BSGFXAPI bs_Result _bsgfx_ensureInstanceCount(bsgfx_InstanceType* instance_type, bs_U32 instances_count, bs_U32 overhead_count);
 BSGFXAPI bs_Result _bsgfx_instanceType(size_t instance_size, int bind_set, int binding, bsgfx_InstanceType** out);
+BSGFXAPI void _bsgfx_nameSubtype(bsgfx_InstanceSubtype* instance_subtype, const char* name);
 BSGFXAPI void _bsgfx_deleteSubtype(bsgfx_InstanceSubtype* instance_subtype);
 BSGFXAPI bs_Result _bsgfx_subtype(bsgfx_InstanceType* instance_type, bs_Batch* batch, bs_U32 flags, bs_Range range, bsgfx_InstanceSubtype** out);
 BSGFXAPI int _bsgfx_instantiate(bsgfx_InstanceSubtype* instance_subtype, const void* data, int data_size, bs_U32 flags, unsigned int bone_index, int id, int material);
@@ -548,6 +551,7 @@ static inline bsgfx_FunctionTable* _bsgfx_getFunctions() {
     functions.bsgfx_animator = _bsgfx_animator;
     functions.bsgfx_ensureInstanceCount = _bsgfx_ensureInstanceCount;
     functions.bsgfx_instanceType = _bsgfx_instanceType;
+    functions.bsgfx_nameSubtype = _bsgfx_nameSubtype;
     functions.bsgfx_deleteSubtype = _bsgfx_deleteSubtype;
     functions.bsgfx_subtype = _bsgfx_subtype;
     functions.bsgfx_instantiate = _bsgfx_instantiate;

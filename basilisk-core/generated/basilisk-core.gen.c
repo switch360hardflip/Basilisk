@@ -4079,9 +4079,22 @@ bs_vec2 bs_windowCursorPosition(
     return next.bs_windowCursorPosition(context);
 }
 
-bs_ivec2 bs_windowPosition()
+bs_ivec2 bs_windowPosition(
+    bs_Context* context)
 {
-    return next.bs_windowPosition();
+    return next.bs_windowPosition(context);
+}
+
+void bs_maximizeWindow(
+    bs_Context* context)
+{
+    next.bs_maximizeWindow(context);
+}
+
+void bs_minimizeWindow(
+    bs_Context* context)
+{
+    next.bs_minimizeWindow(context);
 }
 
 bs_vec2 bs_screenCursorPosition()

@@ -44,6 +44,7 @@ ContextMenuElement _context_menu_test_elements_[] = {
 ContextMenuElement _context_menu_open_recent_elements_[] = {
     {
         .left_text = "Testing...",
+        .hover_menu_type = CONTEXT_MENU_TEST,
     },
     {
         .left_text = "Testing...",
@@ -312,7 +313,7 @@ void basilisk_instantiateContextMenuUI(ContextMenuType menu_type) {
     instantiateContextMenuUI(menu, menu->elements, menu->elements_count);
 }
 
-static void buttonTest(bsgfx_InstanceSubtype* subtype, Button* button, bsgfx_Material* hovering_material, bool* has_changes) {
+static void buttonTest(bsgfx_InstanceSubtype* subtype, Button* button) {
     bsgfx_Material* transparent_material = $transparent_color();
 
     button->hovering = bsgfx_hoveringQuadInstance(subtype, button->background_instance_range.offset);
@@ -324,11 +325,11 @@ static void buttonTest(bsgfx_InstanceSubtype* subtype, Button* button, bsgfx_Mat
     button->position = instance->transform.v[3];
 
     if (button->hovering && !button->was_hovering) {
-        button->hover_once = *has_changes = true;
+        button->hover_once = true;
     }
 
     if (!button->hovering && button->was_hovering) {
-        button->hover_release = *has_changes = true;
+        button->hover_release = true;
     }
 
     button->was_hovering = button->hovering;
@@ -344,47 +345,53 @@ void onContextMenuTick(bs_Context* context, void* params) {
         //hideContextMenuUI();
     }
 
-
-   /**
-    TODO: maybe don't have to check this all the time
-    */
-    bs_Context* child = context->next;
-    bool hovering_any_child = false;
-    while (child) {
-        if (child->hovering) {
-            hovering_any_child = true;
-            break;
-        }
-
-        child = child->next;
-    }
-
     ContextMenu* menu = context_menus + context->popup.id;
 
     bsgfx_Material* transparent_material = $transparent_color();
     bsgfx_Material* default_button_background_material = $blue_button_background_color();
 
-    if (!context->next || context->hovering) {
-        for (int j = 0; j < menu->elements_count; j++) {
-            bsgfx_InstanceHeader* header2 = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, menu->elements[j].button.background_instance_range.offset);
-            header2->material = transparent_material->id;
+    bool hovering_any_button = false;
+    for (int i = 0; i < menu->elements_count; i++) {
+        ContextMenuElement* element = menu->elements + i;
+        buttonTest(menu->ui_solid_subtype, &element->button);
+
+        if (element->button.hovering)
+            hovering_any_button = true;
+    }
+
+    if (!context->next || hovering_any_button) {
+        for (int i = 0; i < menu->elements_count; i++) {
+            ContextMenuElement* element = menu->elements + i;
+            bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
+
+            if (header->material != transparent_material->id)
+                menu->has_changes = true;
+
+            header->material = transparent_material->id;
         }
     }
 
-
     for (int i = 0; i < menu->elements_count; i++) {
         ContextMenuElement* element = menu->elements + i;
-        buttonTest(menu->ui_solid_subtype, &element->button, default_button_background_material, &menu->has_changes);
 
         bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
 
         if (element->button.hovering) {
+            if (header->material != default_button_background_material->id)
+                menu->has_changes = true;
+
             header->material = default_button_background_material->id;
         }
 
         if (element->button.hover_once) {
-
             if (context->next) {
+                if (context->next->popup.id == element->hover_menu_type) {
+                    bs_ivec2 transform = bs_windowPosition(context);
+                    bs_ivec2 local = BS_IV2(BASILISK_CONTEXT_MENU_WIDTH, (menu->elements_count - i) * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT);
+                    bs_moveWindow(context->next, transform.x + local.x, transform.y - local.y);
+                    continue;
+                }
+
                 bs_closePopupWindow(context->next);
                 context->next = NULL;
             }
@@ -394,9 +401,6 @@ void onContextMenuTick(bs_Context* context, void* params) {
                 if (element->button.hover_once) {
                     int height = context_menus[element->hover_menu_type].elements_count * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT;
 
-                    printf("active\n");
-
-
                     openContextMenu(BS_IV2(BASILISK_CONTEXT_MENU_WIDTH, (menu->elements_count - i) * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT), element->hover_menu_type, context);
                 }
             }
@@ -405,6 +409,14 @@ void onContextMenuTick(bs_Context* context, void* params) {
       //  if (element->button.hover_release && context->hovering)
       //      header->material = transparent_material->id;
     }
+
+#ifdef _DEBUG
+    // debugging
+    if (bs_inputDownOnce(BS_MIDDLE_MOUSE_BUTTON)) {
+        printf("Force repaint\n");
+        menu->has_changes = true;
+    }
+#endif
 
     if (menu->has_changes) {
         menu->has_changes = false;
@@ -424,8 +436,10 @@ void iniContextMenu(ContextMenuType type) {
     if (!menu->ui_solid_subtype)
         bsgfx_subtype(quad_instance_type, batch, 0, range, &menu->ui_solid_subtype);
 
-    if (!menu->text_subtype)
+    if (!menu->text_subtype) {
         bsgfx_subtype(quad_instance_type, batch, 0, range, &menu->text_subtype);
+        bsgfx_nameSubtype(menu->text_subtype, menu->title);
+    }
 }
 
 void openContextMenu(bs_ivec2 position, ContextMenuType type, bs_Context* context) {

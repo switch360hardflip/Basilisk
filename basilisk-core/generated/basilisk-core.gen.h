@@ -3884,6 +3884,7 @@ struct bs_Context {
     bs_Timer timer;
     bs_IO io;
     bs_ContextListener listener;
+    bs_Context* first_child;
     bs_Context* next;
     union {
         struct {
@@ -9666,10 +9667,28 @@ bs_windowCursorPosition(
     bs_Context* context);
 
  /**
+  @param context
   @return bs_ivec2
   */
 BSAPI bs_ivec2
-bs_windowPosition();
+bs_windowPosition(
+    bs_Context* context);
+
+ /**
+  @param context
+  @return void
+  */
+BSAPI void
+bs_maximizeWindow(
+    bs_Context* context);
+
+ /**
+  @param context
+  @return void
+  */
+BSAPI void
+bs_minimizeWindow(
+    bs_Context* context);
 
  /**
   @return bs_vec2
