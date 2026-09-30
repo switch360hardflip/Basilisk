@@ -224,6 +224,12 @@ static void onApplicationWindowInput(bs_Context* context, bs_ContextInputParams 
 		bs_closeAllPopupWindows();
 }
 
+bool _hovering_any_title_bar_button_ = false;
+
+static void onPreTick() {
+	_hovering_any_title_bar_button_ = false;
+}
+
 int main(int argc, char* argv[]) {
 	bs_disableValidation();
 	bsgfx_disableValidation();
@@ -255,6 +261,7 @@ int main(int argc, char* argv[]) {
 	*core_callbacks = (bs_Callbacks) {
 		.log = onLog,
 		.client_area_tick = onClientAreaTick,
+		.pre_tick = onPreTick,
 	};
 
 	bsgfx_Callbacks* gfx_callbacks = bsgfx_callbacks();

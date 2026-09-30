@@ -47,7 +47,6 @@ BSGFX_CACHE_COLOR_MATERIAL(transparent_color, BS_RGBA(0, 0, 0, 0))
 
 static bsgfx_Font* title_bar_font;
 
-static bool hovering_any_title_bar_button;
 static bool title_bar_has_changes = true;
 
 TitleBarButton _main_title_bar_buttons_[TITLE_BAR_BUTTON_COUNT];
@@ -60,7 +59,7 @@ bs_NonClientArea onClientAreaTick(bs_Context* context, bs_ivec2 pt) {
 
     int y = pt.y - rc.top;
 
-     if (hovering_any_title_bar_button)
+    if (_hovering_any_title_bar_button_)
         return BS_NON_CLIENT_AREA_CAPTION_BUTTON;
 
     if (y >= 0 && y < BASILISK_TITLE_BAR_HEIGHT)
@@ -222,6 +221,37 @@ void instantiateTitleBarTextButtonUI(
     button->instance_range = instantiateButtonBackgroundUI(subtypes, element, material, element->position, BS_V2(element->size.x + TITLE_BAR_BUTTON_PADDING_X * 2, height));
 }
 
+void instantiateTitleBarTextUI(
+    const CommonSubtypes* subtypes,
+    const char* text,
+    bsgfx_Material* material,
+    bs_vec3 position,
+    bs_vec2 title_bar_size
+) {
+    bsgfx_UIElement element_v;
+    bsgfx_UIElement* element = &element_v;
+
+    position.z++;
+    position.x += TITLE_BAR_BUTTON_PADDING_X;
+    bsgfx_UIText text_ui = {
+        .position = position,
+        .font = title_bar_font,
+        .as_ascii = text,
+        .px_size = 13,
+        .align = { 0, BASILISK_TITLE_BAR_HEIGHT },
+        .subtype = subtypes->text,
+    };
+
+    bsgfx_instantiateTextUI(text_ui, element);
+    element->position = position;
+    element->position.x -= TITLE_BAR_BUTTON_PADDING_X;
+    element->position.z--;
+
+    float height = BASILISK_TITLE_BAR_HEIGHT;
+    height += TITLE_BAR_BUTTON_PADDING_Y * 2.0;
+    element->position.y -= TITLE_BAR_BUTTON_PADDING_Y;
+}
+
 void instantiateTitleBarUI(bs_Context* context) {
     title_bar_font = _fonts_.selawik;
 
@@ -329,7 +359,7 @@ void titleBarButtonTest(const CommonSubtypes* subtypes, TitleBarButton buttons[T
     button->position = instance->transform.v[3];
 
     if (button->hovering) {
-        hovering_any_title_bar_button = true;
+        _hovering_any_title_bar_button_ = true;
         if (header->material == hovering_material->id)
             return false;
 
@@ -350,8 +380,6 @@ bool onTitleBarTick() {
 
     bsgfx_computeContextCamera();
     bsmod_onTick();
-
-    hovering_any_title_bar_button = false;
 
     bool was_hidden = context->hidden;
 

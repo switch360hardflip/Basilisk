@@ -199,6 +199,7 @@ static inline bsgfx_FunctionTable* _preval_bsgfx_getFunctions() {
     functions.bsgfx_atlasIconUIElement = (PFN_bsgfx_atlasIconUIElement)bs_getProcAddress(module, "_preval_bsgfx_atlasIconUIElement");
     functions.bsgfx_hoveringUIElement = (PFN_bsgfx_hoveringUIElement)bs_getProcAddress(module, "_preval_bsgfx_hoveringUIElement");
     functions.bsgfx_translateUIElement = (PFN_bsgfx_translateUIElement)bs_getProcAddress(module, "_preval_bsgfx_translateUIElement");
+    functions.bsgfx_instanceUIInput = (PFN_bsgfx_instanceUIInput)bs_getProcAddress(module, "_preval_bsgfx_instanceUIInput");
     functions.bsgfx_renderColorPickers = (PFN_bsgfx_renderColorPickers)bs_getProcAddress(module, "_preval_bsgfx_renderColorPickers");
 #ifdef __linux__
     dlclose(module);

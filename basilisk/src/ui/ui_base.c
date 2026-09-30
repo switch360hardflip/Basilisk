@@ -56,7 +56,7 @@
 
 //BSGFX_CACHE_ATLAS_QUERY(BSMOD_ATLASES, BSMOD_ATLAS_UI, icon)
 BSGFX_CACHE_COLOR_MATERIAL(border_outline_color, BS_RGBA(38, 38, 38, 255))
-BSGFX_CACHE_COLOR_MATERIAL(background_color, BS_RGBA(52, 52, 52, 255))
+BSGFX_CACHE_COLOR_MATERIAL(background_color, BS_RGBA(55, 55, 55, 255))
 
 void instantiateBaseUI(bs_Context* context, const CommonSubtypes* subtypes) {
     bs_ivec2 resolution = bs_resolution(context);

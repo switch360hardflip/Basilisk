@@ -202,9 +202,19 @@ void instantiateTitleBarTextButtonUI(
     bs_vec3 position,
     bs_vec2 title_bar_size
 );
+
+void instantiateTitleBarTextUI(
+    const CommonSubtypes* subtypes,
+    const char* text,
+    bsgfx_Material* material,
+    bs_vec3 position,
+    bs_vec2 title_bar_size
+);
 void titleBarButtonTest(const CommonSubtypes* subtypes, TitleBarButton buttons[TITLE_BAR_BUTTON_COUNT], TitleBarButtonId id, bsgfx_Material* hovering_material);
 void instantiateTitleBarUI(bs_Context* context);
 
+
+extern bool _hovering_any_title_bar_button_;
 
 void instantiateBaseUI(bs_Context* context, const CommonSubtypes* subtypes);
 bs_NonClientArea onClientAreaTick(bs_Context* context, bs_ivec2 pt);

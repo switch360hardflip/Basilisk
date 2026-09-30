@@ -2493,6 +2493,16 @@ BSAPI bs_Result _preval_bs_openPopupWindow(bs_ContextListener listener, bs_Conte
     return next.bs_openPopupWindow(listener, context, id, x, y, width, height, title);
 }
 
+BSAPI void _preval_bs_destroyWindow(bs_Context* context) {
+    BS_VALIDATE(context != NULL, ,);
+    next.bs_destroyWindow(context);
+}
+
+BSAPI void _preval_bs_destroyContext(bs_Context* context) {
+    BS_VALIDATE(context != NULL, ,);
+    next.bs_destroyContext(context);
+}
+
 BSAPI bs_Result _preval_bs_window(bs_Context* context, bs_Context* parent, bs_ContextListener listener, bs_U32 width, bs_U32 height, const char* title, bs_WindowType type) {
     BS_VALIDATE(context != NULL, BS_RESULT_VALIDATION_ERROR,);
     BS_VALIDATE(title != NULL, BS_RESULT_VALIDATION_ERROR,);
@@ -2525,10 +2535,6 @@ BSAPI void _preval_bs_tick(bs_Callback fixed_tick) {
 
 BSAPI void _preval_bs_exit() {
     next.bs_exit();
-}
-
-BSAPI void _preval_bs_setCursor(bs_CursorIcon type) {
-    next.bs_setCursor(type);
 }
 
 BSAPI double _preval_bs_deltaTime() {
@@ -3237,6 +3243,8 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_closeAllPopupWindows = _preval_bs_closeAllPopupWindows;
     functions.bs_closePopupWindow = _preval_bs_closePopupWindow;
     functions.bs_openPopupWindow = _preval_bs_openPopupWindow;
+    functions.bs_destroyWindow = _preval_bs_destroyWindow;
+    functions.bs_destroyContext = _preval_bs_destroyContext;
     functions.bs_window = _preval_bs_window;
     functions.bs_swapchain = _preval_bs_swapchain;
     functions.bs_showWindow = _preval_bs_showWindow;
@@ -3244,7 +3252,6 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_device = _preval_bs_device;
     functions.bs_tick = _preval_bs_tick;
     functions.bs_exit = _preval_bs_exit;
-    functions.bs_setCursor = _preval_bs_setCursor;
     functions.bs_deltaTime = _preval_bs_deltaTime;
     functions.bs_pause = _preval_bs_pause;
     functions.bs_advance = _preval_bs_advance;

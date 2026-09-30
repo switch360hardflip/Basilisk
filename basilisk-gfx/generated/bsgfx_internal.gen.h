@@ -188,6 +188,7 @@ typedef void(* PFN_bsgfx_instantiateAtlasIconUIElement)(bsgfx_UIIcon icon, const
 typedef void(* PFN_bsgfx_atlasIconUIElement)(bsgfx_UIIcon icon, bsgfx_UIElement* element);
 typedef bool(* PFN_bsgfx_hoveringUIElement)(const bsgfx_UIElement* element);
 typedef void(* PFN_bsgfx_translateUIElement)(const bsgfx_UIElement* element, const bs_vec3* position);
+typedef void(* PFN_bsgfx_instanceUIInput)(bsgfx_UIInput* input, bs_vec3 position, bs_vec2* out_width, const char* alphabet);
 typedef void(* PFN_bsgfx_renderColorPickers)(bs_RendererScope* scope, bs_Queue* queue);
 
 typedef struct {
@@ -341,6 +342,7 @@ typedef struct {
     PFN_bsgfx_atlasIconUIElement bsgfx_atlasIconUIElement;
     PFN_bsgfx_hoveringUIElement bsgfx_hoveringUIElement;
     PFN_bsgfx_translateUIElement bsgfx_translateUIElement;
+    PFN_bsgfx_instanceUIInput bsgfx_instanceUIInput;
     PFN_bsgfx_renderColorPickers bsgfx_renderColorPickers;
 } bsgfx_FunctionTable;
 
@@ -494,6 +496,7 @@ BSGFXAPI void _bsgfx_instantiateAtlasIconUIElement(bsgfx_UIIcon icon, const bsgf
 BSGFXAPI void _bsgfx_atlasIconUIElement(bsgfx_UIIcon icon, bsgfx_UIElement* element);
 BSGFXAPI bool _bsgfx_hoveringUIElement(const bsgfx_UIElement* element);
 BSGFXAPI void _bsgfx_translateUIElement(const bsgfx_UIElement* element, const bs_vec3* position);
+BSGFXAPI void _bsgfx_instanceUIInput(bsgfx_UIInput* input, bs_vec3 position, bs_vec2* out_width, const char* alphabet);
 BSGFXAPI void _bsgfx_renderColorPickers(bs_RendererScope* scope, bs_Queue* queue);
 
 static inline bsgfx_FunctionTable* _bsgfx_getFunctions() {
@@ -649,6 +652,7 @@ static inline bsgfx_FunctionTable* _bsgfx_getFunctions() {
     functions.bsgfx_atlasIconUIElement = _bsgfx_atlasIconUIElement;
     functions.bsgfx_hoveringUIElement = _bsgfx_hoveringUIElement;
     functions.bsgfx_translateUIElement = _bsgfx_translateUIElement;
+    functions.bsgfx_instanceUIInput = _bsgfx_instanceUIInput;
     functions.bsgfx_renderColorPickers = _bsgfx_renderColorPickers;
 
     return &functions;

@@ -27,7 +27,7 @@ void main() {
     float r = texture(font_atlas, uv).r;
     out_color = vec4(r, r, r, 1.0);
 
-    float alpha_scale = 0.6;
+    float alpha_scale = 0.45;
     float coverage = pow(r, alpha_scale);
 
     vec3 c = vec3(in_color.xyz);

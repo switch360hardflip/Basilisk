@@ -4252,6 +4252,18 @@ bs_Result bs_openPopupWindow(
     return next.bs_openPopupWindow(listener, context, id, x, y, width, height, title);
 }
 
+void bs_destroyWindow(
+    bs_Context* context)
+{
+    next.bs_destroyWindow(context);
+}
+
+void bs_destroyContext(
+    bs_Context* context)
+{
+    next.bs_destroyContext(context);
+}
+
 bs_Result bs_window(
     bs_Context* context, 
     bs_Context* parent, 
@@ -4298,12 +4310,6 @@ void bs_tick(
 void bs_exit()
 {
     next.bs_exit();
-}
-
-void bs_setCursor(
-    bs_CursorIcon type)
-{
-    next.bs_setCursor(type);
 }
 
 double bs_deltaTime()

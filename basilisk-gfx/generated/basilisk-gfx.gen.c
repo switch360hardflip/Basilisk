@@ -1177,6 +1177,15 @@ void bsgfx_translateUIElement(
     next.bsgfx_translateUIElement(element, position);
 }
 
+void bsgfx_instanceUIInput(
+    bsgfx_UIInput* input, 
+    bs_vec3 position, 
+    bs_vec2* out_width, 
+    const char* alphabet)
+{
+    next.bsgfx_instanceUIInput(input, position, out_width, alphabet);
+}
+
 void bsgfx_renderColorPickers(
     bs_RendererScope* scope, 
     bs_Queue* queue)

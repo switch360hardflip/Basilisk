@@ -424,7 +424,11 @@ void onContextMenuTick(bs_Context* context, void* params) {
 
         if (element->button.hovering) {
             if (element->on_click && bs_inputDownOnce(BS_LEFT_MOUSE_BUTTON)) {
+                bs_closeAllPopupWindows();
+                bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
+                header->material = transparent_material->id;
                 element->on_click(menu, element);
+                menu->has_changes = true;
             }
         }
     }
@@ -448,6 +452,11 @@ void iniContextMenu(ContextMenuType type) {
     }
 }
 
+static void onContextMenuShow(bs_Context* context, bool shown) {
+    ContextMenu* menu = context_menus + context->popup.id;
+    menu->has_changes = true;
+}
+
 void openContextMenu(bs_ivec2 position, ContextMenuType type, bs_Context* context) {
     ContextMenu* menu = context_menus + type;
 
@@ -462,6 +471,7 @@ void openContextMenu(bs_ivec2 position, ContextMenuType type, bs_Context* contex
 
     bs_openPopupWindow((bs_ContextListener) {
         .tick = onContextMenuTick,
+        .show = onContextMenuShow
     }, context, type, new_position.x, new_position.y, BASILISK_CONTEXT_MENU_WIDTH, height, menu->title);
 }
 

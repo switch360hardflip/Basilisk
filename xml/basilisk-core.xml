@@ -74,6 +74,7 @@
 		<typedef><type>void</type><name>(* bs_NameObjectFunction)(bs_Object*, const char*)</name></typedef>
 		<typedef><type>void</type><name>(* bs_ValidationErrorFunction)()</name></typedef>
 		<typedef><type>bs_NonClientArea</type><name>(* bs_NonClientAreaTickFunction)(bs_Context*, bs_ivec2)</name></typedef>
+		<typedef><type>void</type><name>(* bs_PreTickFunction)()</name></typedef>
 		<typedef><type>void</type><name>(* bs_SubpassFunction)(bs_RendererScope*)</name></typedef>
 
 		<typedef><type>long long</type><name>bs_I64</name></typedef>
@@ -119,6 +120,9 @@
         <typedef><type>void</type><name>(* bs_ContextLeaveFunction)(bs_Context* context, void* params)</name></typedef>
 		<typedef><type>void</type><name>(* bs_ContextResizeFunction)(bs_Context*, bs_U32, bs_U32)</name></typedef>
         <typedef><type>void</type><name>(* bs_ContextActivateFunction)(bs_Context* context, bs_ContextActivateParams params)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextMotionFunction)(bs_Context* context, int x, int y)</name></typedef>
+        <typedef><type>bs_CursorIcon</type><name>(* bs_ContextSetCursorFunction)(bs_Context* context)</name></typedef>
+        <typedef><type>void</type><name>(* bs_ContextShowFunction)(bs_Context* context, bool shown)</name></typedef>
 
 		<typedef><type>void</type><name>(*bs_Callback)()</name></typedef>
 		<typedef><type>BS_VERTEX_DECLARATION_STRUCTURE()</type><name>bs_VertexDeclaration</name></typedef>
@@ -2086,9 +2090,11 @@
             <ifdef cond="_WIN32"/>
     			<field><type>volatile bs_U32</type><name>input_down_events</name><size>BS_KEY_BYTES_COUNT</size></field>
     			<field><type>volatile bs_U32</type><name>input_up_events</name><size>BS_KEY_BYTES_COUNT</size></field>
+    			<field><type>volatile bs_U32</type><name>char_events</name><size>BS_KEY_BYTES_COUNT</size></field>
             <else/>
                 <field><type>_Atomic bs_U32</type><name>input_down_events</name><size>BS_KEY_BYTES_COUNT</size></field>
     			<field><type>_Atomic bs_U32</type><name>input_up_events</name><size>BS_KEY_BYTES_COUNT</size></field>
+			    <field><type>_Atomic bs_U32</type><name>char_events</name><size>BS_KEY_BYTES_COUNT</size></field>
             <endif/>
 
 			<field><type>bs_U32</type><name>inputs_up_once</name><size>BS_KEY_BYTES_COUNT</size></field>
@@ -2126,6 +2132,10 @@
             <field><type>bs_String*</type><name>cwd</name></field>
             <field><type>bs_String*</type><name>appdata</name></field>
             <field><type>bs_String*</type><name>log</name></field>
+
+            <structure instance=" cursor_icons[BS_CURSOR_TYPE_COUNT]">
+                <field><type>void*</type><name>handle</name></field>
+            </structure>
 
             <structure instance="* descriptor_lookup">
                 <field><type>int*</type><name>bindings</name></field>
@@ -2218,6 +2228,9 @@
 			<field><type>bs_ContextEnterFunction</type><name>enter</name></field>
 			<field><type>bs_ContextResizeFunction</type><name>resize</name></field>
 			<field><type>bs_ContextActivateFunction</type><name>activate</name></field>
+			<field><type>bs_ContextMotionFunction</type><name>motion</name></field>
+			<field><type>bs_ContextSetCursorFunction</type><name>set_cursor</name></field>
+			<field><type>bs_ContextShowFunction</type><name>show</name></field>
 		</structure>
 		
 		<ifdef cond="_WIN32"/>
@@ -2234,7 +2247,6 @@
             <field><type>bs_vec2</type><name>cursor</name></field>
             <field><type>bs_vec2</type><name>border_size</name></field>
             <field><type>bs_WindowType</type><name>window_type</name></field>
-            <field><type>bs_CursorIcon</type><name>cursor_icon</name></field>
             <field><type>bs_NonClientArea</type><name>hovering_non_client_area</name></field>
 			 
             <field><type>bs_U32</type><name>dpi</name></field>
@@ -2248,6 +2260,7 @@
             <field><type>bool</type><name>active</name></field>
             <field><type>bool</type><name>resized</name></field>
             <field><type>bool</type><name>image_acquired</name></field>
+            <field><type>bool</type><name>has_class</name></field>
             <field><type>bs_Object*</type><name>swapchain_image</name></field>
             <field><type>bs_Object*</type><name>present_queue</name></field>
 
@@ -2337,6 +2350,7 @@
 			<field><type>bs_MessageFunction</type><name>log</name></field>
 			<field><type>bs_ValidationErrorFunction</type><name>error</name></field>
 			<field><type>bs_NonClientAreaTickFunction</type><name>client_area_tick</name></field>
+			<field><type>bs_PreTickFunction</type><name>pre_tick</name></field>
 		</structure>
 
 		<structure name="bs_LogQueueItem">
@@ -4524,6 +4538,16 @@
             <param><type>bs_I32</type><name>height</name></param>
             <param><type>const char*</type><name>title</name></param>
         </function>
+
+		<function name="bs_destroyWindow">
+            <return>void</return>
+            <param><type>bs_Context*</type><name>context</name></param>
+        </function>
+		<function name="bs_destroyContext">
+            <return>void</return>
+            <param><type>bs_Context*</type><name>context</name></param>
+        </function>
+
 		<function name="bs_window">
             <return>bs_Result</return>
             <param><type>bs_Context*</type><name>context</name></param>
@@ -4557,10 +4581,6 @@
         </function>
         <function name="bs_exit">
             <return>void</return>
-        </function>
-        <function name="bs_setCursor">
-            <return>void</return>
-            <param><type>bs_CursorIcon</type><name>type</name></param>
         </function>
         <function name="bs_deltaTime">
             <return>double</return>

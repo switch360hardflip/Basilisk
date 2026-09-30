@@ -44,6 +44,7 @@
 typedef struct bsgfx_UIElement bsgfx_UIElement;
 typedef struct bsgfx_UIIcon bsgfx_UIIcon;
 typedef struct bsgfx_UISolid bsgfx_UISolid;
+typedef struct bsgfx_UIInput bsgfx_UIInput;
 typedef struct bsgfx_UIText bsgfx_UIText;
 typedef struct bsgfx_Text bsgfx_Text;
 typedef struct bsgfx_MeshInstance bsgfx_MeshInstance;
@@ -1136,8 +1137,40 @@ struct bsgfx_UISolid {
     bs_vec2 size;
     bs_vec3 position;
     bs_vec2 align;
+    bs_vec4 borders;
     int material_id;
     bsgfx_InstanceSubtype* subtype;
+};
+
+struct bsgfx_UIInput {
+    bsgfx_InputType type;
+    bool active;
+    bool new_line_on_enter;
+    const char* placeholder_text;
+    int material_id;
+    int placeholder_text_material_id;
+    int outline_material_id;
+    int background_outline_material_id;
+    int background_shadow_material_id;
+    bs_vec2 dimensions;
+    bs_vec2 align;
+    bs_U64 hash;
+    int* select_position;
+    int* select_size;
+    bsgfx_Font* font;
+    bsgfx_InstanceSubtype* text_subtype;
+    union {
+        double* as_double;
+        float* as_float;
+        long long* as_long;
+        unsigned long long* as_ulong;
+        int* as_int;
+        int* as_uint;
+        char* as_char;
+        unsigned char* as_uchar;
+        bs_String** as_string;
+        void* as_void;
+    };
 };
 
 struct bsgfx_UIText {
@@ -3395,6 +3428,20 @@ BSGFXAPI void
 bsgfx_translateUIElement(
     const bsgfx_UIElement* element,
     const bs_vec3* position);
+
+ /**
+  @param input
+  @param position
+  @param out_width
+  @param alphabet
+  @return void
+  */
+BSGFXAPI void
+bsgfx_instanceUIInput(
+    bsgfx_UIInput* input,
+    bs_vec3 position,
+    bs_vec2* out_width,
+    const char* alphabet);
 
  /**
   @param scope

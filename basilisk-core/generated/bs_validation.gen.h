@@ -437,6 +437,8 @@ static inline bs_FunctionTable* _val_bs_getFunctions() {
     functions.bs_closeAllPopupWindows = (PFN_bs_closeAllPopupWindows)bs_getProcAddress(module, "_val_bs_closeAllPopupWindows");
     functions.bs_closePopupWindow = (PFN_bs_closePopupWindow)bs_getProcAddress(module, "_val_bs_closePopupWindow");
     functions.bs_openPopupWindow = (PFN_bs_openPopupWindow)bs_getProcAddress(module, "_val_bs_openPopupWindow");
+    functions.bs_destroyWindow = (PFN_bs_destroyWindow)bs_getProcAddress(module, "_val_bs_destroyWindow");
+    functions.bs_destroyContext = (PFN_bs_destroyContext)bs_getProcAddress(module, "_val_bs_destroyContext");
     functions.bs_window = (PFN_bs_window)bs_getProcAddress(module, "_val_bs_window");
     functions.bs_swapchain = (PFN_bs_swapchain)bs_getProcAddress(module, "_val_bs_swapchain");
     functions.bs_showWindow = (PFN_bs_showWindow)bs_getProcAddress(module, "_val_bs_showWindow");
@@ -444,7 +446,6 @@ static inline bs_FunctionTable* _val_bs_getFunctions() {
     functions.bs_device = (PFN_bs_device)bs_getProcAddress(module, "_val_bs_device");
     functions.bs_tick = (PFN_bs_tick)bs_getProcAddress(module, "_val_bs_tick");
     functions.bs_exit = (PFN_bs_exit)bs_getProcAddress(module, "_val_bs_exit");
-    functions.bs_setCursor = (PFN_bs_setCursor)bs_getProcAddress(module, "_val_bs_setCursor");
     functions.bs_deltaTime = (PFN_bs_deltaTime)bs_getProcAddress(module, "_val_bs_deltaTime");
     functions.bs_pause = (PFN_bs_pause)bs_getProcAddress(module, "_val_bs_pause");
     functions.bs_advance = (PFN_bs_advance)bs_getProcAddress(module, "_val_bs_advance");

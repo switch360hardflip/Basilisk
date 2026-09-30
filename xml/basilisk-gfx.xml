@@ -1038,10 +1038,42 @@
 			<field><type>bs_vec2</type><name>size</name></field>
 			<field><type>bs_vec3</type><name>position</name></field>
 			<field><type>bs_vec2</type><name>align</name></field>
+			<field><type>bs_vec4</type><name>borders</name></field>
 			<field><type>int</type><name>material_id</name></field>
 			<field><type>bsgfx_InstanceSubtype*</type><name>subtype</name></field>
 		</structure>
 
+		<structure name="bsgfx_UIInput">
+			<field><type>bsgfx_InputType</type><name>type</name></field>
+			<field><type>bool</type><name>active</name></field>
+			<field><type>bool</type><name>new_line_on_enter</name></field>
+			<field><type>const char*</type><name>placeholder_text</name></field>
+			<field><type>int</type><name>material_id</name></field>
+			<field><type>int</type><name>placeholder_text_material_id</name></field>
+			<field><type>int</type><name>outline_material_id</name></field>
+			<field><type>int</type><name>background_outline_material_id</name></field>
+			<field><type>int</type><name>background_shadow_material_id</name></field>
+			<field><type>bs_vec2</type><name>dimensions</name></field>
+			<field><type>bs_vec2</type><name>align</name></field>
+			<field><type>bs_U64</type><name>hash</name></field>
+			<field><type>int*</type><name>select_position</name></field>
+			<field><type>int*</type><name>select_size</name></field>
+			<field><type>bsgfx_Font*</type><name>font</name></field>
+			<field><type>bsgfx_InstanceSubtype*</type><name>text_subtype</name></field>
+			<structure type="union">
+				<field><type>double*</type><name>as_double</name></field>
+				<field><type>float*</type><name>as_float</name></field>
+				<field><type>long long*</type><name>as_long</name></field>
+				<field><type>unsigned long long*</type><name>as_ulong</name></field>
+				<field><type>int*</type><name>as_int</name></field>
+				<field><type>int*</type><name>as_uint</name></field>
+				<field><type>char*</type><name>as_char</name></field>
+				<field><type>unsigned char*</type><name>as_uchar</name></field>
+				<field><type>bs_String**</type><name>as_string</name></field>
+				<field><type>void*</type><name>as_void</name></field>
+			</structure>
+		</structure>
+		
 		<structure name="bsgfx_UIText">
 			<field><type>bs_vec3</type><name>position</name></field>
 			<field><type>bs_vec2</type><name>align</name></field>
@@ -2449,6 +2481,14 @@
 			<return>void</return>
 			<param><type>const bsgfx_UIElement*</type><name>element</name></param>
 			<param><type>const bs_vec3*</type><name>position</name></param>
+		</function>
+
+		<function name="bsgfx_instanceUIInput">
+			<return>void</return>
+			<param><type>bsgfx_UIInput*</type><name>input</name></param>
+			<param><type>bs_vec3</type><name>position</name></param>
+			<param><type>bs_vec2*</type><name>out_width</name></param>
+			<param><type>const char*</type><name>alphabet</name></param>
 		</function>
 
 		<function name="bsgfx_renderColorPickers">

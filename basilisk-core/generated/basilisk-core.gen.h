@@ -2008,6 +2008,7 @@ typedef void (* bs_MessageFunction)(const bs_LogQueueItem*);
 typedef void (* bs_NameObjectFunction)(bs_Object*, const char*);
 typedef void (* bs_ValidationErrorFunction)();
 typedef bs_NonClientArea (* bs_NonClientAreaTickFunction)(bs_Context*, bs_ivec2);
+typedef void (* bs_PreTickFunction)();
 typedef void (* bs_SubpassFunction)(bs_RendererScope*);
 typedef long long bs_I64;
 typedef int bs_I32;
@@ -2048,6 +2049,9 @@ typedef void (* bs_ContextEnterFunction)(bs_Context* context, void* params);
 typedef void (* bs_ContextLeaveFunction)(bs_Context* context, void* params);
 typedef void (* bs_ContextResizeFunction)(bs_Context*, bs_U32, bs_U32);
 typedef void (* bs_ContextActivateFunction)(bs_Context* context, bs_ContextActivateParams params);
+typedef void (* bs_ContextMotionFunction)(bs_Context* context, int x, int y);
+typedef bs_CursorIcon (* bs_ContextSetCursorFunction)(bs_Context* context);
+typedef void (* bs_ContextShowFunction)(bs_Context* context, bool shown);
 typedef void (*bs_Callback)();
 typedef BS_VERTEX_DECLARATION_STRUCTURE() bs_VertexDeclaration;
 enum bs_Library {
@@ -3723,9 +3727,11 @@ struct bs_IO {
 #ifdef _WIN32
     volatile bs_U32 input_down_events[BS_KEY_BYTES_COUNT];
     volatile bs_U32 input_up_events[BS_KEY_BYTES_COUNT];
+    volatile bs_U32 char_events[BS_KEY_BYTES_COUNT];
 #else
     _Atomic bs_U32 input_down_events[BS_KEY_BYTES_COUNT];
     _Atomic bs_U32 input_up_events[BS_KEY_BYTES_COUNT];
+    _Atomic bs_U32 char_events[BS_KEY_BYTES_COUNT];
 #endif
     bs_U32 inputs_up_once[BS_KEY_BYTES_COUNT];
     bs_U32 inputs_down_once[BS_KEY_BYTES_COUNT];
@@ -3761,6 +3767,9 @@ struct bs_Instance {
     bs_String* cwd;
     bs_String* appdata;
     bs_String* log;
+    struct {
+        void* handle;
+    } cursor_icons[BS_CURSOR_TYPE_COUNT];
     struct {
         int* bindings;
         int bind_set;
@@ -3850,6 +3859,9 @@ struct bs_ContextListener {
     bs_ContextEnterFunction enter;
     bs_ContextResizeFunction resize;
     bs_ContextActivateFunction activate;
+    bs_ContextMotionFunction motion;
+    bs_ContextSetCursorFunction set_cursor;
+    bs_ContextShowFunction show;
 };
 
 #ifdef _WIN32
@@ -3866,7 +3878,6 @@ struct bs_Context {
     bs_vec2 cursor;
     bs_vec2 border_size;
     bs_WindowType window_type;
-    bs_CursorIcon cursor_icon;
     bs_NonClientArea hovering_non_client_area;
     bs_U32 dpi;
     int frames_in_flight;
@@ -3879,6 +3890,7 @@ struct bs_Context {
     bool active;
     bool resized;
     bool image_acquired;
+    bool has_class;
     bs_Object* swapchain_image;
     bs_Object* present_queue;
     bs_Timer timer;
@@ -3961,6 +3973,7 @@ struct bs_Callbacks {
     bs_MessageFunction log;
     bs_ValidationErrorFunction error;
     bs_NonClientAreaTickFunction client_area_tick;
+    bs_PreTickFunction pre_tick;
 };
 
 struct bs_LogQueueItem {
@@ -9910,6 +9923,22 @@ bs_openPopupWindow(
 
  /**
   @param context
+  @return void
+  */
+BSAPI void
+bs_destroyWindow(
+    bs_Context* context);
+
+ /**
+  @param context
+  @return void
+  */
+BSAPI void
+bs_destroyContext(
+    bs_Context* context);
+
+ /**
+  @param context
   @param parent
   @param listener
   @param width
@@ -9975,14 +10004,6 @@ bs_tick(
   */
 BSAPI void
 bs_exit();
-
- /**
-  @param type
-  @return void
-  */
-BSAPI void
-bs_setCursor(
-    bs_CursorIcon type);
 
  /**
   @return double

@@ -27,8 +27,21 @@
 #include <bsmod_cache.h>
 #include <basilisk.h>
 
+typedef struct {
+    bs_Range instance_range;
+    bool rendered;
+} InputField;
+
+typedef enum {
+    INPUT_FIELD_PROJECT_NAME,
+    INPUT_FIELD_PROJECT_PATH,
+
+    INPUT_FIELD_COUNT,
+} InputFieldId;
+
 static CommonSubtypes _new_project_subtypes_;
 static TitleBarButton _new_project_title_bar_buttons_[TITLE_BAR_BUTTON_COUNT];
+static InputField _new_project_input_fields_[INPUT_FIELD_COUNT];
 
 
 
@@ -112,8 +125,110 @@ BSGFX_CACHE_COLOR_MATERIAL(title_bar_background, BS_RGBA(83, 83, 83, 255))
 BSGFX_CACHE_COLOR_MATERIAL(close_button_background_color, BS_RGBA(226, 42, 39, 255))
 BSGFX_CACHE_COLOR_MATERIAL(default_button_background_color, BS_RGBA(93, 93, 93, 255))
 BSGFX_CACHE_COLOR_MATERIAL(transparent_color, BS_RGBA(0, 0, 0, 0))
+BSGFX_CACHE_COLOR_MATERIAL(input_background_outline_color, BS_RGBA(30, 30, 30, 255))
+BSGFX_CACHE_COLOR_MATERIAL(input_background_color, BS_RGBA(42, 42, 42, 255))
 
-static void onCreateMenuTick(bs_Context* context, void* params) {
+static void instantiateNewProjectMenuOptions(bs_Context* context) {
+    static int select_position;
+    static int select_size;
+    static bs_String* string;
+
+    if (!string)
+        string = bs_stringF(NULL, "test 123\nabc wt");
+
+    bsgfx_UIInput input = {
+        .type = BSGFX_INPUT_STRING,
+        .material_id = $magenta_material()->id,
+        .placeholder_text_material_id = $blue_material()->id,
+        .dimensions = { 128, 32 },
+        .select_position = &select_position,
+        .select_size = &select_size,
+        .font = _fonts_.selawik,
+        .as_string = &string,
+        .text_subtype = _new_project_subtypes_.text,
+    };
+
+    const char* alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789å";
+    bs_vec2 width = { 0 , 0 };
+    bsgfx_instanceUIInput(&input, BS_V3(0, 0, 0), &width, alphabet);
+
+
+    static bs_String* formatted_string;
+    formatted_string = bs_string(formatted_string, "");
+    int selection_start = select_position;
+    int selection_end = select_position + select_size;
+    // Normalize the selection in case select_size can be negative.
+    if (selection_start > selection_end) {
+        int tmp = selection_start;
+        selection_start = selection_end;
+        selection_end = tmp;
+    }
+    for (int i = 0; i < string->len; i++) {
+        // Cursor.
+        if (i == select_position) {
+            formatted_string = bs_appendString(
+                formatted_string,
+                "\033[36m|"       // cyan cursor
+                "\033[0m"
+            );
+        }
+
+        // No character exists at string->len, so only draw the cursor there.
+        if (i == string->len)
+            break;
+
+        // Selection background.
+        if (i >= selection_start && i < selection_end) {
+            formatted_string = bs_appendString(
+                formatted_string,
+                "\033[46m"        // selection background
+            );
+        }
+        else {
+            formatted_string = bs_appendString(
+                formatted_string,
+                "\033[0m"
+            );
+        }
+
+        formatted_string = bs_appendChar(
+            formatted_string,
+            string->value[i]
+        );
+    }
+}
+
+
+
+  /*==============================================================================
+   * Load
+   *============================================================================*/
+
+static bs_CursorIcon onNewProjectSetCursor(bs_Context* context) {
+    for (int i = 0; i < INPUT_FIELD_COUNT; i++) {
+        if (!_new_project_input_fields_[i].rendered)
+            continue;
+
+        bool hovering = bsgfx_hoveringQuadInstance(_new_project_subtypes_.ui_solid, _new_project_input_fields_[i].instance_range.offset);
+
+        if (hovering)
+            return BS_CURSOR_TEXT;
+    }
+
+    return BS_CURSOR_DEFAULT;
+}
+
+void onCreateMenuTick(bs_Context* context, void* params);
+static void createNewProjectMenuWindow(bs_Context* context) {
+    const bs_ivec2 dimensions = { 500, 400 };
+    bs_window(context, basilisk.context, (bs_ContextListener) {
+        .tick = onCreateMenuTick,
+        .set_cursor = onNewProjectSetCursor,
+    }, dimensions.x, dimensions.y, "New Project", BS_WINDOW_NO_TITLE_BAR);
+    bs_addBorderPadding(context, BORDER_PADDING);
+}
+
+void onCreateMenuTick(bs_Context* context, void* params) {
     if (context->hidden)
         return;
 
@@ -126,9 +241,15 @@ static void onCreateMenuTick(bs_Context* context, void* params) {
 
     titleBarButtonTest(&_new_project_subtypes_, _new_project_title_bar_buttons_, TITLE_BAR_BUTTON_CLOSE, $close_button_background_color());
 
+    instantiateNewProjectMenuOptions(context);
+
+
     if (bs_inputUpOnce(BS_LEFT_MOUSE_BUTTON)) {
         if (_new_project_title_bar_buttons_[TITLE_BAR_BUTTON_CLOSE].hovering) {
             bs_hideWindow(context);
+            bs_destroyContext(context);
+            createNewProjectMenuWindow(context);
+            updateInstances();
         }
     }
 }
@@ -157,11 +278,7 @@ void iniNewProjectMenu() {
     const bs_ivec2 dimensions = { 500, 400 };
 
     bs_Object* context_object = BS_CONTEXT(BASILISK_CONTEXTS, BASILISK_CONTEXT_NEW_PROJECT, BS_OBJECT_IN_FLIGHT_BIT);
-    bs_window(context_object->context, basilisk.context, (bs_ContextListener) {
-        .tick = onCreateMenuTick
-    }, dimensions.x, dimensions.y, "New Project", BS_WINDOW_NO_TITLE_BAR);
-    bs_addBorderPadding(context_object->context, BORDER_PADDING);
-    bs_swapchain(context_object->context);
+    createNewProjectMenuWindow(context_object->context);
 }
 
 void onCreateProjectFromContextMenu() {
@@ -176,8 +293,78 @@ void onCreateProjectFromContextMenu() {
    * Instantiating
    *============================================================================*/
 
-static void instantiateNewProjectMenuOptions(bs_Context* context) {
+#define INPUT_FIELD_HEIGHT 20
+#define BORDER_ROUNDED_EDGES BS_V4(5.0, 5.0, 5.0, 5.0)
 
+static void instantiateInputField(bs_Context* context, InputField* field, const char* name, bs_vec3 position, float width, int padding) {
+    bsgfx_UIElement element;
+
+    const int outline_size = 1;
+
+    bs_ivec2 resolution = bs_resolution(context);
+
+   /**
+    Left aligned
+    */
+    position.x += padding;
+
+    bsgfx_UIText text_ui = {
+        .position = position,
+        .font = _fonts_.selawik,
+        .as_ascii = name,
+        .px_size = 14,
+        .align = { 0, BASILISK_TITLE_BAR_HEIGHT },
+        .subtype = _new_project_subtypes_.text,
+        .align.y = INPUT_FIELD_HEIGHT + outline_size * 2,
+    };
+
+    bsgfx_instantiateTextUI(text_ui, &element);
+
+   /**
+    Right aligned
+    */
+    position.x += resolution.x;
+    position.x -= width;
+    position.x -= padding * 2;
+
+    field->rendered = true;
+    bsgfx_instantiateSolidUI((bsgfx_UISolid) {
+        .position = { position.x - outline_size, position.y - outline_size, position.z },
+        .size = { width + outline_size * 2, INPUT_FIELD_HEIGHT + outline_size * 2 },
+        .material_id = $input_background_outline_color()->id,
+        .subtype = _new_project_subtypes_.ui_solid,
+        .borders = BORDER_ROUNDED_EDGES,
+    }, &element);
+
+    field->instance_range = bsgfx_instantiateSolidUI((bsgfx_UISolid) {
+        .position = position,
+        .size = { width, INPUT_FIELD_HEIGHT },
+        .material_id = $input_background_color()->id,
+        .subtype = _new_project_subtypes_.ui_solid,
+        .borders = BORDER_ROUNDED_EDGES,
+    }, &element);
+    position.z++;
+}
+
+static void instantiateNewProjectMenuContents(bs_Context* context) {
+    const int padding = 16;
+    const int element_padding = 8;
+    const int input_width = 350;
+
+    bs_ivec2 resolution = bs_resolution(context);
+    bs_vec3 position = { 0.0, resolution.y - BASILISK_TITLE_BAR_HEIGHT, 0.0 };
+
+    position.x += context->border_padding;
+  //  position.x += padding;
+    position.y -= padding;
+
+    position.y -= INPUT_FIELD_HEIGHT;
+    instantiateInputField(context, _new_project_input_fields_ + INPUT_FIELD_PROJECT_NAME, "Project Name", position, input_width, padding);
+    position.y -= element_padding;
+
+    position.y -= INPUT_FIELD_HEIGHT;
+    instantiateInputField(context, _new_project_input_fields_ + INPUT_FIELD_PROJECT_PATH, "Project Path", position, input_width, padding);
+    position.y -= element_padding;
 }
 
 void instantiateNewProjectMenu(bs_Context* context) {
@@ -193,6 +380,9 @@ void instantiateNewProjectMenu(bs_Context* context) {
         bsgfx_subtype(quad_instance_type, batch, 0, range, &_new_project_subtypes_.ui_solid);
 
     instantiateBaseUI(context, &_new_project_subtypes_);
+
+
+    instantiateNewProjectMenuContents(context);
 
     CommonSubtypes* subtypes = &_new_project_subtypes_;
     TitleBarButton* buttons = _new_project_title_bar_buttons_;
@@ -244,6 +434,7 @@ void instantiateNewProjectMenu(bs_Context* context) {
     position.x += element->size.x;
     position.x += 16.0;
 
+    instantiateTitleBarTextUI(subtypes, "New Project", transparent_material, position, title_bar_size);
 
     //bs_Context* ctx = contextFromMenuType(CONTEXT_MENU_FILE);
 

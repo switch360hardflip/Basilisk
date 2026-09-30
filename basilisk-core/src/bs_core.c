@@ -360,6 +360,14 @@ static void _bs_prepareInstance() {
 
 void _bs_findExecutablePaths();
 void _bs_iniLogger();
+
+static void _bs_loadCursorIcons() {
+#ifdef _WIN32
+    _bs_instance_->cursor_icons[BS_CURSOR_DEFAULT].handle = LoadCursor(NULL, IDC_ARROW);
+    _bs_instance_->cursor_icons[BS_CURSOR_TEXT].handle = LoadCursor(NULL, IDC_IBEAM);
+#endif
+}
+
 BSAPI void _bs_ini() {
     _bs_instance_ = _bs_calloc(1, sizeof(bs_Instance));
     _bs_instance_->log = _bs_stringN(_bs_instance_->log, "", 0);
@@ -378,6 +386,8 @@ BSAPI void _bs_ini() {
 
     _bs_findExecutablePaths();
     _bs_prepareInstance();
+
+    _bs_loadCursorIcons();
 }
 
 

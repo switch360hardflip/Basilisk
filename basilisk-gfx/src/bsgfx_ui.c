@@ -40,6 +40,15 @@ static inline bs_vec2 _bsgfx_alignUIElement(bs_vec2 align, bs_vec2 size) {
 	);
 }
 
+static inline bs_mat4x3 _bsgfx_roundedMatrix(bs_vec3 position, bs_vec3 scale, bs_vec4 radii) {
+	return (bs_mat4x3) {
+		scale.x, radii.x, radii.y,
+		radii.z, scale.y, 0.0,
+		radii.w, 0.0, scale.z,
+		position.x, position.y, position.z,
+	};
+}
+
 BSGFXAPI bool _bsgfx_hoveringUIElement(const bsgfx_UIElement* element) {
 	bs_vec2 cursor = bs_windowCursorPosition(bs_scope()->context);
 	bool hovering = bs_rectangleVsPoint(&element->position.xy, &element->size, &cursor);
@@ -115,13 +124,11 @@ BSGFXAPI void _bsgfx_solidUIElement(bsgfx_UISolid solid, bsgfx_UIElement* elemen
 }
 
 BSGFXAPI bs_Range _bsgfx_instantiateSolidUIElement(bsgfx_UISolid solid, const bsgfx_UIElement* element) {
-	bs_mat4 transform = BS_MAT4_IDENTITY;
-
-	bs_m4Translate(&transform, &element->position, &transform);
-	bs_m4Scale(&transform, &BS_V3(element->size.x, element->size.y, 0), &transform);
+	bs_mat4x3 matrix = _bsgfx_roundedMatrix(element->position, BS_V3(element->size.x, element->size.y, 0), solid.borders);
 
 	bs_vec4 coords = BS_V4(0, 0, 1, 1);
-	int offset = _bsgfx_instantiateQuad(solid.subtype, bs_m4x3(&transform), coords, 0, 0, solid.material_id);
+
+	int offset = _bsgfx_instantiateQuad(solid.subtype, matrix, coords, 0, 0, solid.material_id);
 
 	return (bs_Range) { .offset = offset, .num = 1 };
 }
@@ -166,15 +173,6 @@ BSGFXAPI void _bsgfx_instantiateTextUI(bsgfx_UIText text, bsgfx_UIElement* eleme
   /*==============================================================================
    * UI
    *============================================================================*/
-
-static inline bs_mat4x3 _bsgfx_roundedMatrix(bs_vec3 position, bs_vec3 scale, bs_vec4 radii) {
-	return (bs_mat4x3) {
-		scale.x, radii.x, radii.y,
-		radii.z, scale.y, 0.0,
-		radii.w, 0.0, scale.z,
-		position.x, position.y, position.z,
-	};
-}
 
 static void _bsgfx_instanceBackground(
 	bsgfx_InstanceSubtype* subtype,
@@ -959,72 +957,68 @@ static inline void _bsgfx_findNextLine(bsgfx_Font* font, bs_String* input, int* 
 	*select_draw_position_y -= _bsgfx_textHeight(&select_position);
 }
 
-static void _bsgfx_deserializeInputValue(bsgfx_Widget* widget, bs_String* string) {
-	switch (widget->input.type) {
-	case BSGFX_INPUT_DOUBLE: *widget->input.as_double = bs_toDouble(string->value); break;
-	case BSGFX_INPUT_FLOAT: *widget->input.as_float = bs_toDouble(string->value); break;
-	case BSGFX_INPUT_ULONG: *widget->input.as_ulong = bs_toULong(string->value); break;
-	case BSGFX_INPUT_LONG: *widget->input.as_long = bs_toLong(string->value); break;
-	case BSGFX_INPUT_UINT: *widget->input.as_uint = bs_toULong(string->value); break;
-	case BSGFX_INPUT_INT: *widget->input.as_uint = bs_toLong(string->value); break;
-	case BSGFX_INPUT_CHAR: *widget->input.as_uint = bs_toLong(string->value); break;
-	case BSGFX_INPUT_UCHAR: *widget->input.as_uint = bs_toULong(string->value); break;
-	case BSGFX_INPUT_STRING: *widget->input.as_string = bs_stringN(*widget->input.as_string, string->value, string->len); break;
+static void _bsgfx_deserializeInputValue(bsgfx_UIInput* input, bs_String* string) {
+	switch (input->type) {
+	case BSGFX_INPUT_DOUBLE: *input->as_double = bs_toDouble(string->value); break;
+	case BSGFX_INPUT_FLOAT: *input->as_float = bs_toDouble(string->value); break;
+	case BSGFX_INPUT_ULONG: *input->as_ulong = bs_toULong(string->value); break;
+	case BSGFX_INPUT_LONG: *input->as_long = bs_toLong(string->value); break;
+	case BSGFX_INPUT_UINT: *input->as_uint = bs_toULong(string->value); break;
+	case BSGFX_INPUT_INT: *input->as_uint = bs_toLong(string->value); break;
+	case BSGFX_INPUT_CHAR: *input->as_uint = bs_toLong(string->value); break;
+	case BSGFX_INPUT_UCHAR: *input->as_uint = bs_toULong(string->value); break;
+	case BSGFX_INPUT_STRING: *input->as_string = bs_stringN(*input->as_string, string->value, string->len); break;
 	default:
-		bs_warnF("Input type %d", widget->input.type); // TODO: bsgfx warn
+		bs_warnF("Input type %d", input->type); // TODO: bsgfx warn
 	}
 }
 
-static bs_String* _bsgfx_serializeInputValue(bsgfx_Widget* widget, bs_String* string) {
+static bs_String* _bsgfx_serializeInputValue(bsgfx_UIInput* input, bs_String* string) {
 
-	switch (widget->input.type) {
-	case BSGFX_INPUT_DOUBLE: return bs_stringF(string, "%.4f", (float)*widget->input.as_double);
-	case BSGFX_INPUT_FLOAT: return bs_stringF(string, "%.4f", (float)*widget->input.as_float);
-	case BSGFX_INPUT_ULONG: return bs_stringF(string, "%lld", (long long)*widget->input.as_ulong);
-	case BSGFX_INPUT_LONG: return bs_stringF(string, "%lld", (long long)*widget->input.as_long);
-	case BSGFX_INPUT_UINT: return bs_stringF(string, "%d", (int)*widget->input.as_uint);
-	case BSGFX_INPUT_INT: return bs_stringF(string, "%d", (int)*widget->input.as_int);
-	case BSGFX_INPUT_CHAR: return bs_stringF(string, "%d", (int)*widget->input.as_char);
-	case BSGFX_INPUT_UCHAR: return bs_stringF(string, "%d", (int)*widget->input.as_uchar);
+	switch (input->type) {
+	case BSGFX_INPUT_DOUBLE: return bs_stringF(string, "%.4f", (float)*input->as_double);
+	case BSGFX_INPUT_FLOAT: return bs_stringF(string, "%.4f", (float)*input->as_float);
+	case BSGFX_INPUT_ULONG: return bs_stringF(string, "%lld", (long long)*input->as_ulong);
+	case BSGFX_INPUT_LONG: return bs_stringF(string, "%lld", (long long)*input->as_long);
+	case BSGFX_INPUT_UINT: return bs_stringF(string, "%d", (int)*input->as_uint);
+	case BSGFX_INPUT_INT: return bs_stringF(string, "%d", (int)*input->as_int);
+	case BSGFX_INPUT_CHAR: return bs_stringF(string, "%d", (int)*input->as_char);
+	case BSGFX_INPUT_UCHAR: return bs_stringF(string, "%d", (int)*input->as_uchar);
 	case BSGFX_INPUT_STRING:
-		return *widget->input.as_string ? bs_stringN(string, (*widget->input.as_string)->value, (*widget->input.as_string)->len) : string;
+		return *input->as_string ? bs_stringN(string, (*input->as_string)->value, (*input->as_string)->len) : string;
 	default:
-		bs_warnF("Input type %d", widget->input.type); // TODO: bsgfx warn
+		bs_warnF("Input type %d", input->type); // TODO: bsgfx warn
 		return NULL;
 	}
 }
 
-static bool _bsgfx_instanceInput(
-	bsgfx_Menu* menu,
-	bsgfx_Widget* widget,
-	bool already_hovering,
+BSGFXAPI void _bsgfx_instanceUIInput(
+	bsgfx_UIInput* input,
 	bs_vec3 position,
 	bs_vec2* out_width,
 	const char* alphabet)
 {
 	bs_vec2 cursor = bs_windowCursorPosition(bs_scope()->context);
 
-	bsgfx_Font* font = widget->font ? widget->font : menu->font;
-
 	static bs_String* string;
 	if (!string)
 		string = bs_stringN(string, "", 0);
 
-	string = _bsgfx_serializeInputValue(widget, string);
+	string = _bsgfx_serializeInputValue(input, string);
 
-	const int outline_width = widget->input.outline_material_id != 0;
-	float height = widget->input.dimensions.y + outline_width * 2;
+	const int outline_width = input->outline_material_id != 0;
+	float height = input->dimensions.y + outline_width * 2;
 
-	if (widget->align_height == 0.0)
-		widget->align_height = height;
+//	if (input->align_height == 0.0)
+//		input->align_height = height;
 
-	position.y -= (widget->align_height + height) / 2.0;
+//	position.y -= (widget->align_height + height) / 2.0;
 
-	if (widget->input.active)
-		_bsgfx_selected_input = widget->input.hash;
+	if (input->active)
+		_bsgfx_selected_input = input->hash;
 
 	// input background
-	bool hovering = !already_hovering && bs_rectangleVsPoint(&position.xy, &widget->input.dimensions, &cursor);
+	//bool hovering = !already_hovering && bs_rectangleVsPoint(&position.xy, &input->dimensions, &cursor);
 
 	static char blinking_underscore = ' ';
 	const float blink_every = 0.6;
@@ -1034,31 +1028,31 @@ static bool _bsgfx_instanceInput(
 	int start = 0;
 	int end = 0;
 
-	if (widget->input.select_position && widget->input.select_size) {
-		int select_position = *widget->input.select_position;
-		int select_size = *widget->input.select_size;
+	if (input->select_position && input->select_size) {
+		int select_position = *input->select_position;
+		int select_size = *input->select_size;
 
-		if (bs_inputDownOnce(BS_LEFT_MOUSE_BUTTON)) {
-			if (hovering) {
-				if (_bsgfx_selected_input != widget->input.hash) {
-					_bsgfx_selected_input = widget->input.hash;
-					//select_position = value->len;
-					//select_size = -value->len;
-					//first_select = true;
-				}
-				//else {
-				_bsgfx_inputCursorPosition(font, string, cursor.x - position.x, widget->input.dimensions.y - (cursor.y - position.y), &select_position);
-				select_size = 0;
-				//}
-			}
-			else
-				_bsgfx_selected_input = select_position = select_size = 0;
-		}
+		//if (bs_inputDownOnce(BS_LEFT_MOUSE_BUTTON)) {
+		//	if (hovering) {
+		//		if (_bsgfx_selected_input != input->hash) {
+		//			_bsgfx_selected_input = input->hash;
+		//			//select_position = value->len;
+		//			//select_size = -value->len;
+		//			//first_select = true;
+		//		}
+		//		//else {
+		//		_bsgfx_inputCursorPosition(font, string, cursor.x - position.x, input->dimensions.y - (cursor.y - position.y), &select_position);
+		//		select_size = 0;
+		//		//}
+		//	}
+		//	else
+		//		_bsgfx_selected_input = select_position = select_size = 0;
+		//}
 
-		if (hovering)
-			bs_setCursor(BS_CURSOR_TEXT);
-		else
-			bs_setCursor(BS_CURSOR_DEFAULT);
+	//	if (hovering)
+	//		bs_setCursor(BS_CURSOR_TEXT);
+	//	else
+	//		bs_setCursor(BS_CURSOR_DEFAULT);
 
 		int x_dir = 0, y_dir = 0;
 		if (bs_inputHeld(BS_KEY_LEFT)) x_dir = -1;
@@ -1081,7 +1075,7 @@ static bool _bsgfx_instanceInput(
 
 		// wouldnt be surprised if the select_size calculation breaks here
 		if (select_position < 0 || (select_position + select_size) < 0) {
-			select_size += *widget->input.select_position;
+			select_size += *input->select_position;
 			select_position = 0;
 		}
 		else if (select_position > string->len || (select_position + select_size) > string->len) {
@@ -1139,8 +1133,8 @@ static bool _bsgfx_instanceInput(
 
 		char* row = string->value + row_position;
 		bs_vec2 select_draw_position;
-		bsgfx_textDimensions(font, &select_draw_position, row, select_position - row_position);
-		select_draw_position.y = widget->input.dimensions.y - _bsgfx_textHeight() - (row_index * _bsgfx_textHeight());
+		bsgfx_textDimensions(input->font, &select_draw_position, row, select_position - row_position);
+		select_draw_position.y = input->dimensions.y - _bsgfx_textHeight() - (row_index * _bsgfx_textHeight());
 		if (y_dir != 0) {
 			if (bs_inputDown(BS_KEY_LEFT_SHIFT)) {
 				int select_size_end = select_position;
@@ -1148,22 +1142,22 @@ static bool _bsgfx_instanceInput(
 				float select_size_draw_position_y = select_draw_position.y;
 
 				if (y_dir > 0)
-					_bsgfx_findNextLine(font, string, &select_position, &select_size_draw_position_x, &select_size_draw_position_y);
+					_bsgfx_findNextLine(input->font, string, &select_position, &select_size_draw_position_x, &select_size_draw_position_y);
 				if (y_dir < 0)
-					_bsgfx_findPreviousLine(font, string, &select_position, &select_size_draw_position_x, &select_size_draw_position_y);
+					_bsgfx_findPreviousLine(input->font, string, &select_position, &select_size_draw_position_x, &select_size_draw_position_y);
 
 				select_size += (select_size_end - select_position);
 			}
 			else {
 				select_size = 0;
 				if (y_dir > 0)
-					_bsgfx_findNextLine(font, string, &select_position, &select_draw_position.x, &select_draw_position.y);
+					_bsgfx_findNextLine(input->font, string, &select_position, &select_draw_position.x, &select_draw_position.y);
 				if (y_dir < 0)
-					_bsgfx_findPreviousLine(font, string, &select_position, &select_draw_position.x, &select_draw_position.y);
+					_bsgfx_findPreviousLine(input->font, string, &select_position, &select_draw_position.x, &select_draw_position.y);
 			}
 		}
 
-		if (_bsgfx_selected_input == widget->input.hash) {
+		if (_bsgfx_selected_input == input->hash) {
 			blink_timer += bs_deltaTime();
 
 #define BSGFX_REPLACE_CHARS { \
@@ -1183,9 +1177,9 @@ static bool _bsgfx_instanceInput(
 
 				BSGFX_REPLACE_CHARS;
 
-				_bsgfx_deserializeInputValue(widget, string);
+				_bsgfx_deserializeInputValue(input, string);
 			}
-			else if (bs_inputHeld(BS_KEY_ENTER) && widget->input.new_line_on_enter) {
+			else if (bs_inputHeld(BS_KEY_ENTER) && input->new_line_on_enter) {
 				blink_timer = 0.0;
 				blinking_underscore = '|';
 
@@ -1193,7 +1187,7 @@ static bool _bsgfx_instanceInput(
 					BSGFX_REPLACE_CHARS;
 
 				string = bs_insertChar(string, select_position++, '\n');
-				_bsgfx_deserializeInputValue(widget, string);
+				_bsgfx_deserializeInputValue(input, string);
 			}
 			else if (bs_inputHeld(BS_KEY_SPACE)) {
 				blink_timer = 0.0;
@@ -1203,26 +1197,23 @@ static bool _bsgfx_instanceInput(
 					BSGFX_REPLACE_CHARS;
 
 				string = bs_insertChar(string, select_position++, ' ');
-				_bsgfx_deserializeInputValue(widget, string);
+				_bsgfx_deserializeInputValue(input, string);
 			}
 			else {
-				// TODO: Font rework
-				/*
-				for (int i = 0; font->alphabet[i] != '\0'; i++) {
-					if (bs_charDown(font->alphabet[i])) {
+				for (int i = 0; alphabet[i] != '\0'; i++) {
+					if (bs_charDown(alphabet[i])) {
 						if (select_size != 0)
 							BSGFX_REPLACE_CHARS;
 
 						blink_timer = 0.0;
 						blinking_underscore = '|';
 
-						string = bs_insertChar(string, select_position++, font->alphabet[i]);
-						_bsgfx_deserializeInputValue(widget, string);
+						string = bs_insertChar(string, select_position++, alphabet[i]);
+						_bsgfx_deserializeInputValue(input, string);
 
 						break;
 					}
 				}
-				*/
 			}
 		}
 
@@ -1234,10 +1225,10 @@ static bool _bsgfx_instanceInput(
 			end = temp;
 		}
 
-		*widget->input.select_position = select_position;
-		*widget->input.select_size = select_size;
+		*input->select_position = select_position;
+		*input->select_size = select_size;
 
-		if (_bsgfx_selected_input == widget->input.hash && blinking_underscore == '|') {
+		if (_bsgfx_selected_input == input->hash && blinking_underscore == '|') {
 			char c[2] = { blinking_underscore, '\0' };
 			bsgfx_Text text = {
 				// TODO: Font rework
@@ -1245,13 +1236,16 @@ static bool _bsgfx_instanceInput(
 				.scale = 16.0, // todo font scale
 				.material_id = $black_material()->id,
 			};
+			//bs_vec3 position = { position.x + select_draw_position.x, position.y + select_draw_position.y, position.z + 4 };
 
 			bs_vec2 text_size;
+		//	bsgfx_instantiateASCIIText(input->text_subtype, input->font, position, 11, input->material_id, &text_size, "test");
+
 		//_bsgfx_instanceTextN(menu->text_subtype, font, &text, &text_size, c, 1);
 		}
 	}
 
-	if (_bsgfx_selected_input == widget->input.hash && blink_timer > blink_every) {
+	if (_bsgfx_selected_input == input->hash && blink_timer > blink_every) {
 		blinking_underscore = blinking_underscore == '|' ? ' ' : '|';
 		blink_timer = 0.0;
 	}
@@ -1267,13 +1261,13 @@ static bool _bsgfx_instanceInput(
 		.select_end = end,
 	};
 
-	if (string->len == 0 && widget->input.placeholder_text) {
-		text.material_id = widget->input.placeholder_text_material_id;
+	if (string->len == 0 && input->placeholder_text) {
+		text.material_id = input->placeholder_text_material_id;
 		bs_vec2 text_size;
 		//_bsgfx_instanceText(menu->text_subtype, font, &text, &text_size, widget->input.placeholder_text);
 	}
 	else {
-		text.material_id = widget->material_id;
+		text.material_id = input->material_id;
 		bs_vec2 text_size;
 		//_bsgfx_instanceTextN(menu->text_subtype, font, &text, &text_size, string->value, BS_MIN(string->len, 1024));
 	}
@@ -1281,21 +1275,19 @@ static bool _bsgfx_instanceInput(
 	const float z_offset = 3;
 	_bsgfx_instanceBackground(_bsgfx_subtypes_[BSGFX_SUBTYPE_UI_COLOR],
 		BS_V3(position.x, position.y, position.z + z_offset),
-		widget->input.dimensions,
-		BS_V4(menu->border_radius, menu->border_radius, menu->border_radius, menu->border_radius),
-		widget->input.outline_material_id,
-		widget->input.background_outline_material_id,
-		widget->input.background_shadow_material_id);
+		input->dimensions,
+		BS_V4(0,0,0,0),
+		//BS_V4(menu->border_radius, menu->border_radius, menu->border_radius, menu->border_radius),
+		input->outline_material_id,
+		input->background_outline_material_id,
+		input->background_shadow_material_id);
 
 	//	if (active && bs_inputDownOnce(BS_KEY_ENTER) && widget->input.action) {
 	//		widget->input.action(widget);
 	//		_bsgfx_selected_input = 0;
 	//	}
 
-	*out_width = BS_V2(widget->input.dimensions.x, height);
-
-
-	return hovering;
+	*out_width = BS_V2(input->dimensions.x, height);
 }
 
 /**

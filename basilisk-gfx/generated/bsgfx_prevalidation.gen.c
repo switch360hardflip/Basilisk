@@ -797,6 +797,13 @@ BSGFXAPI void _preval_bsgfx_translateUIElement(const bsgfx_UIElement* element, c
     next.bsgfx_translateUIElement(element, position);
 }
 
+BSGFXAPI void _preval_bsgfx_instanceUIInput(bsgfx_UIInput* input, bs_vec3 position, bs_vec2* out_width, const char* alphabet) {
+    BSGFX_VALIDATE(input != NULL, ,);
+    BSGFX_VALIDATE(out_width != NULL, ,);
+    BSGFX_VALIDATE(alphabet != NULL, ,);
+    next.bsgfx_instanceUIInput(input, position, out_width, alphabet);
+}
+
 BSGFXAPI void _preval_bsgfx_renderColorPickers(bs_RendererScope* scope, bs_Queue* queue) {
     BSGFX_VALIDATE(scope != NULL, ,);
     BSGFX_VALIDATE(queue != NULL, ,);
@@ -954,6 +961,7 @@ bsgfx_FunctionTable* _preval_bsgfx_getFunctionTable() {
     functions.bsgfx_atlasIconUIElement = _preval_bsgfx_atlasIconUIElement;
     functions.bsgfx_hoveringUIElement = _preval_bsgfx_hoveringUIElement;
     functions.bsgfx_translateUIElement = _preval_bsgfx_translateUIElement;
+    functions.bsgfx_instanceUIInput = _preval_bsgfx_instanceUIInput;
     functions.bsgfx_renderColorPickers = _preval_bsgfx_renderColorPickers;
 
     return &functions;

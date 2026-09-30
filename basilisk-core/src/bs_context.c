@@ -145,23 +145,6 @@ BSAPI bs_Image* _bs_swapchainImage() {
     return _bs_scope_.context->swapchain_image->image;
 }
 
-void _bs_destroySwapchain() {
-    if (!_bs_scope_.context->swapchain_image)
-        return;
-    bs_Image* swapchain_image = _bs_scope_.context->swapchain_image->image;
-
-    for (int i = 0; i < _bs_scope_.context->head.swaps_count; i++) {
-        if (swapchain_image->_[i].vk_image_view)
-            vkDestroyImageView(_bs_instance_->device, swapchain_image->_[i].vk_image_view, NULL);
-        swapchain_image->_[i].vk_image_view = VK_NULL_HANDLE;
-    }
-
-    if (_bs_scope_.context->swapchain)
-        vkDestroySwapchainKHR(_bs_instance_->device, _bs_scope_.context->swapchain, NULL);
-    _bs_scope_.context->swapchain = VK_NULL_HANDLE;
-}
-
-
 #ifdef _WIN32
 
 typedef struct {
@@ -228,11 +211,20 @@ static void _bs_awaitDxCommands() {
     }
 }
 
-static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
-    HRESULT hresult;
-    VkResult vk_result;
-    bs_Result result;
-    bs_SwapchainProperties props = _bs_swapchainProperties();
+void _bs_destroySwapchain(bs_Context* context) {
+    if (!context->swapchain_image)
+        return;
+    bs_Image* swapchain_image = context->swapchain_image->image;
+
+    for (int i = 0; i < context->head.swaps_count; i++) {
+        if (swapchain_image->_[i].vk_image_view)
+            vkDestroyImageView(_bs_instance_->device, swapchain_image->_[i].vk_image_view, NULL);
+        swapchain_image->_[i].vk_image_view = VK_NULL_HANDLE;
+    }
+
+    if (context->swapchain)
+        vkDestroySwapchainKHR(_bs_instance_->device, context->swapchain, NULL);
+    context->swapchain = VK_NULL_HANDLE;
 
     if (context->dxgi_swapchain) {
         _bs_awaitDxCommands();
@@ -257,6 +249,18 @@ static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
             image->dx_image = NULL;
             image->dx_shared_handle = NULL;
         }
+    }
+}
+
+
+static bs_Result _bs_dxgiSwapchain(bs_Context* context) {
+    HRESULT hresult;
+    VkResult vk_result;
+    bs_Result result;
+    bs_SwapchainProperties props = _bs_swapchainProperties();
+
+    if (context->dxgi_swapchain) {
+        _bs_destroySwapchain(context);
 
       //  _bs_destroySwapchain();
 
@@ -750,7 +754,7 @@ BSAPI bs_Result _bs_swapchain(bs_Context* context) {
         return bs_convertVulkanResult(result);
     }
 
-    _bs_destroySwapchain();
+    _bs_destroySwapchain(context);
     context->swapchain = new_swapchain;
 
     bsi_nameHandle((bs_U64)context->swapchain, VK_OBJECT_TYPE_SWAPCHAIN_KHR, context->title);
@@ -829,19 +833,6 @@ BSAPI void _bs_titleWindowN(bs_Context* context, char* name, int name_length) {
     context->title = name; // todo
 }
 
-BSAPI void _bs_setCursor(bs_CursorIcon icon) {
-	_bs_warnF("_bs_setCursor has not been implemented yet");
-	/*
-	if (_bs_scope_.context->cursor_icons[icon].handle == NULL)
-		_bs_scope_.context->cursor_icons[icon].handle = LoadCursor(NULL, _bs_wnd.cursor_icons[icon].id);
-
-	if (_bs_wnd.cursor_icon == icon)
-		return;
-
-	_bs_wnd.cursor_icon = icon;
-	*/
-}
-
 BSAPI void _bs_resizeWindow(bs_Context* context, bs_U32 width, bs_U32 height) {
 #ifdef _WIN32
     RECT rect;
@@ -865,7 +856,10 @@ BSAPI void _bs_resizeWindow(bs_Context* context, bs_U32 width, bs_U32 height) {
 
 BSAPI void _bs_maximizeWindow(bs_Context* context) {
 #ifdef _WIN32
-	ShowWindow(context->hwnd, SW_SHOWMAXIMIZED);
+    if (IsZoomed(context->hwnd))
+	    ShowWindow(context->hwnd, SW_RESTORE);
+    else
+        ShowWindow(context->hwnd, SW_SHOWMAXIMIZED);
 #else
 	_bs_warnF("_bs_maximizeWindow has not been implemented for this OS yet");
 #endif
@@ -1071,7 +1065,7 @@ BSAPI bs_vec2 _bs_screenCursorPosition() {
 }
 
 BSAPI bool _bs_contextKeyHeld(bs_Context* context, bs_U32 code) {
-    return false;
+    return bs_getBit(context->io.inputs_down_once, code); // TODO
 }
 
 BSAPI bool _bs_contextInputDown(bs_Context* context, bs_U32 code) {
@@ -1087,7 +1081,7 @@ BSAPI bool _bs_contextInputUpOnce(bs_Context* context, bs_U32 code) {
 }
 
 BSAPI bool _bs_contextCharDown(bs_Context* context, unsigned char code) {
-    return false;
+    return bs_getBit(context->io.char_events, code);
 }
 
 BSAPI bool _bs_contextCharDownOnce(bs_Context* context, unsigned char code) {
@@ -1163,8 +1157,10 @@ void _bs_tickContext(bs_Context* context) {
         _bs_scope_.context = last_context;
     }
 
-    for (int i = 0; i < BS_KEY_BYTES_COUNT; i++)
+    for (int i = 0; i < BS_KEY_BYTES_COUNT; i++) {
+        context->io.char_events[i] = 0;
         context->io.inputs_down[i] &= ~context->io.inputs_up_once[i];
+    }
 
     _bs_instance_->time_old = _bs_instance_->time;
 }
@@ -1428,8 +1424,8 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
         context->io.scroll = (SHORT)HIWORD(msg.wParam) / 120.0;
     } break;
     case WM_CHAR: {
-     //   if (msg.wParam < BS_KEYS_COUNT)
-     //       bs_setBit(context->io.chars, (bs_U32)msg.wParam);
+        if (msg.wParam < BS_KEYS_COUNT)
+            bs_setBit(context->io.char_events, (bs_U32)msg.wParam);
     } break;
     case WM_KEYDOWN: {
         if (msg.wParam < BS_KEYS_COUNT)
@@ -1546,6 +1542,9 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
             DispatchMessage(&msg);
         }
 #endif
+
+        if (_bs_callbacks_.pre_tick)
+            _bs_callbacks_.pre_tick();
 
         if (!separate_message_thread) {
             _bs_renderTick(fixed_tick);
@@ -1743,10 +1742,10 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
     case WM_ERASEBKGND:
         return 1;
     case WM_SHOWWINDOW:
-        if (context && context->listener.create) {
+        if (context && context->listener.show) {
             bs_Context* last = _bs_scope_.context;
             _bs_scope_.context = context;
-            context->listener.create(context);
+            context->listener.show(context, !!w_param);
             _bs_scope_.context = last;
         }
         break;
@@ -1877,6 +1876,32 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
 	case WM_SYSKEYUP:
 	case WM_SYSCHAR:
 		return 0;
+    case WM_MOUSEMOVE:
+        if (context && context->listener.motion) {
+            int x = GET_X_LPARAM(l_param);
+            int y = GET_Y_LPARAM(l_param);
+
+            bs_Context* last = _bs_scope_.context;
+            _bs_scope_.context = context;
+            context->listener.motion(context, x, y);
+            _bs_scope_.context = last;
+        }
+        return 0;
+    case WM_SETCURSOR:
+        if (context && context->listener.set_cursor) {
+            bs_Context* last = _bs_scope_.context;
+            _bs_scope_.context = context;
+            bs_CursorIcon icon = context->listener.set_cursor(context);
+            _bs_scope_.context = last;
+
+            if (icon == BS_CURSOR_DEFAULT || !_bs_instance_->cursor_icons[icon].handle)
+                return DefWindowProc(hwnd, msg, w_param, l_param);
+
+            SetCursor(_bs_instance_->cursor_icons[icon].handle);
+
+            return TRUE;
+        }
+        return DefWindowProc(hwnd, msg, w_param, l_param);
 //	case WM_SETCURSOR: {
 //		// SetCursor(_bs_scope_.context->cursor_icons[_bs_wnd.cursor_icon].handle);
 //	} break;
@@ -1986,6 +2011,21 @@ BSAPI bs_Result _bs_openPopupWindow(bs_ContextListener listener, bs_Context* par
     return BS_RESULT_OK;
 }
 
+BSAPI void _bs_destroyWindow(bs_Context* context) {
+    DestroyWindow(context->hwnd);
+    context->hwnd = NULL;
+}
+
+BSAPI void _bs_destroyContext(bs_Context* context) {
+    _bs_destroyWindow(context);
+    vkDestroySurfaceKHR(_bs_instance_->instance, context->surface, NULL);
+    
+    _bs_destroySwapchain(context);
+
+    context->dxgi_swapchain = NULL;
+    context->surface = VK_NULL_HANDLE;
+}
+
 BSAPI bs_Result _val_bs_window(
     bs_Context* context,
     bs_Context* parent,
@@ -2025,34 +2065,40 @@ BSAPI bs_Result _bs_window(
     const char* class_name = title;
     HINSTANCE hinstance = GetModuleHandle(0);
 
-    HICON hicon = (HICON)LoadImage(
-        NULL,
-        "content/icon.ico",
-        IMAGE_ICON,
-        0, 0,
-        LR_LOADFROMFILE | LR_DEFAULTSIZE
-    );
 
-    WNDCLASSEX wc = {
-        .cbSize = sizeof(WNDCLASSEX),
-        .style = CS_OWNDC,
-        .lpfnWndProc = _bs_windowProcedure,
-        .cbClsExtra = 0,
-        .cbWndExtra = 0,
-        .hInstance = hinstance,
-        .hIcon = hicon ? hicon : LoadIcon(NULL, IDI_APPLICATION),
-        .hCursor = LoadCursor(NULL, IDC_ARROW),
-		//.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
-		.lpszMenuName = NULL,
-        .lpszClassName = class_name,
-        //.hIconSm = LoadIcon(NULL, IDI_APPLICATION),
-    };
+    if (!context->has_class) {
+        HICON hicon = (HICON)LoadImage(
+            NULL,
+            "content/icon.ico",
+            IMAGE_ICON,
+            0, 0,
+            LR_LOADFROMFILE | LR_DEFAULTSIZE
+        );
 
-    if (!RegisterClassEx(&wc)) {
-        BS_WARN_WIN32_PATH("RegisterClassEx", title);
-        _bs_scope_.context = last_context;
-        return _bs_convertWin32Error(GetLastError());
+        context->has_class = true;
+
+        WNDCLASSEX wc = {
+            .cbSize = sizeof(WNDCLASSEX),
+            .style = CS_OWNDC,
+            .lpfnWndProc = _bs_windowProcedure,
+            .cbClsExtra = 0,
+            .cbWndExtra = 0,
+            .hInstance = hinstance,
+            .hIcon = hicon ? hicon : LoadIcon(NULL, IDI_APPLICATION),
+            .hCursor = LoadCursor(NULL, IDC_ARROW),
+		    //.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
+		    .lpszMenuName = NULL,
+            .lpszClassName = class_name,
+            //.hIconSm = LoadIcon(NULL, IDI_APPLICATION),
+        };
+    
+        if (!RegisterClassEx(&wc)) {
+            BS_WARN_WIN32_PATH("RegisterClassEx", title);
+            _bs_scope_.context = last_context;
+            return _bs_convertWin32Error(GetLastError());
+        }
     }
+
 
     DWORD style = WS_OVERLAPPEDWINDOW | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
     DWORD ex_style = 0;
