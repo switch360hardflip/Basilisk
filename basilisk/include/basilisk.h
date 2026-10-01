@@ -112,10 +112,7 @@ BS_GENERATE_ENUM(BASILISK_FONT_IDS);
 typedef struct {
     bs_vec3 position;
     bs_Range background_instance_range;
-    bool was_hovering;
     bool hovering;
-    bool hover_once;
-    bool hover_release;
 } Button;
 
 typedef enum {
@@ -124,6 +121,7 @@ typedef enum {
     CONTEXT_MENU_FILE,
     CONTEXT_MENU_OPEN_RECENT,
     CONTEXT_MENU_TEST,
+    CONTEXT_MENU_TEST2,
 
     CONTEXT_MENU_COUNT
 } ContextMenuType;
@@ -225,6 +223,8 @@ void iniContextMenu(ContextMenuType type);
 void openContextMenu(bs_ivec2 position, ContextMenuType type, bs_Context* context);
 void toggleContextMenu(bs_ivec2 position, ContextMenuType type);
 
+void onTitleBarInput(bs_Context* context, bs_ContextInputParams params);
+void onTitleBarMotion(bs_Context* context, int x, int y);
 bool onTitleBarTick();
 void iniTitleBar();
 

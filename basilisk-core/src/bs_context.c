@@ -1119,10 +1119,6 @@ void _bs_tickContext(bs_Context* context) {
 
     #ifdef _WIN32
     context->active = context->hwnd == GetForegroundWindow();
-
-    POINT p = { _bs_instance_->screen_cursor.x, _bs_instance_->screen_cursor.y };
-    if (ScreenToClient(context->hwnd, &p))
-        context->cursor = BS_V2(p.x, p.y);
     #endif
 
     if (separate_message_thread) {
@@ -1301,6 +1297,10 @@ void _bs_closeAllPopupWindows() {
 }
 
 static void _bs_renderTick(bs_Callback fixed_tick) {
+    if (_bs_callbacks_.pre_tick)
+        _bs_callbacks_.pre_tick();
+
+
     //  _bs_checkTimer(&_bs_instance_->timer);
     double frame_start = _bs_instance_->timer.seconds;
 
@@ -1357,10 +1357,10 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
     _bs_checkTimer(&_bs_instance_->timer);
 
     #ifdef _WIN32
-    while ((_bs_instance_->timer.seconds - frame_start) < _bs_instance_->target_frame_time) {
-        Sleep(1);
-        _bs_checkTimer(&_bs_instance_->timer);
-    }
+    //while ((_bs_instance_->timer.seconds - frame_start) < _bs_instance_->target_frame_time) {
+    //    Sleep(1);
+    //    _bs_checkTimer(&_bs_instance_->timer);
+    //}
     #endif
 }
 
@@ -1371,19 +1371,31 @@ static void _bs_startRenderTick(bs_Callback fixed_tick) {
 }
 
 #ifdef _WIN32
+static void _bs_setCapture(bs_Context* context) {
+    SetCapture(context->hwnd);
+    _bs_instance_->captured_context = context;
+}
+static void _bs_releaseCapture() {
+    ReleaseCapture();
+    _bs_instance_->captured_context = NULL;
+}
+
 static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG msg) {
+    bs_Context* last = _bs_scope_.context;
+    _bs_scope_.context = context;
+
     switch (msg.message) {
     case WM_QUIT: PostQuitMessage(0); _bs_instance_->alive = false; return;
 
     case WM_LBUTTONDOWN:
-        SetCapture(context->hwnd);
+        _bs_setCapture(context);
         bs_setBit(context->io.input_down_events, BS_LEFT_MOUSE_BUTTON);
 
         if (context->listener.input)
             context->listener.input(context, (bs_ContextInputParams) { .code = BS_LEFT_MOUSE_BUTTON, .state = BS_INPUT_PRESSED, });
         break;
     case WM_LBUTTONUP:
-        ReleaseCapture();
+        _bs_releaseCapture();
         bs_setBit(context->io.input_up_events, BS_LEFT_MOUSE_BUTTON);
 
         if (context->listener.input)
@@ -1391,14 +1403,14 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
         break;
 
     case WM_RBUTTONDOWN:
-        SetCapture(context->hwnd);
+        _bs_setCapture(context);
         bs_setBit(context->io.input_down_events, BS_RIGHT_MOUSE_BUTTON);
 
         if (context->listener.input)
             context->listener.input(context, (bs_ContextInputParams) { .code = BS_RIGHT_MOUSE_BUTTON, .state = BS_INPUT_PRESSED, });
         break;
     case WM_RBUTTONUP:
-        ReleaseCapture();
+        _bs_releaseCapture();
         bs_setBit(context->io.input_up_events, BS_RIGHT_MOUSE_BUTTON);
 
         if (context->listener.input)
@@ -1406,14 +1418,14 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
         break;
 
     case WM_MBUTTONDOWN:
-        SetCapture(context->hwnd);
+        _bs_setCapture(context);
         bs_setBit(context->io.input_down_events, BS_MIDDLE_MOUSE_BUTTON);
 
         if (context->listener.input)
             context->listener.input(context, (bs_ContextInputParams) { .code = BS_MIDDLE_MOUSE_BUTTON, .state = BS_INPUT_PRESSED, });
         break;
     case WM_MBUTTONUP:
-        ReleaseCapture();
+        _bs_releaseCapture();
         bs_setBit(context->io.input_up_events, BS_MIDDLE_MOUSE_BUTTON);
 
         if (context->listener.input)
@@ -1478,7 +1490,35 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
     //case WM_NCLBUTTONDBLCLK:
     //case WM_NCRBUTTONDBLCLK:
     //case WM_NCMBUTTONDBLCLK:
+    case WM_NCMOUSEMOVE:
+        if (context) {
+            POINT pt = {
+                GET_X_LPARAM(msg.lParam),
+                GET_Y_LPARAM(msg.lParam)
+            };
+            ScreenToClient(msg.hwnd, &pt);
+
+            context->cursor = BS_V2(pt.x, pt.y);
+
+            if (context->listener.motion)
+                context->listener.motion(context, pt.x, pt.y);
+        }
+
+        break;
+
     case WM_MOUSEMOVE:
+        if (context) {
+            POINT pt = {
+                GET_X_LPARAM(msg.lParam),
+                GET_Y_LPARAM(msg.lParam)
+            };
+
+            context->cursor = BS_V2(pt.x, pt.y);
+
+            if (context->listener.motion)
+                context->listener.motion(context, pt.x, pt.y);
+        }
+
         TRACKMOUSEEVENT track_mouse_event = {
             .cbSize = sizeof(TRACKMOUSEEVENT),
             .dwFlags = TME_LEAVE,
@@ -1489,21 +1529,21 @@ static void _bs_handleMessageAtomic(bs_List* contexts, bs_Context* context, MSG 
         TrackMouseEvent(&track_mouse_event);
 
         if (!context->hovering) {
+            context->hovering = true;
             if (context->listener.enter)
                 context->listener.enter(context, NULL);
-
-            context->hovering = true;
         }
 
         break;
     case WM_MOUSELEAVE:
+        context->hovering = false;
         if (context->listener.leave)
             context->listener.leave(context, NULL);
 
-        context->hovering = false;
-
         break;
     }
+
+    _bs_scope_.context = last;
 }
 #endif
 
@@ -1535,16 +1575,17 @@ BSAPI void _bs_tick(bs_Callback fixed_tick) {
                 }
             }
 
-            if (context)
+            if (context) {
+                if (context->window_type == BS_WINDOW_POPUP && context->hidden)
+                    continue;
                 _bs_handleMessageAtomic(contexts, context, msg);
+            }
 
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
 #endif
 
-        if (_bs_callbacks_.pre_tick)
-            _bs_callbacks_.pre_tick();
 
         if (!separate_message_thread) {
             _bs_renderTick(fixed_tick);
@@ -1738,6 +1779,9 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
         }
     }
 
+    if (context && context->window_type == BS_WINDOW_POPUP && context->hidden)
+	    return 0;
+
     switch (msg) {
     case WM_ERASEBKGND:
         return 1;
@@ -1806,7 +1850,11 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
                     GET_Y_LPARAM(l_param)
                 };
 
+                bs_Context* last = _bs_scope_.context;
+                _bs_scope_.context = context;
                 context->hovering_non_client_area = _bs_callbacks_.client_area_tick(context, pt);
+                _bs_scope_.context = last;
+
                 switch (context->hovering_non_client_area) {
                 case BS_CLIENT_AREA:
                     return _bs_hitTestResize(context, pt, HTCLIENT, context->border_padding);
@@ -1876,17 +1924,7 @@ LRESULT CALLBACK _bs_windowProcedure(HWND hwnd, UINT msg, WPARAM w_param, LPARAM
 	case WM_SYSKEYUP:
 	case WM_SYSCHAR:
 		return 0;
-    case WM_MOUSEMOVE:
-        if (context && context->listener.motion) {
-            int x = GET_X_LPARAM(l_param);
-            int y = GET_Y_LPARAM(l_param);
 
-            bs_Context* last = _bs_scope_.context;
-            _bs_scope_.context = context;
-            context->listener.motion(context, x, y);
-            _bs_scope_.context = last;
-        }
-        return 0;
     case WM_SETCURSOR:
         if (context && context->listener.set_cursor) {
             bs_Context* last = _bs_scope_.context;
@@ -1936,7 +1974,14 @@ BSAPI bs_Context* _bs_queryPopupWindow(bs_I32 id) {
 }
 
 BSAPI void _bs_closePopupWindow(bs_Context* context) {
+    if (_bs_instance_->captured_context == context)
+        _bs_releaseCapture();
+
     bs_hideWindow(context);
+
+    if (context->parent)
+        context->parent->next = NULL;
+
     bs_Context* child = context->next;
     while (child) {
         bs_hideWindow(child);
@@ -2003,8 +2048,10 @@ BSAPI bs_Result _bs_openPopupWindow(bs_ContextListener listener, bs_Context* par
     _bs_moveWindow(context, x, y);
     _bs_showWindow(context);
 
-    if (parent)
+    if (parent) {
+        context->parent = parent;
         parent->next = context;
+    }
 
     _bs_scope_.context = last_context;
 
@@ -2059,7 +2106,7 @@ BSAPI bs_Result _bs_window(
     context->window_type = type;
 
     bs_Timer timer = _bs_timer();
-    _bs_setTargetFramerate(60);
+    _bs_setTargetFramerate(2);
 
     #ifdef _WIN32
     const char* class_name = title;
@@ -2105,6 +2152,7 @@ BSAPI bs_Result _bs_window(
     HWND parent_hwnd = NULL;
 
     if (parent) {
+        context->parent = parent;
         parent->next = context;
         parent_hwnd = parent->hwnd;
        // style = WS_CHILD | WS_VISIBLE;

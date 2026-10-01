@@ -222,6 +222,12 @@ static void onApplicationWindowActivate(bs_Context* context, bs_ContextActivateP
 static void onApplicationWindowInput(bs_Context* context, bs_ContextInputParams params) {
 	if (params.state == BS_INPUT_PRESSED && context->hovering_non_client_area != BS_NON_CLIENT_AREA_CAPTION_BUTTON)
 		bs_closeAllPopupWindows();
+
+	onTitleBarInput(context, params);
+}
+
+static void onApplicationMotion(bs_Context* context, int x, int y) {
+	onTitleBarMotion(context, x, y);
 }
 
 bool _hovering_any_title_bar_button_ = false;
@@ -272,6 +278,7 @@ int main(int argc, char* argv[]) {
 			.tick = onTick,
 			.activate = onApplicationWindowActivate,
 			.input = onApplicationWindowInput,
+			.motion = onApplicationMotion,
 		}
 	};
 

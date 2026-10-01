@@ -52,23 +52,6 @@ static bool title_bar_has_changes = true;
 TitleBarButton _main_title_bar_buttons_[TITLE_BAR_BUTTON_COUNT];
 static CommonSubtypes _main_title_bar_subtypes_;
 
-bs_NonClientArea onClientAreaTick(bs_Context* context, bs_ivec2 pt) {
-    #ifdef _WIN32
-    RECT rc;
-    GetWindowRect(context->hwnd, &rc);
-
-    int y = pt.y - rc.top;
-
-    if (_hovering_any_title_bar_button_)
-        return BS_NON_CLIENT_AREA_CAPTION_BUTTON;
-
-    if (y >= 0 && y < BASILISK_TITLE_BAR_HEIGHT)
-        return BS_NON_CLIENT_AREA_CAPTION;
-    #endif
-
-    return BS_CLIENT_AREA;
-}
-
 
 
   /*==============================================================================
@@ -375,12 +358,29 @@ void titleBarButtonTest(const CommonSubtypes* subtypes, TitleBarButton buttons[T
     }
 }
 
-bool onTitleBarTick() {
-    bs_Context* context = bs_scope()->context;
+bs_NonClientArea onClientAreaTick(bs_Context* context, bs_ivec2 pt) {
+#ifdef _WIN32
+    RECT rc;
+    GetWindowRect(context->hwnd, &rc);
 
-    bsgfx_computeContextCamera();
-    bsmod_onTick();
+    int y = pt.y - rc.top;
 
+    for (int i = 0; i < TITLE_BAR_BUTTON_COUNT; i++) {
+        bsgfx_Material* default_button_background_material = $default_button_background_color();
+        titleBarButtonTest(&_main_title_bar_subtypes_, _main_title_bar_buttons_, i, default_button_background_material);
+    }
+
+    if (_hovering_any_title_bar_button_)
+        return BS_NON_CLIENT_AREA_CAPTION_BUTTON;
+
+    if (y >= 0 && y < BASILISK_TITLE_BAR_HEIGHT)
+        return BS_NON_CLIENT_AREA_CAPTION;
+#endif
+
+    return BS_CLIENT_AREA;
+}
+
+void onTitleBarInput(bs_Context* context, bs_ContextInputParams params) {
     bool was_hidden = context->hidden;
 
     //bs_Renderer* renderer = bs_fetch(BASILISK_RENDERERS, BASILISK_RENDERER_TITLE_BAR)->renderer;
@@ -398,7 +398,7 @@ bool onTitleBarTick() {
     titleBarButtonTest(&_main_title_bar_subtypes_, _main_title_bar_buttons_, TITLE_BAR_BUTTON_MAXIMIZE, default_button_background_material);
     titleBarButtonTest(&_main_title_bar_subtypes_, _main_title_bar_buttons_, TITLE_BAR_BUTTON_CLOSE, close_button_background_material);
 
-    if (bs_inputDownOnce(BS_LEFT_MOUSE_BUTTON)) {
+    if (params.state == BS_INPUT_PRESSED && params.code == BS_LEFT_MOUSE_BUTTON) {
         if (_main_title_bar_buttons_[TITLE_BAR_BUTTON_FILE].hovering) {
             bs_vec3 position = _main_title_bar_buttons_[TITLE_BAR_BUTTON_FILE].position;
             position.x += TITLE_BAR_BUTTON_PADDING_X / 2;
@@ -407,7 +407,7 @@ bool onTitleBarTick() {
         }
     }
 
-    if (bs_inputUpOnce(BS_LEFT_MOUSE_BUTTON)) {
+    if (params.state == BS_INPUT_RELEASED && params.code == BS_LEFT_MOUSE_BUTTON) {
         if (_main_title_bar_buttons_[TITLE_BAR_BUTTON_MINIMIZE].hovering) {
             bs_minimizeWindow(context);
         }
@@ -418,6 +418,28 @@ bool onTitleBarTick() {
             bs_exit();
         }
     }
+}
+
+void onTitleBarMotion(bs_Context* context, int x, int y) {
+    bsgfx_Material* transparent_material = $transparent_color();
+    bsgfx_Material* default_button_background_material = $default_button_background_color();
+    bsgfx_Material* close_button_background_material = $close_button_background_color();
+
+    titleBarButtonTest(&_main_title_bar_subtypes_, _main_title_bar_buttons_, TITLE_BAR_BUTTON_FILE, default_button_background_material);
+    titleBarButtonTest(&_main_title_bar_subtypes_, _main_title_bar_buttons_, TITLE_BAR_BUTTON_MINIMIZE, default_button_background_material);
+    titleBarButtonTest(&_main_title_bar_subtypes_, _main_title_bar_buttons_, TITLE_BAR_BUTTON_MAXIMIZE, default_button_background_material);
+    titleBarButtonTest(&_main_title_bar_subtypes_, _main_title_bar_buttons_, TITLE_BAR_BUTTON_CLOSE, close_button_background_material);
+
+}
+
+
+bool onTitleBarTick() {
+    bs_Context* context = bs_scope()->context;
+
+    bsgfx_computeContextCamera();
+    bsmod_onTick();
+
+
 
     if (title_bar_has_changes || bs_scope()->resizing) {
         title_bar_has_changes = false;

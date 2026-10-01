@@ -35,9 +35,20 @@
 
 BSGFX_CACHE_COLOR_MATERIAL(context_menu_button_hover_color, BS_RGBA(0, 120, 215, 255))
 
+ContextMenuElement _context_menu_test2_elements_[] = {
+    {
+        .left_text = "abc",
+        .right_text = "123456",
+    },
+    {
+        .left_text = "abcdefghijklmnopqrstuvwxyz",
+    },
+};
+
 ContextMenuElement _context_menu_test_elements_[] = {
     {
         .left_text = "lalaalal",
+        .hover_menu_type = CONTEXT_MENU_TEST2,
     },
 };
 
@@ -59,6 +70,9 @@ ContextMenuElement _context_menu_open_recent_elements_[] = {
     },
     {
         .left_text = "Testing...",
+    },
+    {
+        .left_text = "Testing...",
         .hover_menu_type = CONTEXT_MENU_TEST,
     },
 
@@ -69,6 +83,7 @@ ContextMenuElement _context_menu_file_elements_[] = {
         .left_text = "New...",
         .right_text = "Ctrl+N",
         .on_click = onCreateProjectFromContextMenu,
+        .hover_menu_type = CONTEXT_MENU_OPEN_RECENT,
     },
     {
         .left_text = "Open...",
@@ -80,6 +95,7 @@ ContextMenuElement _context_menu_file_elements_[] = {
     {
         .left_text = "Save",
         .right_text = "Ctrl+S",
+        .hover_menu_type = CONTEXT_MENU_OPEN_RECENT,
     },
     {
         .left_text = "Save As...",
@@ -88,6 +104,7 @@ ContextMenuElement _context_menu_file_elements_[] = {
     {
         .left_text = "Exit",
         .right_text = "Alt+F4",
+        .hover_menu_type = CONTEXT_MENU_OPEN_RECENT,
     }
 };
 
@@ -101,6 +118,7 @@ BSGFX_CACHE_COLOR_MATERIAL(transparent_color, BS_RGBA(0, 0, 0, 0))
 typedef struct {
     const char* title;
     bool has_changes;
+    bool close;
     //  bs_Context* context;
     ContextMenuElement* elements;
     int elements_count;
@@ -113,6 +131,7 @@ ContextMenu context_menus[CONTEXT_MENU_COUNT] = {
     [CONTEXT_MENU_FILE] = CONTEXT_MENU(_context_menu_file_elements_),
     [CONTEXT_MENU_OPEN_RECENT] = CONTEXT_MENU(_context_menu_open_recent_elements_),
     [CONTEXT_MENU_TEST] = CONTEXT_MENU(_context_menu_test_elements_),
+    [CONTEXT_MENU_TEST2] = CONTEXT_MENU(_context_menu_test2_elements_),
 };
 
 void instantiateContextMenuUI(ContextMenuType menu_type) {
@@ -206,30 +225,11 @@ void instantiateContextMenuUI(ContextMenuType menu_type) {
                 .subtype = menu->text_subtype
             };
 
-            /**
-             Expandable menu
-             */
-            if (context_menu_element->hover_menu_type != CONTEXT_MENU_UNDEFINED) {
-                position.x += BASILISK_CONTEXT_MENU_WIDTH - BASILISK_CONTEXT_MENU_TEXT_INDENT;
-                bsgfx_AtlasCache* expand_cache = $BSMOD_ATLAS_UI_expand();
-
-                bsgfx_UIIcon icon = {
-                    .position = position,
-                    .cache = expand_cache,
-                    .subtype = bsgfx_subtypes()[BSGFX_SUBTYPE_UI],
-                    .material_id = text_material->id,
-                    .align = { BASILISK_CONTEXT_MENU_TEXT_INDENT, BASILISK_CONTEXT_MENU_BUTTON_HEIGHT },
-                    .subtype = menu->ui_subtype
-                };
-
-                bsgfx_atlasIconUIElement(icon, &element);
-                bsgfx_instantiateAtlasIconUIElement(icon, &element);
-            }
-
             bsgfx_instantiateTextUI(right_text, &element);
 
             bs_vec3 translation = { -(element.size.x), 0.0, 0.0 };
             bsgfx_translateUIElement(&element, &translation);
+            position.x -= BASILISK_CONTEXT_MENU_WIDTH - BASILISK_CONTEXT_MENU_TEXT_INDENT;
         }
         
        /**
@@ -313,22 +313,93 @@ static void buttonTest(bsgfx_InstanceSubtype* subtype, Button* button) {
     bsgfx_Material* transparent_material = $transparent_color();
 
     button->hovering = bsgfx_hoveringQuadInstance(subtype, button->background_instance_range.offset);
-    button->hover_once = false;
-    button->hover_release = false;
     bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(subtype, button->background_instance_range.offset);
     bsgfx_QuadInstance* instance = bsgfx_deviceInstanceData(subtype, button->background_instance_range.offset);
 
     button->position = instance->transform.v[3];
+}
 
-    if (button->hovering && !button->was_hovering) {
-        button->hover_once = true;
+static void resetContextMenuElements(ContextMenu* menu) {
+    bsgfx_Material* transparent_material = $transparent_color();
+    for (int i = 0; i < menu->elements_count; i++) {
+        ContextMenuElement* element = menu->elements + i;
+        bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
+
+        if (header->material != transparent_material->id) {
+            menu->has_changes = true;
+            header->material = transparent_material->id;
+        }
+    }
+}
+
+static void onContextMenuMotion(bs_Context* context, int x, int y) {
+    ContextMenu* menu = context_menus + context->popup.id;
+    bsgfx_Material* default_button_background_material = $blue_button_background_color();
+    bsgfx_Material* transparent_material = $transparent_color();
+
+    for (int i = 0; i < menu->elements_count; i++) {
+        ContextMenuElement* element = menu->elements + i;
+        buttonTest(menu->ui_solid_subtype, &element->button);
     }
 
-    if (!button->hovering && button->was_hovering) {
-        button->hover_release = true;
+    bool hovering_new = false;
+    for (int i = 0; i < menu->elements_count; i++) {
+        ContextMenuElement* element = menu->elements + i;
+        bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
+
+        if (element->button.hovering) {
+            if (header->material != default_button_background_material->id) {
+                hovering_new = true;
+                menu->has_changes = true;
+                header->material = default_button_background_material->id;
+            }
+        }
     }
 
-    button->was_hovering = button->hovering;
+    if (hovering_new) {
+        for (int i = 0; i < menu->elements_count; i++) {
+            ContextMenuElement* element = menu->elements + i;
+            bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
+
+            if (!element->button.hovering) {
+                if (header->material != transparent_material->id) {
+                    menu->has_changes = true;
+                    header->material = transparent_material->id;
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < menu->elements_count; i++) {
+        ContextMenuElement* element = menu->elements + i;
+        bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
+
+        if (element->button.hovering) {
+            if (context->next) {
+                if (context->next->popup.id == element->hover_menu_type) {
+                    bs_ivec2 transform = bs_windowPosition(context);
+                    bs_ivec2 local = BS_IV2(BASILISK_CONTEXT_MENU_WIDTH, (menu->elements_count - i) * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT);
+                    bs_moveWindow(context->next, transform.x + local.x, transform.y - local.y);
+
+                    if (context->next->next) {
+                        ContextMenu* close_menu = context_menus + context->next->next->popup.id;
+                        close_menu->close = true;
+                    }
+
+                    continue;
+                }
+
+                ContextMenu* close_menu = context_menus + context->next->popup.id;
+                close_menu->close = true;
+            }
+
+            if (element->hover_menu_type != CONTEXT_MENU_UNDEFINED) {
+                int height = context_menus[element->hover_menu_type].elements_count * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT;
+
+                openContextMenu(BS_IV2(BASILISK_CONTEXT_MENU_WIDTH, (menu->elements_count - i) * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT), element->hover_menu_type, context);
+            }
+        }
+    }
 }
 
 void onContextMenuTick(bs_Context* context, void* params) {
@@ -344,67 +415,7 @@ void onContextMenuTick(bs_Context* context, void* params) {
     ContextMenu* menu = context_menus + context->popup.id;
 
     bsgfx_Material* transparent_material = $transparent_color();
-    bsgfx_Material* default_button_background_material = $blue_button_background_color();
 
-    bool hovering_any_button = false;
-    for (int i = 0; i < menu->elements_count; i++) {
-        ContextMenuElement* element = menu->elements + i;
-        buttonTest(menu->ui_solid_subtype, &element->button);
-
-        if (element->button.hovering)
-            hovering_any_button = true;
-    }
-
-    if (!context->next || hovering_any_button) {
-        for (int i = 0; i < menu->elements_count; i++) {
-            ContextMenuElement* element = menu->elements + i;
-            bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
-
-            if (header->material != transparent_material->id)
-                menu->has_changes = true;
-
-            header->material = transparent_material->id;
-        }
-    }
-
-    for (int i = 0; i < menu->elements_count; i++) {
-        ContextMenuElement* element = menu->elements + i;
-
-        bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
-
-        if (element->button.hovering) {
-            if (header->material != default_button_background_material->id)
-                menu->has_changes = true;
-
-            header->material = default_button_background_material->id;
-        }
-
-        if (element->button.hover_once) {
-            if (context->next) {
-                if (context->next->popup.id == element->hover_menu_type) {
-                    bs_ivec2 transform = bs_windowPosition(context);
-                    bs_ivec2 local = BS_IV2(BASILISK_CONTEXT_MENU_WIDTH, (menu->elements_count - i) * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT);
-                    bs_moveWindow(context->next, transform.x + local.x, transform.y - local.y);
-                    continue;
-                }
-
-                bs_closePopupWindow(context->next);
-                context->next = NULL;
-            }
-
-            if (element->hover_menu_type != CONTEXT_MENU_UNDEFINED) {
-
-                if (element->button.hover_once) {
-                    int height = context_menus[element->hover_menu_type].elements_count * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT;
-
-                    openContextMenu(BS_IV2(BASILISK_CONTEXT_MENU_WIDTH, (menu->elements_count - i) * BASILISK_CONTEXT_MENU_BUTTON_HEIGHT), element->hover_menu_type, context);
-                }
-            }
-        }
-
-      //  if (element->button.hover_release && context->hovering)
-      //      header->material = transparent_material->id;
-    }
 
 #ifdef _DEBUG
     // debugging
@@ -413,10 +424,26 @@ void onContextMenuTick(bs_Context* context, void* params) {
         menu->has_changes = true;
     }
 #endif
-
     if (menu->has_changes) {
         menu->has_changes = false;
         contextMenuPipeline(context);
+    }
+
+    if (menu->close) {
+        menu->close = false;
+        if (context && !context->hovering) {
+            bs_closePopupWindow(context);
+
+            if (context->parent) {
+                ContextMenu* parent_menu = context_menus + context->parent->popup.id;
+                for (int i = 0; i < parent_menu->elements_count; i++) {
+                    ContextMenuElement* element = parent_menu->elements + i;
+                    bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(parent_menu->ui_solid_subtype, element->button.background_instance_range.offset);
+                    header->material = transparent_material->id;
+                    parent_menu->has_changes = true;
+                }
+            }
+        }
     }
 
     for (int i = 0; i < menu->elements_count; i++) {
@@ -427,8 +454,8 @@ void onContextMenuTick(bs_Context* context, void* params) {
                 bs_closeAllPopupWindows();
                 bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
                 header->material = transparent_material->id;
-                element->on_click(menu, element);
                 menu->has_changes = true;
+                element->on_click(menu, element);
             }
         }
     }
@@ -454,7 +481,38 @@ void iniContextMenu(ContextMenuType type) {
 
 static void onContextMenuShow(bs_Context* context, bool shown) {
     ContextMenu* menu = context_menus + context->popup.id;
-    menu->has_changes = true;
+    menu->close = false;
+
+    resetContextMenuElements(menu);
+}
+
+static void onContextMenuLeave(bs_Context* context, void* params) {
+    ContextMenu* menu = context_menus + context->popup.id;
+    bsgfx_Material* transparent_material = $transparent_color();
+
+    for (int i = 0; i < menu->elements_count; i++) {
+        ContextMenuElement* element = menu->elements + i;
+        bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(menu->ui_solid_subtype, element->button.background_instance_range.offset);
+
+        element->button.hovering = false;
+
+        if (header->material != transparent_material->id) {
+            if (!context->next) {
+                header->material = transparent_material->id;
+                menu->has_changes = true;
+            }
+        }
+
+        if (element->hover_menu_type != CONTEXT_MENU_UNDEFINED) {
+            ContextMenu* next_menu = context_menus + element->hover_menu_type;
+            next_menu->close = true;
+        }
+    }
+}
+
+static void onContextMenuEnter(bs_Context* context, void* params) {
+    ContextMenu* menu = context_menus + context->popup.id;
+    menu->close = false;
 }
 
 void openContextMenu(bs_ivec2 position, ContextMenuType type, bs_Context* context) {
@@ -471,7 +529,10 @@ void openContextMenu(bs_ivec2 position, ContextMenuType type, bs_Context* contex
 
     bs_openPopupWindow((bs_ContextListener) {
         .tick = onContextMenuTick,
-        .show = onContextMenuShow
+        .show = onContextMenuShow,
+        .leave = onContextMenuLeave,
+        .enter = onContextMenuEnter,
+        .motion = onContextMenuMotion,
     }, context, type, new_position.x, new_position.y, BASILISK_CONTEXT_MENU_WIDTH, height, menu->title);
 }
 

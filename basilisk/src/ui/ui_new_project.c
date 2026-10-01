@@ -166,11 +166,7 @@ static void instantiateNewProjectMenuOptions(bs_Context* context) {
     for (int i = 0; i < string->len; i++) {
         // Cursor.
         if (i == select_position) {
-            formatted_string = bs_appendString(
-                formatted_string,
-                "\033[36m|"       // cyan cursor
-                "\033[0m"
-            );
+            formatted_string = bs_appendString(formatted_string, "\033[36m|" "\033[0m");
         }
 
         // No character exists at string->len, so only draw the cursor there.
@@ -179,16 +175,10 @@ static void instantiateNewProjectMenuOptions(bs_Context* context) {
 
         // Selection background.
         if (i >= selection_start && i < selection_end) {
-            formatted_string = bs_appendString(
-                formatted_string,
-                "\033[46m"        // selection background
-            );
+            formatted_string = bs_appendString(formatted_string, "\033[46m");
         }
         else {
-            formatted_string = bs_appendString(
-                formatted_string,
-                "\033[0m"
-            );
+            formatted_string = bs_appendString(formatted_string, "\033[0m");
         }
 
         formatted_string = bs_appendChar(
@@ -312,7 +302,7 @@ static void instantiateInputField(bs_Context* context, InputField* field, const 
         .position = position,
         .font = _fonts_.selawik,
         .as_ascii = name,
-        .px_size = 14,
+        .px_size = 13,
         .align = { 0, BASILISK_TITLE_BAR_HEIGHT },
         .subtype = _new_project_subtypes_.text,
         .align.y = INPUT_FIELD_HEIGHT + outline_size * 2,

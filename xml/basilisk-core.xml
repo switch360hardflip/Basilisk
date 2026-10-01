@@ -2114,6 +2114,7 @@
             <field><type>bool</type><name>descriptor_pool_needs_update</name></field>
             <field><type>bool</type><name>alive</name></field>
             <field><type>bs_vec2</type><name>screen_cursor</name></field>
+            <field><type>bs_Context*</type><name>captured_context</name></field>
 
             <field><type>bs_Timer</type><name>timer</name></field>
             <field><type>double</type><name>time, time_old</name></field>
@@ -2268,7 +2269,7 @@
             <field><type>bs_IO</type><name>io</name></field>
             <field><type>bs_ContextListener</type><name>listener</name></field>
 
-			 <field><type>bs_Context*</type><name>first_child</name></field>
+			 <field><type>bs_Context*</type><name>parent</name></field>
 			 <field><type>bs_Context*</type><name>next</name></field>
 			 
             <structure type="union">
