@@ -2379,6 +2379,11 @@ BSAPI bs_ivec2 _preval_bs_windowPosition(bs_Context* context) {
     return next.bs_windowPosition(context);
 }
 
+BSAPI bs_vec2 _preval_bs_mapScreenToContext(bs_Context* context, bs_vec2 p) {
+    BS_VALIDATE(context != NULL, (bs_vec2) { 0 },);
+    return next.bs_mapScreenToContext(context, p);
+}
+
 BSAPI void _preval_bs_maximizeWindow(bs_Context* context) {
     BS_VALIDATE(context != NULL, ,);
     next.bs_maximizeWindow(context);
@@ -3218,6 +3223,7 @@ bs_FunctionTable* _preval_bs_getFunctionTable() {
     functions.bs_isLaterThan = _preval_bs_isLaterThan;
     functions.bs_windowCursorPosition = _preval_bs_windowCursorPosition;
     functions.bs_windowPosition = _preval_bs_windowPosition;
+    functions.bs_mapScreenToContext = _preval_bs_mapScreenToContext;
     functions.bs_maximizeWindow = _preval_bs_maximizeWindow;
     functions.bs_minimizeWindow = _preval_bs_minimizeWindow;
     functions.bs_screenCursorPosition = _preval_bs_screenCursorPosition;

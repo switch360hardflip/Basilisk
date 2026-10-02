@@ -610,12 +610,15 @@ BSGFXAPI void* _bsgfx_deviceInstanceData(bsgfx_InstanceSubtype* subtype, int ins
 	return (void*)(header + 1);
 }
 
-BSGFXAPI bool _bsgfx_hoveringQuadInstance(bsgfx_InstanceSubtype* subtype, int offset) {
+BSGFXAPI bool _bsgfx_hoveringQuadInstance(bs_Context* context, bsgfx_InstanceSubtype* subtype, int offset) {
 	bsgfx_QuadInstance* instance = _bsgfx_deviceInstanceData(subtype, offset);
 
 	bs_vec2 position = instance->transform.v[3].xy;
 	bs_vec2 size = BS_V2(instance->transform.v[0].x, instance->transform.v[1].y);
-	bs_vec2 cursor = _bs_windowCursorPosition(bs_scope()->context);
+
+	bs_vec2 cursor = bs_screenCursorPosition();
+	cursor = bs_mapScreenToContext(context, cursor);
+	//bs_vec2 cursor = _bs_windowCursorPosition(bs_scope()->context);
 
 	return bs_rectangleVsPoint(&position, &size, &cursor);
 }

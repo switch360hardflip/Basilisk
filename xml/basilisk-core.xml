@@ -4418,7 +4418,12 @@
             <return>bs_ivec2</return>
             <param><type>bs_Context*</type><name>context</name></param>
         </function>
-
+        <function name="bs_mapScreenToContext">
+            <return>bs_vec2</return>
+            <param><type>bs_Context*</type><name>context</name></param>
+            <param><type>bs_vec2</type><name>p</name></param>
+        </function>
+		
         <function name="bs_maximizeWindow">
             <return>void</return>
             <param><type>bs_Context*</type><name>context</name></param>

@@ -951,6 +951,12 @@ BSAPI bs_vec2 _bs_windowCursorPosition(bs_Context* context) {
 	return BS_V2(pos.x, 1.0 - pos.y);
 }
 
+BSAPI bs_vec2 _bs_mapScreenToContext(bs_Context* context, bs_vec2 coords) {
+    POINT p = { .x = coords.x, .y = coords.y };
+    ScreenToClient(context->hwnd, &p);
+    return BS_V2(p.x, context->dimensions.y - p.y);
+}
+
 BSAPI bs_ivec2 _bs_windowPosition(bs_Context* context) {
 #ifdef _WIN32
 	RECT rectangle = { 0 };
@@ -1157,8 +1163,6 @@ void _bs_tickContext(bs_Context* context) {
         context->io.char_events[i] = 0;
         context->io.inputs_down[i] &= ~context->io.inputs_up_once[i];
     }
-
-    _bs_instance_->time_old = _bs_instance_->time;
 }
 
 
@@ -1354,6 +1358,7 @@ static void _bs_renderTick(bs_Callback fixed_tick) {
         _bs_scope_.context = NULL;
     }
 
+    _bs_instance_->time_old = _bs_instance_->time;
     _bs_checkTimer(&_bs_instance_->timer);
 
     #ifdef _WIN32

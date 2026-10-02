@@ -695,10 +695,11 @@ void* bsgfx_deviceInstanceData(
 }
 
 bool bsgfx_hoveringQuadInstance(
+    bs_Context* context, 
     bsgfx_InstanceSubtype* subtype, 
     int offset)
 {
-    return next.bsgfx_hoveringQuadInstance(subtype, offset);
+    return next.bsgfx_hoveringQuadInstance(context, subtype, offset);
 }
 
 bs_mat4x3 bsgfx_matrix(

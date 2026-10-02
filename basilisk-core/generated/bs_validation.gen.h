@@ -412,6 +412,7 @@ static inline bs_FunctionTable* _val_bs_getFunctions() {
     functions.bs_isLaterThan = (PFN_bs_isLaterThan)bs_getProcAddress(module, "_val_bs_isLaterThan");
     functions.bs_windowCursorPosition = (PFN_bs_windowCursorPosition)bs_getProcAddress(module, "_val_bs_windowCursorPosition");
     functions.bs_windowPosition = (PFN_bs_windowPosition)bs_getProcAddress(module, "_val_bs_windowPosition");
+    functions.bs_mapScreenToContext = (PFN_bs_mapScreenToContext)bs_getProcAddress(module, "_val_bs_mapScreenToContext");
     functions.bs_maximizeWindow = (PFN_bs_maximizeWindow)bs_getProcAddress(module, "_val_bs_maximizeWindow");
     functions.bs_minimizeWindow = (PFN_bs_minimizeWindow)bs_getProcAddress(module, "_val_bs_minimizeWindow");
     functions.bs_screenCursorPosition = (PFN_bs_screenCursorPosition)bs_getProcAddress(module, "_val_bs_screenCursorPosition");

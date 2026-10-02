@@ -9690,6 +9690,16 @@ bs_windowPosition(
 
  /**
   @param context
+  @param p
+  @return bs_vec2
+  */
+BSAPI bs_vec2
+bs_mapScreenToContext(
+    bs_Context* context,
+    bs_vec2 p);
+
+ /**
+  @param context
   @return void
   */
 BSAPI void

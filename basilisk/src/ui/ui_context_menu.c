@@ -83,7 +83,6 @@ ContextMenuElement _context_menu_file_elements_[] = {
         .left_text = "New...",
         .right_text = "Ctrl+N",
         .on_click = onCreateProjectFromContextMenu,
-        .hover_menu_type = CONTEXT_MENU_OPEN_RECENT,
     },
     {
         .left_text = "Open...",
@@ -95,7 +94,6 @@ ContextMenuElement _context_menu_file_elements_[] = {
     {
         .left_text = "Save",
         .right_text = "Ctrl+S",
-        .hover_menu_type = CONTEXT_MENU_OPEN_RECENT,
     },
     {
         .left_text = "Save As...",
@@ -104,7 +102,6 @@ ContextMenuElement _context_menu_file_elements_[] = {
     {
         .left_text = "Exit",
         .right_text = "Alt+F4",
-        .hover_menu_type = CONTEXT_MENU_OPEN_RECENT,
     }
 };
 
@@ -312,7 +309,7 @@ void contextMenuPipeline(bs_Context* context) {
 static void buttonTest(bsgfx_InstanceSubtype* subtype, Button* button) {
     bsgfx_Material* transparent_material = $transparent_color();
 
-    button->hovering = bsgfx_hoveringQuadInstance(subtype, button->background_instance_range.offset);
+    button->hovering = bsgfx_hoveringQuadInstance(bs_scope()->context, subtype, button->background_instance_range.offset);
     bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(subtype, button->background_instance_range.offset);
     bsgfx_QuadInstance* instance = bsgfx_deviceInstanceData(subtype, button->background_instance_range.offset);
 

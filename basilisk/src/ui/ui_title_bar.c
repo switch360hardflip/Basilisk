@@ -333,7 +333,8 @@ void titleBarButtonTest(const CommonSubtypes* subtypes, TitleBarButton buttons[T
     bsgfx_Material* transparent_material = $transparent_color();
     bsgfx_InstanceSubtype* subtype = subtypes->ui_solid;
 
-    button->hovering = bsgfx_hoveringQuadInstance(subtype, button->instance_range.offset);
+    bs_Context* context = bs_fetch(BSGFX_CONTEXTS, BSGFX_CONTEXT_MAIN)->context;
+    button->hovering = bsgfx_hoveringQuadInstance(bs_scope()->context, subtype, button->instance_range.offset);
     button->hover_once = false;
     button->hover_release = false;
     bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(subtype, button->instance_range.offset);
@@ -430,6 +431,16 @@ void onTitleBarMotion(bs_Context* context, int x, int y) {
     titleBarButtonTest(&_main_title_bar_subtypes_, _main_title_bar_buttons_, TITLE_BAR_BUTTON_MAXIMIZE, default_button_background_material);
     titleBarButtonTest(&_main_title_bar_subtypes_, _main_title_bar_buttons_, TITLE_BAR_BUTTON_CLOSE, close_button_background_material);
 
+}
+
+void onTitleBarLeave(bs_Context* context) {
+    bsgfx_Material* transparent_material = $transparent_color();
+    for (int i = 0; i < TITLE_BAR_BUTTON_COUNT; i++) {
+        bsgfx_InstanceHeader* header = bsgfx_deviceInstanceHeader(_main_title_bar_subtypes_.ui_solid, _main_title_bar_buttons_[i].instance_range.offset);
+        header->material = transparent_material->id;
+    }
+    updateInstances();
+    title_bar_has_changes = true;
 }
 
 

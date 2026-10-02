@@ -469,9 +469,10 @@ BSGFXAPI void* _preval_bsgfx_deviceInstanceData(bsgfx_InstanceSubtype* subtype, 
     return next.bsgfx_deviceInstanceData(subtype, instance_id);
 }
 
-BSGFXAPI bool _preval_bsgfx_hoveringQuadInstance(bsgfx_InstanceSubtype* subtype, int offset) {
+BSGFXAPI bool _preval_bsgfx_hoveringQuadInstance(bs_Context* context, bsgfx_InstanceSubtype* subtype, int offset) {
+    BSGFX_VALIDATE(context != NULL, false,);
     BSGFX_VALIDATE(subtype != NULL, false,);
-    return next.bsgfx_hoveringQuadInstance(subtype, offset);
+    return next.bsgfx_hoveringQuadInstance(context, subtype, offset);
 }
 
 BSGFXAPI bs_mat4x3 _preval_bsgfx_matrix(bs_vec3 position, bs_vec3 scale) {

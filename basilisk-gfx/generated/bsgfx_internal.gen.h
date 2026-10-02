@@ -120,7 +120,7 @@ typedef bsgfx_InstanceHeader*(* PFN_bsgfx_hostInstanceHeader)(bsgfx_InstanceSubt
 typedef bsgfx_InstanceHeader*(* PFN_bsgfx_deviceInstanceHeader)(bsgfx_InstanceSubtype* subtype, int instance_id);
 typedef void*(* PFN_bsgfx_hostInstanceData)(bsgfx_InstanceSubtype* subtype, int instance_id);
 typedef void*(* PFN_bsgfx_deviceInstanceData)(bsgfx_InstanceSubtype* subtype, int instance_id);
-typedef bool(* PFN_bsgfx_hoveringQuadInstance)(bsgfx_InstanceSubtype* subtype, int offset);
+typedef bool(* PFN_bsgfx_hoveringQuadInstance)(bs_Context* context, bsgfx_InstanceSubtype* subtype, int offset);
 typedef bs_mat4x3(* PFN_bsgfx_matrix)(bs_vec3 position, bs_vec3 scale);
 typedef void(* PFN_bsgfx_renderFineShadowVolumes)();
 typedef void(* PFN_bsgfx_renderShadowVolumes)();
@@ -428,7 +428,7 @@ BSGFXAPI bsgfx_InstanceHeader* _bsgfx_hostInstanceHeader(bsgfx_InstanceSubtype* 
 BSGFXAPI bsgfx_InstanceHeader* _bsgfx_deviceInstanceHeader(bsgfx_InstanceSubtype* subtype, int instance_id);
 BSGFXAPI void* _bsgfx_hostInstanceData(bsgfx_InstanceSubtype* subtype, int instance_id);
 BSGFXAPI void* _bsgfx_deviceInstanceData(bsgfx_InstanceSubtype* subtype, int instance_id);
-BSGFXAPI bool _bsgfx_hoveringQuadInstance(bsgfx_InstanceSubtype* subtype, int offset);
+BSGFXAPI bool _bsgfx_hoveringQuadInstance(bs_Context* context, bsgfx_InstanceSubtype* subtype, int offset);
 BSGFXAPI bs_mat4x3 _bsgfx_matrix(bs_vec3 position, bs_vec3 scale);
 BSGFXAPI void _bsgfx_renderFineShadowVolumes();
 BSGFXAPI void _bsgfx_renderShadowVolumes();

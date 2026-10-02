@@ -2144,6 +2144,7 @@
 		
 		<function name="bsgfx_hoveringQuadInstance">
 			<return>bool</return>
+			<param><type>bs_Context*</type><name>context</name></param>
 			<param><type>bsgfx_InstanceSubtype*</type><name>subtype</name></param>
 			<param><type>int</type><name>offset</name></param>
 		</function>

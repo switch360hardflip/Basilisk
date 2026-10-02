@@ -2736,12 +2736,14 @@ bsgfx_deviceInstanceData(
     int instance_id);
 
  /**
+  @param context
   @param subtype
   @param offset
   @return bool
   */
 BSGFXAPI bool
 bsgfx_hoveringQuadInstance(
+    bs_Context* context,
     bsgfx_InstanceSubtype* subtype,
     int offset);
 

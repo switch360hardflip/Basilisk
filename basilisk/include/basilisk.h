@@ -225,6 +225,7 @@ void toggleContextMenu(bs_ivec2 position, ContextMenuType type);
 
 void onTitleBarInput(bs_Context* context, bs_ContextInputParams params);
 void onTitleBarMotion(bs_Context* context, int x, int y);
+void onTitleBarLeave(bs_Context* context);
 bool onTitleBarTick();
 void iniTitleBar();
 

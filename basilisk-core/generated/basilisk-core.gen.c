@@ -4085,6 +4085,13 @@ bs_ivec2 bs_windowPosition(
     return next.bs_windowPosition(context);
 }
 
+bs_vec2 bs_mapScreenToContext(
+    bs_Context* context, 
+    bs_vec2 p)
+{
+    return next.bs_mapScreenToContext(context, p);
+}
+
 void bs_maximizeWindow(
     bs_Context* context)
 {

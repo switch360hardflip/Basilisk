@@ -230,6 +230,10 @@ static void onApplicationMotion(bs_Context* context, int x, int y) {
 	onTitleBarMotion(context, x, y);
 }
 
+static void onApplicationLeave(bs_Context* context, void* params) {
+	onTitleBarLeave(context);
+}
+
 bool _hovering_any_title_bar_button_ = false;
 
 static void onPreTick() {
@@ -279,6 +283,7 @@ int main(int argc, char* argv[]) {
 			.activate = onApplicationWindowActivate,
 			.input = onApplicationWindowInput,
 			.motion = onApplicationMotion,
+			.leave = onApplicationLeave,
 		}
 	};
 
