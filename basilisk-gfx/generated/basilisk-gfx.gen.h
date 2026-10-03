@@ -40,6 +40,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdbool.h>
+#include <uchar.h>
 
 typedef struct bsgfx_UIElement bsgfx_UIElement;
 typedef struct bsgfx_UIIcon bsgfx_UIIcon;
@@ -1146,12 +1147,14 @@ struct bsgfx_UIInput {
     bsgfx_InputType type;
     bool active;
     bool new_line_on_enter;
+    bool hovering;
     const char* placeholder_text;
     int material_id;
     int placeholder_text_material_id;
     int outline_material_id;
     int background_outline_material_id;
     int background_shadow_material_id;
+    int px_size;
     bs_vec2 dimensions;
     bs_vec2 align;
     bs_U64 hash;
@@ -1864,20 +1867,6 @@ bsgfx_tickInstanceTypes();
   */
 BSGFXAPI void
 bsgfx_resetInstanceTypes();
-
- /**
-  @param font
-  @param out
-  @param name
-  @param length
-  @return void
-  */
-BSGFXAPI void
-bsgfx_textDimensions(
-    bsgfx_Font* font,
-    bs_vec2* out,
-    char* name,
-    int length);
 
  /**
   @return bs_PipelineHash
@@ -2608,6 +2597,48 @@ BSGFXAPI float
 bsgfx_fontHeight(
     bsgfx_Font* font,
     int px_size);
+
+ /**
+  @param font
+  @param pt_size
+  @return int
+  */
+BSGFXAPI int
+bsgfx_queryPtSize(
+    bsgfx_Font* font,
+    int pt_size);
+
+ /**
+  @param font
+  @param block
+  @param c
+  @param pt_size_id
+  @return bsgfx_Glyph*
+  */
+BSGFXAPI bsgfx_Glyph*
+bsgfx_getGlyph(
+    const bsgfx_Font* font,
+    const bsgfx_UnicodeBlock2* block,
+    char32_t c,
+    int pt_size_id);
+
+ /**
+  @param font
+  @param px_size
+  @param out
+  @param max_length
+  @param text
+  @param text_length
+  @return void
+  */
+BSGFXAPI void
+bsgfx_textSize(
+    bsgfx_Font* font,
+    int px_size,
+    bs_vec2* out,
+    float max_length,
+    char* text,
+    int text_length);
 
  /**
   @param subtype
@@ -3432,17 +3463,31 @@ bsgfx_translateUIElement(
     const bs_vec3* position);
 
  /**
+  @param font
+  @param px_size
   @param input
+  @param relative_x
+  @param relative_y
   @param position
-  @param out_width
-  @param alphabet
   @return void
   */
 BSGFXAPI void
+bsgfx_inputCursorPosition(
+    bsgfx_Font* font,
+    int px_size,
+    bs_String* input,
+    float relative_x,
+    float relative_y,
+    int* position);
+
+ /**
+  @param input
+  @param alphabet
+  @return bool
+  */
+BSGFXAPI bool
 bsgfx_instanceUIInput(
     bsgfx_UIInput* input,
-    bs_vec3 position,
-    bs_vec2* out_width,
     const char* alphabet);
 
  /**

@@ -36,6 +36,7 @@
 #include <bsgfx_validation.gen.h>
 #include <math.h>
 #include <stdio.h>
+#include <uchar.h>
 
 static bsgfx_FunctionTable next = { 0 };
 
@@ -97,15 +98,6 @@ void bsgfx_tickInstanceTypes()
 void bsgfx_resetInstanceTypes()
 {
     next.bsgfx_resetInstanceTypes();
-}
-
-void bsgfx_textDimensions(
-    bsgfx_Font* font, 
-    bs_vec2* out, 
-    char* name, 
-    int length)
-{
-    next.bsgfx_textDimensions(font, out, name, length);
 }
 
 bs_PipelineHash bsgfx_defaultPipelineHash()
@@ -609,6 +601,33 @@ float bsgfx_fontHeight(
     int px_size)
 {
     return next.bsgfx_fontHeight(font, px_size);
+}
+
+int bsgfx_queryPtSize(
+    bsgfx_Font* font, 
+    int pt_size)
+{
+    return next.bsgfx_queryPtSize(font, pt_size);
+}
+
+bsgfx_Glyph* bsgfx_getGlyph(
+    const bsgfx_Font* font, 
+    const bsgfx_UnicodeBlock2* block, 
+    char32_t c, 
+    int pt_size_id)
+{
+    return next.bsgfx_getGlyph(font, block, c, pt_size_id);
+}
+
+void bsgfx_textSize(
+    bsgfx_Font* font, 
+    int px_size, 
+    bs_vec2* out, 
+    float max_length, 
+    char* text, 
+    int text_length)
+{
+    next.bsgfx_textSize(font, px_size, out, max_length, text, text_length);
 }
 
 bsgfx_Range bsgfx_instantiateASCIIText(
@@ -1178,13 +1197,22 @@ void bsgfx_translateUIElement(
     next.bsgfx_translateUIElement(element, position);
 }
 
-void bsgfx_instanceUIInput(
+void bsgfx_inputCursorPosition(
+    bsgfx_Font* font, 
+    int px_size, 
+    bs_String* input, 
+    float relative_x, 
+    float relative_y, 
+    int* position)
+{
+    next.bsgfx_inputCursorPosition(font, px_size, input, relative_x, relative_y, position);
+}
+
+bool bsgfx_instanceUIInput(
     bsgfx_UIInput* input, 
-    bs_vec3 position, 
-    bs_vec2* out_width, 
     const char* alphabet)
 {
-    next.bsgfx_instanceUIInput(input, position, out_width, alphabet);
+    return next.bsgfx_instanceUIInput(input, alphabet);
 }
 
 void bsgfx_renderColorPickers(

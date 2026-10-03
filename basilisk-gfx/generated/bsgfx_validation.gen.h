@@ -64,7 +64,6 @@ static inline bsgfx_FunctionTable* _val_bsgfx_getFunctions() {
     functions.bsgfx_computeContextCamera = (PFN_bsgfx_computeContextCamera)bs_getProcAddress(module, "_val_bsgfx_computeContextCamera");
     functions.bsgfx_tickInstanceTypes = (PFN_bsgfx_tickInstanceTypes)bs_getProcAddress(module, "_val_bsgfx_tickInstanceTypes");
     functions.bsgfx_resetInstanceTypes = (PFN_bsgfx_resetInstanceTypes)bs_getProcAddress(module, "_val_bsgfx_resetInstanceTypes");
-    functions.bsgfx_textDimensions = (PFN_bsgfx_textDimensions)bs_getProcAddress(module, "_val_bsgfx_textDimensions");
     functions.bsgfx_defaultPipelineHash = (PFN_bsgfx_defaultPipelineHash)bs_getProcAddress(module, "_val_bsgfx_defaultPipelineHash");
     functions.bsgfx_renderTileIcons = (PFN_bsgfx_renderTileIcons)bs_getProcAddress(module, "_val_bsgfx_renderTileIcons");
     functions.bsgfx_renderAtlasIcons = (PFN_bsgfx_renderAtlasIcons)bs_getProcAddress(module, "_val_bsgfx_renderAtlasIcons");
@@ -129,6 +128,9 @@ static inline bsgfx_FunctionTable* _val_bsgfx_getFunctions() {
     functions.bsgfx_instanceAtlas = (PFN_bsgfx_instanceAtlas)bs_getProcAddress(module, "_val_bsgfx_instanceAtlas");
     functions.bsgfx_instanceAtlasFlipped = (PFN_bsgfx_instanceAtlasFlipped)bs_getProcAddress(module, "_val_bsgfx_instanceAtlasFlipped");
     functions.bsgfx_fontHeight = (PFN_bsgfx_fontHeight)bs_getProcAddress(module, "_val_bsgfx_fontHeight");
+    functions.bsgfx_queryPtSize = (PFN_bsgfx_queryPtSize)bs_getProcAddress(module, "_val_bsgfx_queryPtSize");
+    functions.bsgfx_getGlyph = (PFN_bsgfx_getGlyph)bs_getProcAddress(module, "_val_bsgfx_getGlyph");
+    functions.bsgfx_textSize = (PFN_bsgfx_textSize)bs_getProcAddress(module, "_val_bsgfx_textSize");
     functions.bsgfx_instantiateASCIITextN = (PFN_bsgfx_instantiateASCIITextN)bs_getProcAddress(module, "_val_bsgfx_instantiateASCIITextN");
     functions.bsgfx_hostInstanceHeader = (PFN_bsgfx_hostInstanceHeader)bs_getProcAddress(module, "_val_bsgfx_hostInstanceHeader");
     functions.bsgfx_deviceInstanceHeader = (PFN_bsgfx_deviceInstanceHeader)bs_getProcAddress(module, "_val_bsgfx_deviceInstanceHeader");
@@ -202,6 +204,7 @@ static inline bsgfx_FunctionTable* _val_bsgfx_getFunctions() {
     functions.bsgfx_atlasIconUIElement = (PFN_bsgfx_atlasIconUIElement)bs_getProcAddress(module, "_val_bsgfx_atlasIconUIElement");
     functions.bsgfx_hoveringUIElement = (PFN_bsgfx_hoveringUIElement)bs_getProcAddress(module, "_val_bsgfx_hoveringUIElement");
     functions.bsgfx_translateUIElement = (PFN_bsgfx_translateUIElement)bs_getProcAddress(module, "_val_bsgfx_translateUIElement");
+    functions.bsgfx_inputCursorPosition = (PFN_bsgfx_inputCursorPosition)bs_getProcAddress(module, "_val_bsgfx_inputCursorPosition");
     functions.bsgfx_instanceUIInput = (PFN_bsgfx_instanceUIInput)bs_getProcAddress(module, "_val_bsgfx_instanceUIInput");
     functions.bsgfx_renderColorPickers = (PFN_bsgfx_renderColorPickers)bs_getProcAddress(module, "_val_bsgfx_renderColorPickers");
 #ifdef __linux__

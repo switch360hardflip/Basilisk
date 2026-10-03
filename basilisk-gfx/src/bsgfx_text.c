@@ -38,27 +38,7 @@
 
 unsigned char image[HEIGHT][WIDTH];
 
-BSAPI bs_vec2 _bsgfx_textDimensions(bsgfx_Font* font, char* name, int length) {
-    /*
-    float width = 0.0;
-    float layout_scale = ((float)font->size / (float)font->units_per_em);
-
-    for (int i = 0; i < length; i++) {
-        char c = font->table[name[i]];
-        int index = font->table[c];
-        if (index >= font->atlas->count)
-            index = 0;
-        float spacing = font->glyphs[index].advance_width * layout_scale;
-        width += spacing;
-        // width += name[i] == ' ' ? font->spacing * layout_scale : _bs_atlasSize(font->atlas, c).x;
-    }
-
-    return BS_V2(width, font->height);
-    */
-    return BS_V2(16, 16); // temp ofc
-}
-
-static int _bsgfx_queryPtSize(bsgfx_Font* font, int pt_size) {
+BSGFXAPI int _bsgfx_queryPtSize(bsgfx_Font* font, int pt_size) {
     int id = -1;
     for (int i = 0; i < font->pt_sizes_count; i++) {
         id = i;
@@ -83,7 +63,7 @@ static bsgfx_UnicodeBlock2* _bsgfx_queryUnicodeBlock(bsgfx_Font* font, char32_t 
     return NULL;
 }
 
-static inline bsgfx_Glyph* _bsgfx_getGlyph(const bsgfx_Font* font, const bsgfx_UnicodeBlock2* block, char32_t c, int pt_size_id) {
+BSGFXAPI bsgfx_Glyph* _bsgfx_getGlyph(const bsgfx_Font* font, const bsgfx_UnicodeBlock2* block, char32_t c, int pt_size_id) {
     const int pt_offset = pt_size_id * block->count;
     int glyph_offset = block->glyphs_offset + pt_offset + (c - block->offset);
     assert(glyph_offset < font->glyphs_count);
@@ -98,10 +78,11 @@ BSAPI float _bsgfx_fontHeight(bsgfx_Font* font, int px_size) {
     return _bsgfx_convertDesignUnits(font, px_size, font->du_height);
 }
 
-BSGFXAPI bs_vec2
-_bsgfx_textSize(
+BSGFXAPI void _bsgfx_textSize(
     bsgfx_Font* font,
     int px_size,
+    bs_vec2* out,
+    float max_width,
     char* text,
     int text_length)
 {
@@ -152,11 +133,14 @@ _bsgfx_textSize(
             }
         }
 
-        position.x += (float)glyph->x_advance * mul;
-
-        position.x += advance.x;
+        float increment = (float)glyph->x_advance * mul + advance.x;
+        if ((position.x + increment) > max_width)
+            break;
+        position.x += increment;
         position.y += advance.y;
     }
+
+    *out = position;
 }
 
 BSGFXAPI bs_Range

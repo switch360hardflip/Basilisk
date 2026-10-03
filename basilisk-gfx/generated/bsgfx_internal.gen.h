@@ -36,6 +36,7 @@
 #include <basilisk-gfx.h>
 #ifdef _WIN32
 #include <windows.h>
+#include <uchar.h>
 #endif
 
 typedef void(* PFN_bsgfx_test)();
@@ -44,7 +45,6 @@ typedef bsgfx_InstanceType**(* PFN_bsgfx_instanceTypes)();
 typedef void(* PFN_bsgfx_computeContextCamera)();
 typedef void(* PFN_bsgfx_tickInstanceTypes)();
 typedef void(* PFN_bsgfx_resetInstanceTypes)();
-typedef void(* PFN_bsgfx_textDimensions)(bsgfx_Font* font, bs_vec2* out, char* name, int length);
 typedef bs_PipelineHash(* PFN_bsgfx_defaultPipelineHash)();
 typedef void(* PFN_bsgfx_renderTileIcons)(bs_RendererScope* scope, bs_Queue* queue);
 typedef void(* PFN_bsgfx_renderAtlasIcons)(bs_RendererScope* scope, bs_Queue* queue);
@@ -112,6 +112,9 @@ typedef void(* PFN_bsgfx_instanceDepthlessCircle)(const bs_mat4* transform, int 
 typedef int(* PFN_bsgfx_instanceAtlas)(bsgfx_InstanceSubtype* subtype, bs_mat4x3 transform, int texture, bs_U32 flags, int id, int material);
 typedef int(* PFN_bsgfx_instanceAtlasFlipped)(bsgfx_InstanceSubtype* subtype, bs_mat4x3 transform, int texture, bs_U32 flags, int id, int material);
 typedef float(* PFN_bsgfx_fontHeight)(bsgfx_Font* font, int px_size);
+typedef int(* PFN_bsgfx_queryPtSize)(bsgfx_Font* font, int pt_size);
+typedef bsgfx_Glyph*(* PFN_bsgfx_getGlyph)(const bsgfx_Font* font, const bsgfx_UnicodeBlock2* block, char32_t c, int pt_size_id);
+typedef void(* PFN_bsgfx_textSize)(bsgfx_Font* font, int px_size, bs_vec2* out, float max_length, char* text, int text_length);
 typedef bsgfx_Range(* PFN_bsgfx_instantiateASCIIText)(bsgfx_InstanceSubtype* subtype, bsgfx_Font* font, bs_vec3 position, int pt_size, int material_id, bs_vec2* out_size, char* text);
 typedef bsgfx_Range(* PFN_bsgfx_instantiateASCIITextN)(bsgfx_InstanceSubtype* subtype, bsgfx_Font* font, bs_vec3 position, int pt_size, int material_id, bs_vec2* out_size, char* text, int text_length);
 typedef bsgfx_Range(* PFN_bsgfx_instantiateASCIITextV)(bsgfx_InstanceSubtype* subtype, bsgfx_Font* font, bs_vec3 position, int pt_size, int material_id, bs_vec2* out_size, char* format, va_list args);
@@ -188,7 +191,8 @@ typedef void(* PFN_bsgfx_instantiateAtlasIconUIElement)(bsgfx_UIIcon icon, const
 typedef void(* PFN_bsgfx_atlasIconUIElement)(bsgfx_UIIcon icon, bsgfx_UIElement* element);
 typedef bool(* PFN_bsgfx_hoveringUIElement)(const bsgfx_UIElement* element);
 typedef void(* PFN_bsgfx_translateUIElement)(const bsgfx_UIElement* element, const bs_vec3* position);
-typedef void(* PFN_bsgfx_instanceUIInput)(bsgfx_UIInput* input, bs_vec3 position, bs_vec2* out_width, const char* alphabet);
+typedef void(* PFN_bsgfx_inputCursorPosition)(bsgfx_Font* font, int px_size, bs_String* input, float relative_x, float relative_y, int* position);
+typedef bool(* PFN_bsgfx_instanceUIInput)(bsgfx_UIInput* input, const char* alphabet);
 typedef void(* PFN_bsgfx_renderColorPickers)(bs_RendererScope* scope, bs_Queue* queue);
 
 typedef struct {
@@ -198,7 +202,6 @@ typedef struct {
     PFN_bsgfx_computeContextCamera bsgfx_computeContextCamera;
     PFN_bsgfx_tickInstanceTypes bsgfx_tickInstanceTypes;
     PFN_bsgfx_resetInstanceTypes bsgfx_resetInstanceTypes;
-    PFN_bsgfx_textDimensions bsgfx_textDimensions;
     PFN_bsgfx_defaultPipelineHash bsgfx_defaultPipelineHash;
     PFN_bsgfx_renderTileIcons bsgfx_renderTileIcons;
     PFN_bsgfx_renderAtlasIcons bsgfx_renderAtlasIcons;
@@ -266,6 +269,9 @@ typedef struct {
     PFN_bsgfx_instanceAtlas bsgfx_instanceAtlas;
     PFN_bsgfx_instanceAtlasFlipped bsgfx_instanceAtlasFlipped;
     PFN_bsgfx_fontHeight bsgfx_fontHeight;
+    PFN_bsgfx_queryPtSize bsgfx_queryPtSize;
+    PFN_bsgfx_getGlyph bsgfx_getGlyph;
+    PFN_bsgfx_textSize bsgfx_textSize;
     PFN_bsgfx_instantiateASCIIText bsgfx_instantiateASCIIText;
     PFN_bsgfx_instantiateASCIITextN bsgfx_instantiateASCIITextN;
     PFN_bsgfx_instantiateASCIITextV bsgfx_instantiateASCIITextV;
@@ -342,6 +348,7 @@ typedef struct {
     PFN_bsgfx_atlasIconUIElement bsgfx_atlasIconUIElement;
     PFN_bsgfx_hoveringUIElement bsgfx_hoveringUIElement;
     PFN_bsgfx_translateUIElement bsgfx_translateUIElement;
+    PFN_bsgfx_inputCursorPosition bsgfx_inputCursorPosition;
     PFN_bsgfx_instanceUIInput bsgfx_instanceUIInput;
     PFN_bsgfx_renderColorPickers bsgfx_renderColorPickers;
 } bsgfx_FunctionTable;
@@ -352,7 +359,6 @@ BSGFXAPI bsgfx_InstanceType** _bsgfx_instanceTypes();
 BSGFXAPI void _bsgfx_computeContextCamera();
 BSGFXAPI void _bsgfx_tickInstanceTypes();
 BSGFXAPI void _bsgfx_resetInstanceTypes();
-BSGFXAPI void _bsgfx_textDimensions(bsgfx_Font* font, bs_vec2* out, char* name, int length);
 BSGFXAPI bs_PipelineHash _bsgfx_defaultPipelineHash();
 BSGFXAPI void _bsgfx_renderTileIcons(bs_RendererScope* scope, bs_Queue* queue);
 BSGFXAPI void _bsgfx_renderAtlasIcons(bs_RendererScope* scope, bs_Queue* queue);
@@ -420,6 +426,9 @@ BSGFXAPI void _bsgfx_instanceDepthlessCircle(const bs_mat4* transform, int segme
 BSGFXAPI int _bsgfx_instanceAtlas(bsgfx_InstanceSubtype* subtype, bs_mat4x3 transform, int texture, bs_U32 flags, int id, int material);
 BSGFXAPI int _bsgfx_instanceAtlasFlipped(bsgfx_InstanceSubtype* subtype, bs_mat4x3 transform, int texture, bs_U32 flags, int id, int material);
 BSGFXAPI float _bsgfx_fontHeight(bsgfx_Font* font, int px_size);
+BSGFXAPI int _bsgfx_queryPtSize(bsgfx_Font* font, int pt_size);
+BSGFXAPI bsgfx_Glyph* _bsgfx_getGlyph(const bsgfx_Font* font, const bsgfx_UnicodeBlock2* block, char32_t c, int pt_size_id);
+BSGFXAPI void _bsgfx_textSize(bsgfx_Font* font, int px_size, bs_vec2* out, float max_length, char* text, int text_length);
 BSGFXAPI bsgfx_Range _bsgfx_instantiateASCIIText(bsgfx_InstanceSubtype* subtype, bsgfx_Font* font, bs_vec3 position, int pt_size, int material_id, bs_vec2* out_size, char* text);
 BSGFXAPI bsgfx_Range _bsgfx_instantiateASCIITextN(bsgfx_InstanceSubtype* subtype, bsgfx_Font* font, bs_vec3 position, int pt_size, int material_id, bs_vec2* out_size, char* text, int text_length);
 BSGFXAPI bsgfx_Range _bsgfx_instantiateASCIITextV(bsgfx_InstanceSubtype* subtype, bsgfx_Font* font, bs_vec3 position, int pt_size, int material_id, bs_vec2* out_size, char* format, va_list args);
@@ -496,7 +505,8 @@ BSGFXAPI void _bsgfx_instantiateAtlasIconUIElement(bsgfx_UIIcon icon, const bsgf
 BSGFXAPI void _bsgfx_atlasIconUIElement(bsgfx_UIIcon icon, bsgfx_UIElement* element);
 BSGFXAPI bool _bsgfx_hoveringUIElement(const bsgfx_UIElement* element);
 BSGFXAPI void _bsgfx_translateUIElement(const bsgfx_UIElement* element, const bs_vec3* position);
-BSGFXAPI void _bsgfx_instanceUIInput(bsgfx_UIInput* input, bs_vec3 position, bs_vec2* out_width, const char* alphabet);
+BSGFXAPI void _bsgfx_inputCursorPosition(bsgfx_Font* font, int px_size, bs_String* input, float relative_x, float relative_y, int* position);
+BSGFXAPI bool _bsgfx_instanceUIInput(bsgfx_UIInput* input, const char* alphabet);
 BSGFXAPI void _bsgfx_renderColorPickers(bs_RendererScope* scope, bs_Queue* queue);
 
 static inline bsgfx_FunctionTable* _bsgfx_getFunctions() {
@@ -508,7 +518,6 @@ static inline bsgfx_FunctionTable* _bsgfx_getFunctions() {
     functions.bsgfx_computeContextCamera = _bsgfx_computeContextCamera;
     functions.bsgfx_tickInstanceTypes = _bsgfx_tickInstanceTypes;
     functions.bsgfx_resetInstanceTypes = _bsgfx_resetInstanceTypes;
-    functions.bsgfx_textDimensions = _bsgfx_textDimensions;
     functions.bsgfx_defaultPipelineHash = _bsgfx_defaultPipelineHash;
     functions.bsgfx_renderTileIcons = _bsgfx_renderTileIcons;
     functions.bsgfx_renderAtlasIcons = _bsgfx_renderAtlasIcons;
@@ -576,6 +585,9 @@ static inline bsgfx_FunctionTable* _bsgfx_getFunctions() {
     functions.bsgfx_instanceAtlas = _bsgfx_instanceAtlas;
     functions.bsgfx_instanceAtlasFlipped = _bsgfx_instanceAtlasFlipped;
     functions.bsgfx_fontHeight = _bsgfx_fontHeight;
+    functions.bsgfx_queryPtSize = _bsgfx_queryPtSize;
+    functions.bsgfx_getGlyph = _bsgfx_getGlyph;
+    functions.bsgfx_textSize = _bsgfx_textSize;
     functions.bsgfx_instantiateASCIIText = _bsgfx_instantiateASCIIText;
     functions.bsgfx_instantiateASCIITextN = _bsgfx_instantiateASCIITextN;
     functions.bsgfx_instantiateASCIITextV = _bsgfx_instantiateASCIITextV;
@@ -652,6 +664,7 @@ static inline bsgfx_FunctionTable* _bsgfx_getFunctions() {
     functions.bsgfx_atlasIconUIElement = _bsgfx_atlasIconUIElement;
     functions.bsgfx_hoveringUIElement = _bsgfx_hoveringUIElement;
     functions.bsgfx_translateUIElement = _bsgfx_translateUIElement;
+    functions.bsgfx_inputCursorPosition = _bsgfx_inputCursorPosition;
     functions.bsgfx_instanceUIInput = _bsgfx_instanceUIInput;
     functions.bsgfx_renderColorPickers = _bsgfx_renderColorPickers;
 

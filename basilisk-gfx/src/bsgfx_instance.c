@@ -81,6 +81,7 @@ BSGFXAPI bs_Result _bsgfx_ensureInstanceCount(bsgfx_InstanceType* instance_type,
 			return result;
 
 		result = bs_bindBuffer(bind_set, binding, object->buffer);
+		bs_pushDescriptors();
 	}
 
 	return result;
@@ -136,7 +137,7 @@ BSGFXAPI bs_Result _bsgfx_instanceType(size_t instance_size, int bind_set, int p
 	// figure out what is correct first
 	VkDeviceSize atom_size = 64;
 
-	const int initial_instances_count = 128;
+	const int initial_instances_count = 100;
 	size_t size = initial_instances_count * instance_size;
 	VkDeviceSize aligned_size = (size + 64 - 1) & ~(atom_size - 1);
 

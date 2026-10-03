@@ -14,6 +14,7 @@
 			<include>bsgfx_validation.gen.h</include>
 			<include>math.h</include>
 			<include>stdio.h</include>
+			<include>uchar.h</include>
 		</trampoline>
 		<trampolineHeader>
 			<include>basilisk-core.h</include>
@@ -22,6 +23,7 @@
 			<include>stdarg.h</include>
 			<include>string.h</include>
 			<include>stdbool.h</include>
+			<include>uchar.h</include>
 		</trampolineHeader>
 		<internal>
 			<include>bsgfx_internal.h</include>
@@ -32,6 +34,7 @@
 			<include>basilisk-gfx.h</include>
 			<ifdef cond="_WIN32"/>
 			    <include>windows.h</include>
+			    <include>uchar.h</include>
 			<endif/>
 		</internalHeader>
 		<prevalidation>
@@ -1047,12 +1050,14 @@
 			<field><type>bsgfx_InputType</type><name>type</name></field>
 			<field><type>bool</type><name>active</name></field>
 			<field><type>bool</type><name>new_line_on_enter</name></field>
+			<field><type>bool</type><name>hovering</name></field>
 			<field><type>const char*</type><name>placeholder_text</name></field>
 			<field><type>int</type><name>material_id</name></field>
 			<field><type>int</type><name>placeholder_text_material_id</name></field>
 			<field><type>int</type><name>outline_material_id</name></field>
 			<field><type>int</type><name>background_outline_material_id</name></field>
 			<field><type>int</type><name>background_shadow_material_id</name></field>
+			<field><type>int</type><name>px_size</name></field>
 			<field><type>bs_vec2</type><name>dimensions</name></field>
 			<field><type>bs_vec2</type><name>align</name></field>
 			<field><type>bs_U64</type><name>hash</name></field>
@@ -1748,14 +1753,6 @@
 			<return>void</return>
 		</function>
 
-		<function name="bsgfx_textDimensions">
-			<return>void</return>
-			<param><type>bsgfx_Font*</type><name>font</name></param>
-			<param><type>bs_vec2*</type><name>out</name></param>
-			<param><type>char*</type><name>name</name></param>
-			<param><type>int</type><name>length</name></param>
-		</function>
-
 		<function name="bsgfx_defaultPipelineHash">
 			<return>bs_PipelineHash</return>
 		</function>
@@ -2107,6 +2104,30 @@
 			<return>float</return>
 			<param><type>bsgfx_Font*</type><name>font</name></param>
 			<param><type>int</type><name>px_size</name></param>
+		</function>
+		
+		<function name="bsgfx_queryPtSize">
+			<return>int</return>
+			<param><type>bsgfx_Font*</type><name>font</name></param>
+			<param><type>int</type><name>pt_size</name></param>
+		</function>
+		
+		<function name="bsgfx_getGlyph">
+			<return>bsgfx_Glyph*</return>
+			<param><type>const bsgfx_Font*</type><name>font</name></param>
+			<param><type>const bsgfx_UnicodeBlock2*</type><name>block</name></param>
+			<param><type>char32_t</type><name>c</name></param>
+			<param><type>int</type><name>pt_size_id</name></param>
+		</function>
+
+		<function name="bsgfx_textSize">
+			<return>void</return>
+			<param><type>bsgfx_Font*</type><name>font</name></param>
+			<param><type>int</type><name>px_size</name></param>
+			<param><type>bs_vec2*</type><name>out</name></param>
+			<param><type>float</type><name>max_length</name></param>
+			<param><type>char*</type><name>text</name></param>
+			<param><type>int</type><name>text_length</name></param>
 		</function>
 		<variadicStringTemplate name="bsgfx_instantiateASCIIText" string="text">
 			<return>bsgfx_Range</return>
@@ -2484,11 +2505,19 @@
 			<param><type>const bs_vec3*</type><name>position</name></param>
 		</function>
 
-		<function name="bsgfx_instanceUIInput">
+		<function name="bsgfx_inputCursorPosition">
 			<return>void</return>
+			<param><type>bsgfx_Font*</type><name>font</name></param>
+			<param><type>int</type><name>px_size</name></param>
+			<param><type>bs_String*</type><name>input</name></param>
+			<param><type>float</type><name>relative_x</name></param>
+			<param><type>float</type><name>relative_y</name></param>
+			<param><type>int*</type><name>position</name></param>
+		</function>
+		
+		<function name="bsgfx_instanceUIInput">
+			<return>bool</return>
 			<param><type>bsgfx_UIInput*</type><name>input</name></param>
-			<param><type>bs_vec3</type><name>position</name></param>
-			<param><type>bs_vec2*</type><name>out_width</name></param>
 			<param><type>const char*</type><name>alphabet</name></param>
 		</function>
 
